@@ -193,7 +193,11 @@ typedef struct {
   names_t functions_allowed;    /* List of functions allowed to be debugged */
 #endif
   call_stack_t stack;           /* stack of function calls */
-  int ctx_nr;                   /* internal number */
+  unsigned int ctx_nr;          /* internal number */
+#define UID_CTX_NR_MODULO 1000
+  char uid[14+3+1];             /* unique identifier between several runs of a program 
+                                   includes date/time of creation and
+				   ctx_nr modulo UID_CTX_NR_MODULO */
 #if HASGETPID
   unsigned long pid;            /* process id */
 #endif
@@ -235,6 +239,11 @@ typedef struct {
 #endif /* #ifdef _POSIX_THREADS */
 
 #include "dbug.h" /* self-test */
+
+#if HASDMALLOC
+/* dmalloc.h must be the last in the include list */
+#include <dmalloc.h>
+#endif
 
 #ifndef NDEBUG
 
@@ -287,7 +296,7 @@ typedef struct {
 #define MODIFIER_SEPARATOR '='
 
 #define SEP_FMT "%c"
-#define PTR_FMT "%p"
+#define UID_FMT "%s"
 /* GMT in YYYYMMDDhhmmss format */
 #define DATE_FMT "%04d%02d%02d%02d%02d%02d"
 #define SEQ_FMT "%05hu"
@@ -296,33 +305,34 @@ typedef struct {
 #define FUNCTION_FMT "%s"
 #define LINE_FMT "%ld"
 #define LEVEL_FMT "%ld"
+#define CTX_NR_MODULO_FMT "%03u"
 
-/* print:
+/* init:
    - DBUG
-   - address of dbug context
+   - uid of dbug context
    - date
    - seq
    - I
    - major version, minor version, teeny version
    - name
-   - context number
+   - address of dbug context
    - process id
    - flags 
 */
 #define DBUG_INIT_FMT  \
   "DBUG" SEP_FMT \
-  PTR_FMT SEP_FMT \
+  UID_FMT SEP_FMT \
   DATE_FMT SEP_FMT \
   SEQ_FMT SEP_FMT \
   "I" SEP_FMT \
   "%d.%d.%d" SEP_FMT \
   "%s" SEP_FMT \
-  "%d" SEP_FMT \
+  "%p" SEP_FMT \
   "%lu" SEP_FMT \
   "%d" "\n"
 
-/* print:
-   - address of dbug context
+/* done:
+   - uid of dbug context
    - date
    - seq
    - D
@@ -331,15 +341,15 @@ typedef struct {
 */
 #define DBUG_DONE_FMT \
   "DBUG" SEP_FMT \
-  PTR_FMT SEP_FMT \
+  UID_FMT SEP_FMT \
   DATE_FMT SEP_FMT \
   SEQ_FMT SEP_FMT \
   "D" SEP_FMT \
   "%ld" SEP_FMT \
   "%ld" "\n"
 
-/* print:
-   - address of dbug context
+/* enter:
+   - uid of dbug context
    - date
    - seq
    - E
@@ -351,7 +361,7 @@ typedef struct {
 */
 #define DBUG_ENTER_FMT \
   "DBUG" SEP_FMT \
-  PTR_FMT SEP_FMT \
+  UID_FMT SEP_FMT \
   DATE_FMT SEP_FMT \
   SEQ_FMT SEP_FMT \
   "E" SEP_FMT \
@@ -361,8 +371,8 @@ typedef struct {
   LEVEL_FMT SEP_FMT \
   TIME_FMT "\n"
 
-/* print:
-   - address of dbug context
+/* leave:
+   - uid of dbug context
    - date
    - seq
    - L
@@ -374,7 +384,7 @@ typedef struct {
 */
 #define DBUG_LEAVE_FMT \
   "DBUG" SEP_FMT \
-  PTR_FMT SEP_FMT \
+  UID_FMT SEP_FMT \
   DATE_FMT SEP_FMT \
   SEQ_FMT SEP_FMT \
   "L" SEP_FMT \
@@ -399,7 +409,7 @@ typedef struct {
 
 #define DBUG_PRINT_FMT \
   "DBUG" SEP_FMT \
-  PTR_FMT SEP_FMT \
+  UID_FMT SEP_FMT \
   DATE_FMT SEP_FMT \
   SEQ_FMT SEP_FMT \
   "P" SEP_FMT \
@@ -546,12 +556,14 @@ dbug_print_info_set( const dbug_print_info_t *dbug_print_info );
  * Static variables
  */
 
-static int ctx_nr = 0;
+static unsigned int ctx_cnt = 0; /* count of active contexts (init() called but not done()) */
+static unsigned int ctx_tot = 0; /* total contexts created (init() called) */
 
-static /*@null@*/ char *first_dbug_options = NULL;
+static /*@null@*/ /*@only@*/ char *first_dbug_options = NULL;
 
 #ifdef _POSIX_THREADS
-static pthread_mutex_t ctx_nr_mutex = PTHREAD_MUTEX_INITIALIZER;
+/* synchronize access to ctx_cnt/ctx_tot */
+static pthread_mutex_t ctx_adm_mutex = PTHREAD_MUTEX_INITIALIZER; 
 
 /* data to handle thread specific data (dbug context) */
 static dbug_key_t dbug_ctx_key = { PTHREAD_MUTEX_INITIALIZER, 0, &dbug_ctx_data_done };
@@ -667,7 +679,7 @@ _dbug_print_ctx( const dbug_ctx_t dbug_ctx, const int line, const char *break_po
 	      dbug_ctx->seq++;
 	      (void) fprintf( dbug_ctx->fp, DBUG_PRINT_FMT,
 			      dbug_ctx->separator,
-			      (void*)dbug_ctx,
+			      dbug_ctx->uid,
 			      dbug_ctx->separator,
 			      dbug_ctx->tm.tm_year + 1900,
 			      dbug_ctx->tm.tm_mon + 1,
@@ -732,7 +744,7 @@ dbug_ctx_print( const dbug_ctx_t dbug_ctx )
 #endif
 
   _DBUG_PRINT( "info", 
-	       ( "name: %s; ctx_nr: %d; pid: %lu; flags: 0x%X; delay: %u; magic: 0x%X",
+	       ( "name: %s; ctx_nr: %u; pid: %lu; flags: 0x%X; delay: %u; magic: 0x%X",
 		 dbug_ctx->name,
 		 dbug_ctx->ctx_nr,
 		 pid,
@@ -1076,7 +1088,7 @@ dbug_names_done( names_t *names )
     {
       for ( idx = 0; idx < names->count; idx++ )
 	{
-	  if ( names->array[idx].name )
+	  if ( names->array[idx].name != NULL )
 	    {
 	      FREE( names->array[idx].name );
 	      names->array[idx].name = NULL;
@@ -1185,7 +1197,8 @@ dbug_names_ins( names_t *names, const char *name, name_t **result )
             else
               {
 		memcpy( ptr, names->array, sizeof(name_t) * names->size );
-		FREE( names->array );
+		if ( names->array != NULL )
+		  FREE( names->array );
             	names->array = ptr;
             	names->size += NAMES_SIZE_EXPAND;
               }
@@ -1363,7 +1376,8 @@ dbug_names_del( names_t *names, const char *name )
 	  }
 	else /* result->ref_count == 0 */
 	  {
-	    FREE( result->name );
+	    if ( result->name != NULL )
+	      FREE( result->name );
 
 	    del_idx = (size_t) ( result - names->array );
 
@@ -1509,7 +1523,8 @@ dbug_stack_push( call_stack_t *stack, call_t *call )
       else
 	{
 	  memcpy( ptr, stack->array, sizeof(call_t) * stack->size );
-	  FREE( stack->array );
+	  if ( stack->array != NULL )
+	    FREE( stack->array );
 	  stack->array = ptr;
 	  stack->size += STACK_SIZE_EXPAND;
 	}
@@ -1864,7 +1879,7 @@ dbug_init_ctx( const char * options, const char *name, dbug_ctx_t* dbug_ctx )
 {
   dbug_errno_t status = 0;
   int step_no;
-  char *dbug_options = (char*)options;
+  /*@temp@*/ char *dbug_options = (char*)options;
   const char *procname = "dbug_init_ctx";
 
   _DBUG_ENTER( procname );
@@ -1888,13 +1903,27 @@ dbug_init_ctx( const char * options, const char *name, dbug_ctx_t* dbug_ctx )
 #endif
 
 /* steps in initialising */
-#define DBUG_INIT_CTX_STEPS 10
+#define DBUG_CTX_MALLOC_STEP 0
+#define FILES_STEP 1
+#define FUNCTIONS_STEP 2
+#define BREAK_POINTS_ALLOWED_STEP 3
+#define FUNCTIONS_ALLOWED_STEP 4
+#define STACK_STEP 5
+#define MUTEX_LOCK_STEP 6
+#define CTX_NR_STEP 7
+#define FIRST_DBUG_OPTIONS_STEP 8
+#define MUTEX_UNLOCK_STEP 9
+#define NAME_STEP 10
+#define DBUG_KEY_STEP 11
+#define DBUG_PRINT_INFO_STEP 12
+#define DBUG_OPTIONS_STEP 13
+#define DBUG_INIT_CTX_STEPS (DBUG_OPTIONS_STEP+1)
 
   for ( step_no = 0; status == 0 && step_no < DBUG_INIT_CTX_STEPS; step_no++ )
     {
       switch( step_no )
 	{
-	case 0:
+	case DBUG_CTX_MALLOC_STEP:
 	  *dbug_ctx = (dbug_ctx_t) MALLOC( sizeof(**dbug_ctx) );
 	  if ( *dbug_ctx == NULL )
 	    {
@@ -1904,46 +1933,61 @@ dbug_init_ctx( const char * options, const char *name, dbug_ctx_t* dbug_ctx )
 	    memset( *dbug_ctx, 0, sizeof(**dbug_ctx) );
 	  break;
 
-	case 1:
+	case FILES_STEP:
 	  status = dbug_names_init( &(*dbug_ctx)->files );
 	  break;
 
-	case 2:
+	case FUNCTIONS_STEP:
 	  status = dbug_names_init( &(*dbug_ctx)->functions );
 	  break;
 
-	case 3:
+	case BREAK_POINTS_ALLOWED_STEP:
 #if BREAK_POINTS_ALLOWED
 	  status = dbug_names_init( &(*dbug_ctx)->break_points_allowed );
 #endif
 	  break;
 
-	case 4:
+	case FUNCTIONS_ALLOWED_STEP:
 #if FUNCTIONS_ALLOWED
 	  status = dbug_names_init( &(*dbug_ctx)->functions_allowed );
 #endif
 	  break;
 
-	case 5:
+	case STACK_STEP:
 	  status = dbug_stack_init( &(*dbug_ctx)->stack );
 	  break;
 
-	case 6:
+	case MUTEX_LOCK_STEP:
 #ifdef _POSIX_THREADS
-	  status = pthread_mutex_lock( &ctx_nr_mutex );
+	  status = pthread_mutex_lock( &ctx_adm_mutex );
 
 	  _DBUG_PRINT( "info", ( "pthread_mutex_lock = %d", status ) );
-
-	  if ( status != 0 )
-	    break;
 #endif
-	  ctx_nr++;
+	  break;
+
+	case CTX_NR_STEP:
+	  /* set ctx_cnt/ctx_tot and uid */
+	  ctx_tot++;
+	  ctx_cnt++;
+	  (*dbug_ctx)->ctx_nr = ctx_tot; /* ensures a unique number */
+	  Gmtime( &(*dbug_ctx)->tm );
+	  (void) sprintf( (*dbug_ctx)->uid, DATE_FMT CTX_NR_MODULO_FMT,
+			  (*dbug_ctx)->tm.tm_year + 1900,
+			  (*dbug_ctx)->tm.tm_mon + 1,
+			  (*dbug_ctx)->tm.tm_mday,
+			  (*dbug_ctx)->tm.tm_hour,
+			  (*dbug_ctx)->tm.tm_min,
+			  (*dbug_ctx)->tm.tm_sec,
+			  (*dbug_ctx)->ctx_nr % UID_CTX_NR_MODULO );
+	  break;
+
+	case FIRST_DBUG_OPTIONS_STEP:
 	  if ( first_dbug_options == NULL )
 	    {
 	      if ( dbug_options == NULL )
 		dbug_options = "";
 
-	      first_dbug_options = (char*)malloc( strlen(dbug_options)+1 );
+	      first_dbug_options = (char*)MALLOC( strlen(dbug_options)+1 );
 	      if ( first_dbug_options != NULL )
 		strcpy( first_dbug_options, dbug_options );
 	      else
@@ -1951,18 +1995,17 @@ dbug_init_ctx( const char * options, const char *name, dbug_ctx_t* dbug_ctx )
 	    }
 	  else if ( dbug_options == NULL )
 	    dbug_options = first_dbug_options;
+	  break;
 
-	  (*dbug_ctx)->ctx_nr = ctx_nr;
-
+	case MUTEX_UNLOCK_STEP:
 #ifdef _POSIX_THREADS
-	  status = pthread_mutex_unlock( &ctx_nr_mutex );
+	  status = pthread_mutex_unlock( &ctx_adm_mutex );
 
 	  _DBUG_PRINT( "info", ( "pthread_mutex_unlock = %d", status ) );
-
-	  if ( status != 0 )
-	    break;
 #endif
+	  break;
 
+	case NAME_STEP:
 	  if ( name )
 	    {
 	      (*dbug_ctx)->name = (char*)MALLOC( strlen(name) + 1 );
@@ -1977,7 +2020,7 @@ dbug_init_ctx( const char * options, const char *name, dbug_ctx_t* dbug_ctx )
 	    {
 	      char dbug_name[100+1];
 
-	      sprintf( dbug_name, "dbug thread %d", (*dbug_ctx)->ctx_nr );
+	      sprintf( dbug_name, "dbug thread %u", (*dbug_ctx)->ctx_nr );
 
 	      (*dbug_ctx)->name = (char*)MALLOC( strlen(dbug_name) + 1 );
 	      if ( (*dbug_ctx)->name == NULL )
@@ -1987,25 +2030,22 @@ dbug_init_ctx( const char * options, const char *name, dbug_ctx_t* dbug_ctx )
 	      else
 		strcpy( (*dbug_ctx)->name, dbug_name );
 	    }
-
 	  break;
 
-#ifndef _POSIX_THREADS
-	case 7:
-	case 8:
-	  break;
-#else
-	case 7:
+	case DBUG_KEY_STEP:
+#ifdef _POSIX_THREADS
 	  status = dbug_key_init( &dbug_print_info_key );
+#endif
 	  break;
 	
-	case 8:
+	case DBUG_PRINT_INFO_STEP:
+#ifdef _POSIX_THREADS
 	  if ( dbug_print_info_get() == NULL ) /* no dbug print info set */
 	    {
 	      dbug_print_info_t *dbug_print_info = 
 		(dbug_print_info_t*)MALLOC( sizeof(*dbug_print_info) );
 
-	      if ( dbug_print_info )
+	      if ( dbug_print_info != NULL )
 		dbug_print_info_set( dbug_print_info );
 	      else
 		status = ENOMEM;
@@ -2013,7 +2053,7 @@ dbug_init_ctx( const char * options, const char *name, dbug_ctx_t* dbug_ctx )
 	  break;
 #endif
 
-	case 9:
+	case DBUG_OPTIONS_STEP:
 	  status = dbug_options_ctx( *dbug_ctx, dbug_options );
 	  (*dbug_ctx)->magic = DBUG_MAGIC;
 
@@ -2026,7 +2066,7 @@ dbug_init_ctx( const char * options, const char *name, dbug_ctx_t* dbug_ctx )
  	      (*dbug_ctx)->seq++;
 	      (void) fprintf( (*dbug_ctx)->fp, DBUG_INIT_FMT, 
 			      (*dbug_ctx)->separator,
-			      (void*)(*dbug_ctx), 
+			      (*dbug_ctx)->uid,
 			      (*dbug_ctx)->separator,
 			      (*dbug_ctx)->tm.tm_year + 1900,
 			      (*dbug_ctx)->tm.tm_mon + 1,
@@ -2044,7 +2084,7 @@ dbug_init_ctx( const char * options, const char *name, dbug_ctx_t* dbug_ctx )
 			      (*dbug_ctx)->separator,
 			      (*dbug_ctx)->name,
 			      (*dbug_ctx)->separator,
-			      (*dbug_ctx)->ctx_nr,
+			      (void*)(*dbug_ctx),
 			      (*dbug_ctx)->separator,
 #if HASGETPID
 			      (*dbug_ctx)->pid,
@@ -2080,41 +2120,72 @@ dbug_init_ctx( const char * options, const char *name, dbug_ctx_t* dbug_ctx )
 
 	  switch( step_no-1 ) /* the last correct initialised member */
 	    {
+	    case DBUG_OPTIONS_STEP:
+	      /*@fallthrough@*/
+
 	      /* in case of problems with creating a thread key do nothing,
 		 because the destructor will handle it */
-	    case 8:
-	    case 7:
+	    case DBUG_PRINT_INFO_STEP:
+	      /*@fallthrough@*/
 
-	    case 6:
+	    case DBUG_KEY_STEP:
+	      /*@fallthrough@*/
+
+	    case NAME_STEP:
 	      FREE( (*dbug_ctx)->name );
 	      (*dbug_ctx)->name = NULL;
 	      /*@fallthrough@*/
 
-	    case 5:
+	    case MUTEX_UNLOCK_STEP:
+#ifdef _POSIX_THREADS
+	      (void) pthread_mutex_lock( &ctx_adm_mutex );
+#endif
+	      /*@fallthrough@*/
+
+	    case FIRST_DBUG_OPTIONS_STEP:
+	      if ( ctx_cnt == 1 && first_dbug_options != NULL )
+		{
+		  FREE( first_dbug_options );
+		  first_dbug_options = NULL;
+		}
+	      /*@fallthrough@*/
+		
+	    case CTX_NR_STEP:
+	      ctx_cnt--;
+	      ctx_tot--; /* unsuccesfull attempts do not count */
+	      /*@fallthrough@*/
+
+	    case MUTEX_LOCK_STEP:
+#ifdef _POSIX_THREADS
+	      (void) pthread_mutex_unlock( &ctx_adm_mutex );
+#endif
+	      /*@fallthrough@*/
+
+	    case STACK_STEP:
 	      (void) dbug_stack_done( &(*dbug_ctx)->stack );
 	      /*@fallthrough@*/
 
-	    case 4:
+	    case  FUNCTIONS_ALLOWED_STEP:
 #if FUNCTIONS_ALLOWED
 	      (void) dbug_names_done( &(*dbug_ctx)->functions_allowed );
 #endif
 	      /*@fallthrough@*/
 
-	    case 3:
+	    case BREAK_POINTS_ALLOWED_STEP:
 #if BREAK_POINTS_ALLOWED
 	      (void) dbug_names_done( &(*dbug_ctx)->break_points_allowed );
 #endif
 	      /*@fallthrough@*/
 
-	    case 2:
+	    case FUNCTIONS_STEP:
 	      (void) dbug_names_done( &(*dbug_ctx)->functions );
 	      /*@fallthrough@*/
 
-	    case 1:
+	    case FILES_STEP:
 	      (void) dbug_names_done( &(*dbug_ctx)->files );
 	      /*@fallthrough@*/
 
-            case 0:
+            case DBUG_CTX_MALLOC_STEP:
 	      FREE( *dbug_ctx );
 	      *dbug_ctx = NULL;
 	      /*@fallthrough@*/
@@ -2127,6 +2198,20 @@ dbug_init_ctx( const char * options, const char *name, dbug_ctx_t* dbug_ctx )
 
   assert( status != 0 || step_no == DBUG_INIT_CTX_STEPS );
 
+#undef DBUG_CTX_MALLOC_STEP
+#undef FILES_STEP
+#undef FUNCTIONS_STEP
+#undef BREAK_POINTS_ALLOWED_STEP
+#undef FUNCTIONS_ALLOWED_STEP
+#undef STACK_STEP
+#undef MUTEX_LOCK_STEP
+#undef CTX_NR_STEP
+#undef FIRST_DBUG_OPTIONS_STEP
+#undef MUTEX_UNLOCK_STEP
+#undef NAME_STEP
+#undef DBUG_KEY_STEP
+#undef DBUG_PRINT_INFO_STEP
+#undef DBUG_OPTIONS_STEP
 #undef DBUG_INIT_CTX_STEPS
 
   _DBUG_PRINT( "output", ( "status: %d", status ) );
@@ -2319,7 +2404,7 @@ dbug_done_ctx( dbug_ctx_t* dbug_ctx )
 	  (*dbug_ctx)->seq++;
 	  (void) fprintf( (*dbug_ctx)->fp, DBUG_DONE_FMT, 
 			  (*dbug_ctx)->separator,
-			  (void*)(*dbug_ctx),
+			  (*dbug_ctx)->uid,
 			  (*dbug_ctx)->separator,
 			  (*dbug_ctx)->tm.tm_year + 1900,
 			  (*dbug_ctx)->tm.tm_mon + 1,
@@ -2338,11 +2423,11 @@ dbug_done_ctx( dbug_ctx_t* dbug_ctx )
 	  FUNLOCKFILE( (*dbug_ctx)->fp );
 	}
 
-
       if ( (*dbug_ctx)->fp != stderr && (*dbug_ctx)->fp != stdout )
 	(void) fclose( (*dbug_ctx)->fp );
 
-      FREE( (*dbug_ctx)->name );
+      if ( (*dbug_ctx)->name != NULL )
+	FREE( (*dbug_ctx)->name );
       (void) dbug_names_done( &(*dbug_ctx)->files );
       (void) dbug_names_done( &(*dbug_ctx)->functions );
 #if BREAK_POINTS_ALLOWED
@@ -2365,6 +2450,22 @@ dbug_done_ctx( dbug_ctx_t* dbug_ctx )
       }
 
       (void) dbug_key_done( &dbug_print_info_key );
+#endif
+
+#ifdef _POSIX_THREADS
+      (void) pthread_mutex_lock( &ctx_adm_mutex );
+#endif
+      if ( ctx_cnt > 0 )
+	ctx_cnt--;
+
+      if ( ctx_cnt == 0 )
+	{
+	  FREE( first_dbug_options );
+	  first_dbug_options = NULL;
+	}
+
+#ifdef _POSIX_THREADS
+      (void) pthread_mutex_unlock( &ctx_adm_mutex );
 #endif
 	
       FREE( *dbug_ctx );
@@ -2533,7 +2634,7 @@ dbug_enter_ctx( const dbug_ctx_t dbug_ctx, const char *file, const char *functio
 	      dbug_ctx->seq++;
 	      (void) fprintf( dbug_ctx->fp, DBUG_ENTER_FMT, 
 			      dbug_ctx->separator,
-			      (void*)dbug_ctx, 
+			      dbug_ctx->uid,
 			      dbug_ctx->separator,
 			      dbug_ctx->tm.tm_year + 1900,
 			      dbug_ctx->tm.tm_mon + 1,
@@ -2695,7 +2796,7 @@ dbug_leave_ctx( const dbug_ctx_t dbug_ctx, const int line, int *dbug_level )
 	      dbug_ctx->seq++;
 	      (void) fprintf( dbug_ctx->fp, DBUG_LEAVE_FMT, 
 			      dbug_ctx->separator,
-			      (void*)dbug_ctx, 
+			      dbug_ctx->uid,
 			      dbug_ctx->separator,
 			      dbug_ctx->tm.tm_year + 1900,
 			      dbug_ctx->tm.tm_mon + 1,
