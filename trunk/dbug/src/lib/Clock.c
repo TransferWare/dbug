@@ -101,7 +101,7 @@
 # endif /* __LCLINT__ */
 #endif
 
-#if defined(HASPTHREADS) && HASPTHREADS
+#if defined(HAVE_PTHREAD_H) && HAVE_PTHREAD_H
 
 #include <pthread.h>
 
@@ -115,7 +115,7 @@ void Gmtime( struct tm *tm )
   time_t time_tmp; 
   struct tm *tm_tmp;
 
-#if defined(HASPTHREADS) && HASPTHREADS
+#if defined(HAVE_PTHREAD_H) && HAVE_PTHREAD_H
   pthread_mutex_lock( &mutex );
 #endif
 
@@ -125,7 +125,7 @@ void Gmtime( struct tm *tm )
   if ( tm_tmp != NULL && tm != NULL )
     *tm = *tm_tmp;
 
-#if defined(HASPTHREADS) && HASPTHREADS
+#if defined(HAVE_PTHREAD_H) && HAVE_PTHREAD_H
   pthread_mutex_unlock( &mutex );
 #endif
 }
@@ -144,7 +144,7 @@ unsigned long Clock (void)
   clock_t tmp;
   unsigned long value;
 
-#if defined(HASPTHREADS) && HASPTHREADS
+#if defined(HAVE_PTHREAD_H) && HAVE_PTHREAD_H
   pthread_mutex_lock( &mutex );
 #endif
 
@@ -162,7 +162,7 @@ unsigned long Clock (void)
     value = ( (clock_t)1000 * (tmp - start) ) / (CLOCKS_PER_SEC); 
   }
 
-#if defined(HASPTHREADS) && HASPTHREADS
+#if defined(HAVE_PTHREAD_H) && HAVE_PTHREAD_H
   pthread_mutex_unlock( &mutex );
 #endif
 
@@ -180,7 +180,7 @@ unsigned long Clock (void)
   unsigned long value;
   struct timeb tmp;
 
-#if defined(HASPTHREADS) && HASPTHREADS
+#if defined(HAVE_PTHREAD_H) && HAVE_PTHREAD_H
   pthread_mutex_lock( &mutex );
 #endif
 
@@ -196,7 +196,7 @@ unsigned long Clock (void)
     value = (tmp.time - start.time)*1000 + (tmp.millitm - start.millitm);
   }
 
-#if defined(HASPTHREADS) && HASPTHREADS
+#if defined(HAVE_PTHREAD_H) && HAVE_PTHREAD_H
   pthread_mutex_unlock( &mutex );
 #endif
   return value;
@@ -243,7 +243,7 @@ unsigned long Clock (void)
 
     now = (struct DateStamp *) AllocMem ((long) sizeof (struct DateStamp), 0L);
     if (now != NULL) {
-#if defined(HASPTHREADS) && HASPTHREADS
+#if defined(HAVE_PTHREAD_H) && HAVE_PTHREAD_H
         pthread_mutex_lock( &mutex );
 #endif
         if (first_clock == TRUE) {
@@ -255,7 +255,7 @@ unsigned long Clock (void)
         millisec = 24 * 3600 * (1000 / HZ) * (now -> ds_Days - begin.ds_Days);
         millisec += 60 * (1000 / HZ) * (now -> ds_Minute - begin.ds_Minute);
         millisec += (1000 / HZ) * (now -> ds_Tick - begin.ds_Tick);
-#if defined(HASPTHREADS) && HASPTHREADS
+#if defined(HAVE_PTHREAD_H) && HAVE_PTHREAD_H
         pthread_mutex_unlock( &mutex );
 #endif
         FreeMem (now, (long) sizeof (struct DateStamp));

@@ -52,7 +52,7 @@ AC_PROG_LIBTOOL
 
 # Checks for header files.
 AC_HEADER_STDC
-AC_CHECK_HEADERS([stdarg.h stdlib.h string.h unistd.h errno.h assert.h stdio.h])
+AC_CHECK_HEADERS([stdarg.h stdlib.h string.h unistd.h errno.h assert.h stdio.h pthread.h])
 # Header files needed for timing functions.
 AC_CHECK_HEADERS([time.h sys/timeb.h sys/param.h sys/time.h sys/resource.h])
 
@@ -86,7 +86,7 @@ AC_SUBST(LTLIBOBJS)
 
 AC_SUBST(ac_aux_dir)
 
-AC_CONFIG_FILES([Makefile config/Makefile doc/Makefile src/Makefile src/lib/Makefile src/prog/Makefile test/Makefile])
+AC_CONFIG_FILES([Makefile config/Makefile doc/Makefile src/Makefile src/lib/Makefile src/prog/Makefile src/prog/dbugrpt test/Makefile])
 AC_OUTPUT
 
 echo \
