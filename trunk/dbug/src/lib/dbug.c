@@ -134,6 +134,7 @@ typedef struct {
 
 #define NAMES_SIZE_EXPAND 10
 #define NAMES_MAGIC 0xACDC
+#define NAMES_VALID(names) ( (names) != NULL && (names)->magic == NAMES_MAGIC )
 
 /* An array of names */
 typedef struct {
@@ -150,6 +151,7 @@ typedef struct {
 
 #define STACK_SIZE_EXPAND 10
 #define STACK_MAGIC 0xABCD
+#define STACK_VALID(stack) ( (stack) != NULL && (stack)->magic == STACK_MAGIC )
 
 typedef struct {
   call_t *array;
@@ -195,6 +197,8 @@ typedef struct {
 
 #define DBUG_MAGIC 0xABCDEF
 
+#define DBUG_CTX_VALID(dbug_ctx) ( (dbug_ctx) != NULL && (dbug_ctx)->magic == DBUG_MAGIC )
+
 #include "dbug.h" /* self-test */
 
 /*
@@ -222,28 +226,32 @@ typedef struct {
 #define SEPARATOR '#'
 #endif
 
-#ifndef OPTIONS_SEPARATOR
-#define OPTIONS_SEPARATOR ','
+/* Options can be separated by either a comma or a semi-colon */
+
+#ifndef OPTIONS_SEPARATORS
+#define OPTIONS_SEPARATORS ",;"
 #endif
 
-#ifndef MODIFIER_SEPARATOR
-#define MODIFIER_SEPARATOR '\0'
+#if BREAK_POINTS_ALLOWED || FUNCTIONS_ALLOWED
+#define MODIFIER_SEPARATOR ':'
+#else
+/* A value for an option must follow the option immediately. No separator allowed. */
 #endif
 
-/* print: major version, minor version, teeny version, address of dbug context, name, context number, process id, flags */
-#define DBUG_INIT_FMT  "DBUG%cI%c%p%c%d.%d.%d%c%s%c%d%c%ld%c%d\n"
+/* print: address of dbug context, I, major version, minor version, teeny version, name, context number, process id, flags */
+#define DBUG_INIT_FMT  "DBUG%c%p%cI%c%d.%d.%d%c%s%c%d%c%ld%c%d\n"
 
-/* print: address of dbug context, maximum number of functions on the stack, stack usage */
-#define DBUG_DONE_FMT  "DBUG%cD%c%p%c%ld%c%ld\n"
+/* print: address of dbug context, D, maximum number of functions on the stack, stack usage */
+#define DBUG_DONE_FMT  "DBUG%c%p%cD%c%ld%c%ld\n"
 
-/* print: address of dbug context, file, function, line, level, time */
-#define DBUG_ENTER_FMT "DBUG%cE%c%p%c%s%c%s%c%ld%c%ld%c%ld\n"
+/* print: address of dbug context, E, file, function, line, level, time */
+#define DBUG_ENTER_FMT "DBUG%c%p%cE%c%s%c%s%c%ld%c%ld%c%ld\n"
 
-/* print: address of dbug context, file, function, line, level, time */
-#define DBUG_LEAVE_FMT "DBUG%cL%c%p%c%s%c%s%c%ld%c%ld%c%ld\n"
+/* print: address of dbug context, L, file, function, line, level, time */
+#define DBUG_LEAVE_FMT "DBUG%c%p%cL%c%s%c%s%c%ld%c%ld%c%ld\n"
 
-/* print: address of dbug context, file, function, line, level, break point, followed by user supplied parameters */
-#define DBUG_PRINT_FMT "DBUG%cP%c%p%c%s%c%s%c%ld%c%ld%c%s%c"
+/* print: address of dbug context, P, file, function, line, level, break point, followed by user supplied parameters */
+#define DBUG_PRINT_FMT "DBUG%c%p%cP%c%s%c%s%c%ld%c%ld%c%s%c"
 
 #ifndef MALLOC
 #define MALLOC malloc
@@ -444,43 +452,45 @@ _dbug_print_ctx( const dbug_ctx_t dbug_ctx, const int line, const char *break_po
 	  procname, PTR_STR(dbug_ctx), line, break_point, format );
 #endif
 
-  if ( dbug_ctx == NULL || dbug_ctx->magic != DBUG_MAGIC )
+  if ( !DBUG_CTX_VALID(dbug_ctx) )
     status = EINVAL;
   else if ( dbug_ctx->flags == 0 )
     status = ENOENT;
   else
-    switch( status = dbug_stack_top( &dbug_ctx->stack, &call ) )
-      {
-      case 0:
-	if ( is_break_point( dbug_ctx, call, break_point ) )
-	  {
-	    fprintf( dbug_ctx->fp, DBUG_PRINT_FMT,
-		     dbug_ctx->separator,
-		     dbug_ctx->separator,
-		     (void*)dbug_ctx,
-		     dbug_ctx->separator,
-		     call->file,
-		     dbug_ctx->separator,
-		     call->function,
-		     dbug_ctx->separator,
-		     (long)line,
-		     dbug_ctx->separator,
-		     (long)dbug_ctx->stack.count,
-		     dbug_ctx->separator,
-		     break_point,
-		     dbug_ctx->separator );
-	    vfprintf(dbug_ctx->fp, format, args);
-	    fprintf(dbug_ctx->fp, "\n");
-	    fflush(dbug_ctx->fp);
-	    SleepMsec(dbug_ctx->delay);
-	  }
-	break;
-      }
+    {
+      switch( status = dbug_stack_top( &dbug_ctx->stack, &call ) )
+	{
+	case 0:
+	  if ( is_break_point( dbug_ctx, call, break_point ) )
+	    {
+	      fprintf( dbug_ctx->fp, DBUG_PRINT_FMT,
+		       dbug_ctx->separator,
+		       (void*)dbug_ctx,
+		       dbug_ctx->separator,
+		       dbug_ctx->separator,
+		       call->file,
+		       dbug_ctx->separator,
+		       call->function,
+		       dbug_ctx->separator,
+		       (long)line,
+		       dbug_ctx->separator,
+		       (long)dbug_ctx->stack.count,
+		       dbug_ctx->separator,
+		       break_point,
+		       dbug_ctx->separator );
+	      vfprintf(dbug_ctx->fp, format, args);
+	      fprintf(dbug_ctx->fp, "\n");
+	      fflush(dbug_ctx->fp);
+	      SleepMsec(dbug_ctx->delay);
+	    }
+	  break;
+	}
+    }
 
   if ( status != 0 && status != ENOENT )
     {
-      fprintf( stderr, "DBUG%cERROR: %s: status: %d\n", 
-	       SEPARATOR, procname, status );
+      fprintf( stderr, "DBUG%c%p%cERROR: %s: status: %d\n", 
+	       SEPARATOR, (void*)dbug_ctx, SEPARATOR, procname, status );
       fflush( stderr );
     }
 
@@ -673,7 +683,7 @@ dbug_options_ctx( const dbug_ctx_t dbug_ctx, const char *options )
 
   for (scan = control; ; ) 
     {
-      char *sep = strchr(scan, OPTIONS_SEPARATOR);
+      char *sep = strpbrk(scan, OPTIONS_SEPARATORS);
       char open_mode[] = "a"; /* append */
 
       /* make scan a zero terminated string containing flag (and modifiers) */
@@ -695,12 +705,16 @@ dbug_options_ctx( const dbug_ctx_t dbug_ctx, const char *options )
 #endif
 	  break;
 
-	case 'D': 
+	case 'D':
 	  do
 	    {
 	      scan++;
 	    }
+#ifdef MODIFIER_SEPARATOR
 	  while ( *scan == MODIFIER_SEPARATOR );
+#else
+	  while ( 0 );
+#endif
 
 	  dbug_ctx->delay = atoi(scan); 
 	  break;
@@ -730,7 +744,11 @@ dbug_options_ctx( const dbug_ctx_t dbug_ctx, const char *options )
 	    {
 	      scan++;
 	    }
+#ifdef MODIFIER_SEPARATOR
 	  while ( *scan == MODIFIER_SEPARATOR );
+#else
+	  while ( 0 );
+#endif
 
 	  if ( *scan != '\0' )
 	    dbug_ctx->fp = fopen( scan, open_mode );
@@ -746,8 +764,8 @@ dbug_options_ctx( const dbug_ctx_t dbug_ctx, const char *options )
 	  break; /* no more options */
 
 	default:
-	  fprintf( stderr, "DBUG%cERROR: %s: unrecognized option: %s\n", 
-		   SEPARATOR, procname, scan );
+	  fprintf( stderr, "DBUG%c%p%cERROR: %s: unrecognized option: %s\n", 
+		   SEPARATOR, (void*)dbug_ctx, SEPARATOR, procname, scan );
 	  fflush( stderr );
 	}
 
@@ -829,7 +847,7 @@ dbug_names_done( names_t *names )
   dbug_names_print( names );
 #endif
 
-  if ( names == NULL || names->magic != NAMES_MAGIC )
+  if ( !NAMES_VALID(names) )
     status = EINVAL;
   else
     {
@@ -897,7 +915,7 @@ dbug_names_ins( names_t *names, const char *name, name_t **result )
 	  procname, PTR_STR(names), name, PTR_STR(result) );
 #endif
 
-  if ( names == NULL || names->magic != NAMES_MAGIC )
+  if ( !NAMES_VALID(names) )
     status = EINVAL;
   else
     switch( status = dbug_names_fnd( names, name, result ) )
@@ -1016,7 +1034,7 @@ dbug_names_fnd( names_t *names, const char *name, name_t **result )
 
   *result = NULL;
 
-  if ( names == NULL || names->magic != NAMES_MAGIC )
+  if ( !NAMES_VALID(names) )
     status = EINVAL;
   else
     {
@@ -1092,7 +1110,7 @@ dbug_names_del( names_t *names, const char *name )
 	  procname, PTR_STR(names), name );
 #endif
 
-  if ( names == NULL || names->magic != NAMES_MAGIC )
+  if ( !NAMES_VALID(names) )
     status = EINVAL;
   else
     switch( status = dbug_names_fnd( names, name, &result ) )
@@ -1202,7 +1220,7 @@ dbug_stack_done( call_stack_t *stack )
 	  procname, PTR_STR(stack) );
 #endif
 
-  if ( stack == NULL || stack->magic != STACK_MAGIC )
+  if ( !STACK_VALID(stack) )
     status = EINVAL;
   else
     {
@@ -1237,7 +1255,7 @@ dbug_stack_push( call_stack_t *stack, call_t *call )
 	  procname, PTR_STR(stack), PTR_STR(call) );
 #endif
 
-  if ( stack == NULL || stack->magic != STACK_MAGIC )
+  if ( !STACK_VALID(stack) )
     status = EINVAL;
 
   /* do we have to expand ? */
@@ -1287,7 +1305,7 @@ dbug_stack_pop( call_stack_t *stack )
 	  procname, PTR_STR(stack) );
 #endif
 
-  if ( stack == NULL || stack->magic != STACK_MAGIC )
+  if ( !STACK_VALID(stack) )
     status = EINVAL;
   else if ( stack->count > 0 )
     stack->count--;
@@ -1315,7 +1333,7 @@ dbug_stack_top( call_stack_t *stack, call_t **top )
 	  procname, PTR_STR(stack) );
 #endif
 
-  if ( stack == NULL || stack->magic != STACK_MAGIC )
+  if ( !STACK_VALID(stack) )
     status = EINVAL;
   else if ( stack->count > 0 )
     *top = &stack->array[stack->count-1];
@@ -1513,8 +1531,8 @@ dbug_init_ctx( const char * options, const char *name, dbug_ctx_t* dbug_ctx )
 	    {
 	      fprintf( (*dbug_ctx)->fp, DBUG_INIT_FMT, 
 		       (*dbug_ctx)->separator,
-		       (*dbug_ctx)->separator,
 		       (void*)(*dbug_ctx), 
+		       (*dbug_ctx)->separator,
 		       (*dbug_ctx)->separator,
 		       DBUG_MAJOR_VERSION,
 		       DBUG_MINOR_VERSION,
@@ -1543,8 +1561,8 @@ dbug_init_ctx( const char * options, const char *name, dbug_ctx_t* dbug_ctx )
 
       if ( status != 0 )
 	{
-	  fprintf( stderr, "DBUG%cERROR: %s: status: %d; step_no: %d\n", 
-		   SEPARATOR, procname, status, step_no );
+	  fprintf( stderr, "DBUG%c%p%cERROR: %s: status: %d; step_no: %d\n", 
+		   SEPARATOR, (dbug_ctx?(void*)*dbug_ctx:NULL), SEPARATOR, procname, status, step_no );
 	  fflush( stderr );
 
 	  switch( step_no-1 ) /* the last correct initialised member */
@@ -1698,7 +1716,7 @@ dbug_done_ctx( dbug_ctx_t* dbug_ctx )
 	  procname, PTR_STR(dbug_ctx) );
 #endif
 
-  if ( dbug_ctx == NULL || *dbug_ctx == NULL || (*dbug_ctx)->magic != DBUG_MAGIC )
+  if ( dbug_ctx == NULL || !DBUG_CTX_VALID(*dbug_ctx) )
     {
       status = EINVAL;
     }
@@ -1715,8 +1733,8 @@ dbug_done_ctx( dbug_ctx_t* dbug_ctx )
 	{
 	  fprintf( (*dbug_ctx)->fp, DBUG_DONE_FMT, 
 		   (*dbug_ctx)->separator,
-		   (*dbug_ctx)->separator,
 		   (void*)(*dbug_ctx),
+		   (*dbug_ctx)->separator,
 		   (*dbug_ctx)->separator,
 		   (long)(*dbug_ctx)->stack.maxcount,
 		   (*dbug_ctx)->separator,
@@ -1745,8 +1763,8 @@ dbug_done_ctx( dbug_ctx_t* dbug_ctx )
 
   if ( status != 0 )
     {
-      fprintf( stderr, "DBUG%cERROR: %s; status: %d\n",
-	       SEPARATOR, procname, status );
+      fprintf( stderr, "DBUG%c%p%cERROR: %s; status: %d\n",
+	       SEPARATOR, (dbug_ctx?(void*)*dbug_ctx:NULL), SEPARATOR, procname, status );
       fflush( stderr );
     }
 
@@ -1827,7 +1845,7 @@ dbug_enter_ctx( const dbug_ctx_t dbug_ctx, const char *file, const char *functio
       switch( step_no )
 	{
 	case 0:
-	  if ( dbug_ctx == NULL || dbug_ctx->magic != DBUG_MAGIC )
+	  if ( !DBUG_CTX_VALID(dbug_ctx) )
 	    status = EINVAL;
 	  else if ( dbug_ctx->flags == 0 )
 	    status = ENOENT;
@@ -1897,8 +1915,8 @@ dbug_enter_ctx( const dbug_ctx_t dbug_ctx, const char *file, const char *functio
 	    {
 	      fprintf( dbug_ctx->fp, DBUG_ENTER_FMT, 
 		       dbug_ctx->separator,
-		       dbug_ctx->separator,
 		       (void*)dbug_ctx, 
+		       dbug_ctx->separator,
 		       dbug_ctx->separator,
 		       call.file, 
 		       dbug_ctx->separator,
@@ -1916,8 +1934,8 @@ dbug_enter_ctx( const dbug_ctx_t dbug_ctx, const char *file, const char *functio
 
       if ( status != 0 && status != ENOENT )
 	{
-	  fprintf( stderr, "DBUG%cERROR: %s: status: %d; step_no: %d\n", 
-		   SEPARATOR, procname, status, step_no );
+	  fprintf( stderr, "DBUG%c%p%cERROR: %s: status: %d; step_no: %d\n", 
+		   SEPARATOR, (void*)dbug_ctx, SEPARATOR, procname, status, step_no );
 	  fflush( stderr );
 	}
     }
@@ -1933,6 +1951,12 @@ dbug_errno_t
 dbug_enter( const char *file, const char *function, const int line, int *dbug_level )
 {
   dbug_errno_t status = 0;
+  const char *procname = "dbug_enter";
+
+#ifndef NDEBUG
+  printf( "> %s( %s, %s, %d, %s )\n", 
+	  procname, file, function, line, PTR_STR(dbug_level) );
+#endif
 
 #ifdef _POSIX_THREADS
   dbug_ctx_t dbug_ctx; /* local dbug_ctx */
@@ -1943,6 +1967,10 @@ dbug_enter( const char *file, const char *function, const int line, int *dbug_le
 #endif
 #endif
   status = dbug_enter_ctx( dbug_ctx, file, function, line, dbug_level );
+
+#ifndef NDEBUG
+  printf( "< %s = %d\n", procname, status );
+#endif
 
   return status;
 }
@@ -1993,7 +2021,7 @@ dbug_leave_ctx( const dbug_ctx_t dbug_ctx, const int line, int *dbug_level )
       switch( step_no )
 	{
 	case 0:
-	  if ( dbug_ctx == NULL || dbug_ctx->magic != DBUG_MAGIC )
+	  if ( !DBUG_CTX_VALID(dbug_ctx) )
 	    status = EINVAL;
 	  else if ( dbug_ctx->flags == 0 )
 	    status = ENOENT;
@@ -2002,8 +2030,9 @@ dbug_leave_ctx( const dbug_ctx_t dbug_ctx, const int line, int *dbug_level )
 	case 1:
 	  if ( dbug_level && (size_t)*dbug_level != dbug_ctx->stack.count )
 	    {
-	      fprintf( stderr, "DBUG%cERROR: %s: dbug level (%ld) != stack count (%ld)\n", 
-		       SEPARATOR, procname, (long)*dbug_level, (long)dbug_ctx->stack.count );
+	      fprintf( stderr, "DBUG%c%p%cERROR: %s: dbug level (%ld) != stack count (%ld)\n", 
+		       SEPARATOR, (void*)dbug_ctx, SEPARATOR, 
+		       procname, (long)*dbug_level, (long)dbug_ctx->stack.count );
 	      fflush( stderr );
 
 	      /* 
@@ -2038,8 +2067,8 @@ dbug_leave_ctx( const dbug_ctx_t dbug_ctx, const int line, int *dbug_level )
 	    {
 	      fprintf( dbug_ctx->fp, DBUG_LEAVE_FMT, 
 		       dbug_ctx->separator,
-		       dbug_ctx->separator,
 		       (void*)dbug_ctx, 
+		       dbug_ctx->separator,
 		       dbug_ctx->separator,
 		       call->file, 
 		       dbug_ctx->separator,
@@ -2069,8 +2098,8 @@ dbug_leave_ctx( const dbug_ctx_t dbug_ctx, const int line, int *dbug_level )
 
       if ( status != 0 && status != ENOENT )
 	{
-	  fprintf( stderr, "DBUG%cERROR: %s: status: %d; step_no: %d\n", 
-		   SEPARATOR, procname, status, step_no );
+	  fprintf( stderr, "DBUG%c%p%cERROR: %s: status: %d; step_no: %d\n", 
+		   SEPARATOR, (void*)dbug_ctx, SEPARATOR, procname, status, step_no );
 	  fflush( stderr );
 	}
     }
@@ -2134,19 +2163,27 @@ va_dcl
  */
 {
   dbug_errno_t status = 0;
+  va_list args;
+#ifndef NDEBUG
+  const char *procname = "dbug_print";
+#endif
 
-  if ( DEBUGGING )
-    {
-      va_list args;
+#ifndef NDEBUG
+  printf( "> %s( %s, %d, %s, %s )\n", 
+	  procname, PTR_STR(dbug_ctx), line, break_point, format );
+#endif
 
 #if HASSTDARG
-      va_start(args, format);
+  va_start(args, format);
 #else
-      va_start(args);
+  va_start(args);
 #endif
-      status = _dbug_print_ctx( dbug_ctx, line, break_point, format, args );
-      va_end(args);
-    }
+  status = _dbug_print_ctx( dbug_ctx, line, break_point, format, args );
+  va_end(args);
+
+#ifndef NDEBUG
+  printf( "< %s = %d\n", procname, status );
+#endif
 
   return status;
 }
@@ -2164,28 +2201,37 @@ va_dcl
 #endif
 {
   dbug_errno_t status = 0;
-
+  va_list args;
+#ifndef NDEBUG
+  const char *procname = "dbug_print";
+#endif
 #ifdef _POSIX_THREADS
   dbug_ctx_t dbug_ctx; /* local dbug_ctx */
+#endif
 
+#ifndef NDEBUG
+  printf( "> %s( %d, %s, %s )\n", 
+	  procname, line, break_point, format );
+#endif
+
+#ifdef _POSIX_THREADS
   dbug_ctx = pthread_getspecific( key_dbug_ctx );
 #ifndef NDEBUG
   printf( "pthread_getspecific = %p\n", (void*)dbug_ctx );
 #endif
 #endif
 
-  if ( DEBUGGING )
-    {
-      va_list args;
-
 #if HASSTDARG
-      va_start(args, format);
+  va_start(args, format);
 #else
-      va_start(args);
+  va_start(args);
 #endif
-      status = _dbug_print_ctx( dbug_ctx, line, break_point, format, args );
-      va_end(args);
-    }
+  status = _dbug_print_ctx( dbug_ctx, line, break_point, format, args );
+  va_end(args);
+
+#ifndef NDEBUG
+  printf( "< %s = %d\n", procname, status );
+#endif
 
   return status;
 }

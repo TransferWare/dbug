@@ -127,9 +127,7 @@ primitive debugging technique.
 
 	#include <stdio.h>
 
-	main (argc, argv)
-	int argc;
-	char *argv[];
+	int main (int argc, char **argv)
 	{
 	    printf ("argv[0] = %d\n", argv[0]);
 	    /*
@@ -159,9 +157,7 @@ three techniques.
 
 	int debug = 0;
 
-	main (argc, argv)
-	int argc;
-	char *argv[];
+	int main (int argc, char **argv)
 	{
 	    /* printf ("argv = %x\n", argv) */
 	    if (debug) printf ("argv[0] = %d\n", argv[0]);
@@ -196,9 +192,7 @@ example of this usage.
 
 	#include <stdio.h>
 
-	main (argc, argv)
-	int argc;
-	char *argv[];
+	int main (int argc, char **argv)
 	{
 	#   ifdef DEBUG
 	    printf ("argv[0] = %d\n", argv[0]);
@@ -360,7 +354,7 @@ C<DBUG_INIT> macro. This section summarizes the currently available debugger
 options and the flag characters which enable or disable them. Arguments are
 enclosed in '<' and '>'. Arguments which are also enclosed in '[' and ']' are
 optional. The options in the debug control string are separated by the
-comma (,) and may not have spaces.
+comma (,) or semi-colon (;) and may not have spaces.
 
 =over 4
 
@@ -371,7 +365,8 @@ Enable output from DBUG_PRINT macros.
 =item D[<time>]
 
 Delay for specified time after each output line, to let output drain.
-Time is given in milliseconds (value of 1000 is one second). Default is zero.
+Time is given in milliseconds (value of 1000 is one second). Default is
+zero. Either tracing or debugging (options t or d) must be enabled.
 
 =item g
 
@@ -409,48 +404,56 @@ This is the output of the I<DBUG> library.
 
 =item DBUG_INIT, DBUG_INIT_CTX, dbug_init, dbug_init_ctx
 
-A line containing the address of dbug context, major version, minor version,
+A line containing the address of dbug context, I, major version, minor version,
 teeny version, name, context number, process id and the flags will be
 printed. Flags is a bit masked integer where tracing equals 1 (see C<t>),
 debugging equals 2 (see C<d>) and profiling equals 4 (see C<g>).
 
 This is the line printed: 
 
-DBUG#I#<address of dbug context>#<major version>.<minor version>.<teeny version>#<name>#<context number>#<process id>#<flags>
+DBUG#<address of dbug context>#I#<major version>.<minor version>.<teeny version>#<name>#<context number>#<process id>#<flags>
 
 =item DBUG_DONE, DBUG_DONE_CTX, dbug_done, dbug_done_ctx
 
-A line containing the address of the dbug context, the maximum number of
+A line containing the address of the dbug context, D, the maximum number of
 functions on the stack and the stack usage will be printed.
 
 This is the line printed: 
 
-DBUG#D#<dbug context>#<maximum number of functions on the stack>#<stack usage>
+DBUG#<dbug context>#D#<maximum number of functions on the stack>#<stack usage>
 
 =item DBUG_ENTER, DBUG_ENTER_CTX, dbug_enter, dbug_enter_ctx
 
-A line consisting of the address of dbug context, file, function, line, level
+A line consisting of the address of dbug context, E, file, function, line, level
 and time (-1 if profiling is off else in milliseconds) is printed.
 
 This is the line printed: 
 
-DBUG#E#<address of dbug context>#<file>#<function>#<line>#<level>#<time>
+DBUG#<address of dbug context>#E#<file>#<function>#<line>#<level>#<time>
 
 =item DBUG_LEAVE, DBUG_LEAVE_CTX, dbug_leave, dbug_leave_ctx
 
-A line consisting of the address of dbug context, file, function, line, level
+A line consisting of the address of dbug context, L, file, function, line, level
 and time (-1 if profiling is off else in milliseconds) is printed.
 
 This is the line printed: 
 
-DBUG#L#<address of dbug context>#<file>#<function>#<line>#<level>#<time>
+DBUG#<address of dbug context>#L#<file>#<function>#<line>#<level>#<time>
 
 =item DBUG_PRINT, DBUG_PRINT_CTX, dbug_print, dbug_print_ctx
 
-A line consisting of the address of dbug context, file, function, line, level,
+A line consisting of the address of dbug context, P, file, function, line, level,
 break point and user supplied parameters is printed.
 
-DBUG#P#<address of dbug context>#<file>#<function>#<line>#<level>#<break point>#<user supplied parameters>
+DBUG#<address of dbug context>#P#<file>#<function>#<line>#<level>#<break point>#<user supplied parameters>
+
+=item Errors
+
+Errors are printed to stderr in the following format:
+
+DBUG#<address of dbug context>#ERROR: <function name>: <description>
+
+Status values are defined in <errno.h>.
 
 =back
 
@@ -459,7 +462,8 @@ DBUG#P#<address of dbug context>#<file>#<function>#<line>#<level>#<break point>#
 After a program has sent its output to a file (or whatever), the debug
 report tool can be used to create a user friendly output in various
 ways. The options are supplied to C<dbugrpt> in a standard (Unix) way. This
-program uses standard input to create the report.
+program uses standard input to create the report. It is possible to store
+several runs of a program in an output file and input this file to the debug reporting tool.
 
 =head2 Debug report options
 
@@ -524,11 +528,12 @@ function trace mechanism, this program is implemented recursively.
 	#include <stdlib.h>
 	#include "dbug.h"
 
-	main (int argc, char *argv[])
+	extern int factorial (int value);
+
+	int main (int argc, char *argv[])
 	{
 	  int result, ix;
 	  char *options = "";
-	  extern int factorial (int value);
 
 	  for (ix = 1; ix < argc && argv[ix][0] == '-'; ix++) 
 	    {
@@ -540,7 +545,7 @@ function trace mechanism, this program is implemented recursively.
 		}
 	    }
 
-	  DBUG_INIT( options, argv[0] );
+	  DBUG_INIT( options, "factorial" );
 	  {
 	    DBUG_ENTER("main");
 	    for (; ix < argc; ix++) 
@@ -556,7 +561,6 @@ function trace mechanism, this program is implemented recursively.
 
 	  return (0);
 	}
-
 
 	Figure 4
 	Factorial Program Mainline
@@ -602,7 +606,7 @@ with the arguments "1", "2", and "3".
 Note that the DBUG_PRINT takes exactly B<one> arguments enclosed in parentheses.
 
 Debug control strings consist of a header, the "-#", followed by a
-comma separated list of debugger arguments.
+comma (or semi-colon) separated list of debugger arguments.
 
 Each debugger argument is a single character flag followed by an
 optional argument specific to the given flag.
@@ -805,6 +809,64 @@ file name and the 'L' flag enables printing of the source file line number.
 The output in figure 10 shows that the "find" macro is in file
 "factorial.c" at source line 7 and the "result" macro is in the same
 file at source line 11.
+
+=head2 Profiling a program
+
+It is sometimes desirable to profile your program. The option 'g'
+provides support for profiling. The debug reporting tool is able to print a
+profile report for each debugging context encountered as well as a
+total. Besides displaying timing results, also stack usage is printed. The
+stack usage is only determined for functions which have a
+dbug_enter/dbug_leave pair. Figure 11 is the output of the factorial program
+for determining the factorial of 3 when run with the debug control string "-#t,D1000,g".
+
+	>main
+	|   >factorial
+	|   |   >factorial
+	|   |   |   >factorial
+	|   |   |   <factorial
+	|   |   <factorial
+	|   <factorial
+	6
+	<main
+
+	-------------------------------------------------------------------------------
+	Profile of execution for debug context 'factorial'
+	Stack usage: 40 bytes
+	Execution times are in seconds
+
+				 Calls           Time
+				 -----           ----
+	function                 # calls % calls        time % time   time/call  weight
+	======================== ======= ======= =========== ====== =========== =======
+	factorial                      3   75.00       5.000  71.74       1.667    5380
+	main                           1   25.00       1.970  28.26       1.970     706
+				 ======= ======= =========== ======                    
+	Totals                         4  100.00       6.970 100.00
+	-------------------------------------------------------------------------------
+
+
+	-------------------------------------------------------------------------------
+	Profile of execution for debug context 'total'
+	Stack usage: 0 bytes
+	Execution times are in seconds
+
+				 Calls           Time
+				 -----           ----
+	function                 # calls % calls        time % time   time/call  weight
+	======================== ======= ======= =========== ====== =========== =======
+	factorial                      3   75.00       5.000  71.74       1.667    5380
+	main                           1   25.00       1.970  28.26       1.970     706
+				 ======= ======= =========== ======                    
+	Totals                         4  100.00       6.970 100.00
+	-------------------------------------------------------------------------------
+
+	Figure 11
+ 	factorial -#t,D1000,g 3 | perl -S dbugrpt
+
+As you can see, it's quite self-evident. The 'weight' column is a metric
+obtained by multiplying the percentage of the calls and the percentage of the
+time. Functions with higher 'weight' benefit the most from being sped up.
 
 =head1 NOTES
 
