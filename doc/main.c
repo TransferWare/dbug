@@ -2,11 +2,12 @@
 #include <stdlib.h>
 #include "dbug.h"
 
-main (int argc, char *argv[])
+extern int factorial (int value);
+
+int main (int argc, char *argv[])
 {
   int result, ix;
   char *options = "";
-  extern int factorial (int value);
   
   for (ix = 1; ix < argc && argv[ix][0] == '-'; ix++) 
     {
@@ -18,7 +19,7 @@ main (int argc, char *argv[])
 	}
     }
 
-  DBUG_INIT( options, argv[0] );
+  DBUG_INIT( options, "factorial" );
   {
     DBUG_ENTER("main");
     for (; ix < argc; ix++) 
