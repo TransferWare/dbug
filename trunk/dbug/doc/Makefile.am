@@ -83,6 +83,8 @@ test5:  $(DBUGRPT)
 
 test6:  $(DBUGRPT)
 	$(FACTORIAL) -#t,D=1000,g 3 | @PERL@ $(DBUGRPT) > $@.log
-	$(GREP) -f $(doc_srcdir)/$@.ref $@.log >$@.lis
+# .ref file may be a DOS file, hence remove ^M
+	sed "s/^M//g" $(doc_srcdir)/$@.ref > tmp.ref
+	$(GREP) -f tmp.ref $@.log >$@.lis
 	test "`cat $@.lis | wc -l`" -eq "`cat $@.log | wc -l`"
 	@echo : > $@
