@@ -3914,6 +3914,18 @@ dbug_dump( const int line,
 
 #if DEBUG_DBUG != 0 && defined(DBUGTEST)
 
+/* assert(FALSE) must abort */
+
+#ifndef NDEBUG
+#define NDEBUG 0
+#endif
+
+#if NDEBUG != 0
+
+Define NDEBUG should be off!
+
+#endif
+
 /*#include <dejagnu.h>*/
 
 static dbug_ctx_t dbug_ctx1 = NULL, dbug_ctx2 = NULL;
@@ -3981,8 +3993,7 @@ test3( void )
   status3 = dbug_print_ctx( dbug_ctx1, __LINE__, "info", "string: %s", "Hello World" );
   fprintf( stderr, "test3; status3: %d\n", status3 );
 
-  if ( !(status1 == EINVAL && status2 == EINVAL && status3 == EINVAL) )
-    return 1;
+  assert( status1 == EINVAL && status2 == EINVAL && status3 == EINVAL );
 
   status1 = dbug_enter( __FILE__, "test3", __LINE__, NULL );
   fprintf( stderr, "test3; status1: %d\n", status1 );
@@ -3991,7 +4002,9 @@ test3( void )
   status3 = dbug_print( __LINE__, "info", "string: %s", "Hello World" );
   fprintf( stderr, "test3; status3: %d\n", status3 );
 
-  return status1 == EINVAL && status2 == EINVAL && status3 == EINVAL ? 0 : 1;
+  assert( status1 == EINVAL && status2 == EINVAL && status3 == EINVAL );
+
+  return 0;
 }
 
 
@@ -4018,8 +4031,7 @@ test4( void )
   fprintf( stderr, "%s; status1: %d; status2: %d; status3: %d\n",
            procname, status1, status2, status3 );
 
-  if ( ! ( status1 == 0 && status2 == 0 && status3 == 0 ) )
-    return 1;
+  assert( status1 == 0 && status2 == 0 && status3 == 0 );
 
   if ( dbug_enter_ctx( dbug_ctx1, __FILE__, procname, __LINE__, NULL ) != 0 ||
        dbug_enter_ctx( dbug_ctx2, __FILE__, procname, __LINE__, NULL ) != 0 ||
@@ -4060,11 +4072,15 @@ test5( void )
         return status;
     }
 
+  assert( status == 0 );
+
   for ( nr = size; status == 0 && nr > 0; nr-- )
     {
       if ( ( status = dbug_leave_ctx( dbug_ctx1, __LINE__, NULL ) ) != 0 )
         return status;
     }
+
+  assert( status == 0 );
 
   status = dbug_done_ctx( &dbug_ctx1 );
 
@@ -4073,7 +4089,7 @@ test5( void )
 
 
 int
-main( int argc, char **argv )
+test6( int argc, char **argv )
 {
 #if defined(HAVE_U_ALLOC_H) && HAVE_U_ALLOC_H != 0
   unsigned int chk = AllocStartCheckPoint();
@@ -4087,23 +4103,10 @@ main( int argc, char **argv )
   int idx_names = 3;
   int status = 0;
 
-  if ( argc > 1 && strncmp( argv[1], "test", 4 ) == 0 )
+  if ( argc < 3 )
     {
-      if ( strcmp( argv[1], "test1" ) == 0 )
-        status = test1();
-      else if ( strcmp( argv[1], "test2" ) == 0 )
-        status = test2();
-      else if ( strcmp( argv[1], "test3" ) == 0 )
-        status = test3();
-      else if ( strcmp( argv[1], "test4" ) == 0 )
-        status = test4();
-      else if ( strcmp( argv[1], "test5" ) == 0 )
-        status = test5();
-    }
-  else if ( argc < 3 )
-    {
-      (void) fprintf( stderr, "Usage: dbugtest <DBUG_INIT options> <DBUG_PUSH options> <name1> <name2> .. <nameN>\n" );
-      exit (0);
+      (void) fprintf( stderr, "Usage: test6 <DBUG_INIT options> <DBUG_PUSH options> <name1> <name2> .. <nameN>\n" );
+      exit(EXIT_FAILURE);
     }
 
   /* PRINT ALL ERRNO NUMBERS USED IN THIS SOURCE */
@@ -4207,7 +4210,33 @@ main( int argc, char **argv )
 #if defined(HAVE_U_ALLOC_H) && HAVE_U_ALLOC_H != 0
   (void) AllocStopCheckPoint(chk);
 #endif
+
   return status;
+}
+
+
+int
+main( int argc, char **argv )
+{
+  if ( argc == 1 )
+    {
+      assert( test1() == 0 );
+      (void) fprintf( stdout, "test1 passed\n" );
+      assert( test2() == 0 );
+      (void) fprintf( stdout, "test2 passed\n" );
+      assert( test3() == 0 );
+      (void) fprintf( stdout, "test3 passed\n" );
+      assert( test4() == 0 );
+      (void) fprintf( stdout, "test4 passed\n" );
+      assert( test5() == 0 );
+      (void) fprintf( stdout, "test5 passed\n" );
+    }
+  else
+    {
+      assert( test6(argc, argv) == 0 );
+      (void) fprintf( stdout, "test6 passed\n" );
+    }
+  return 0;
 }
 
 #endif
