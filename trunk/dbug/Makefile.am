@@ -16,7 +16,7 @@
 ## Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 AUTOMAKE_OPTIONS 	= 
-SUBDIRS 		= config src doc test
+SUBDIRS 		= src doc test
 MAINTAINERCLEANFILES 	= Makefile.in aclocal.m4 configure config-h.in \
 			stamp-h.in $(AUX_DIST)
 ACLOCAL			= aclocal -I $(ac_aux_dir)
@@ -35,4 +35,4 @@ dist-hook:
 	done
 ## @end 1
 
-EXTRA_DIST              = bootstrap VERSION BUGS
+EXTRA_DIST              = VERSION BUGS
