@@ -70,9 +70,9 @@ On Windows systems using the Visual C++ compiler:
     
     ./configure --prefix=c:/usr/local CC=cl CFLAGS=-GD
 
-On Windows systems building DBUG library using the system DLLs (see BUGS):
+On Windows systems using the system DLLs (see BUGS):
 
-    ./configure --prefix=c:/usr/local --disable-shared CC="gcc -mno-cygwin"
+    ./configure --prefix=c:/usr/local CC="gcc -mno-cygwin"
 
 Compiling For Multiple Architectures
 ====================================
