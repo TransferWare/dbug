@@ -19,4 +19,4 @@ MAINTAINERCLEANFILES = Makefile.in
 
 bin_SCRIPTS          = dbugrpt
 
-EXTRA_DIST           = Imakefile dbugrpt.in
+EXTRA_DIST           = dbugrpt.in

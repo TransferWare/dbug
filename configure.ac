@@ -102,7 +102,7 @@ AC_SUBST(LTLIBOBJS)
 
 AC_SUBST(ac_aux_dir)
 
-AC_CONFIG_FILES([Makefile config/Makefile doc/Makefile src/Makefile src/lib/Makefile src/pdbug/Makefile src/prog/Makefile src/prog/dbugrpt test/Makefile])
+AC_CONFIG_FILES([Makefile doc/Makefile src/Makefile src/lib/Makefile src/pdbug/Makefile src/prog/Makefile src/prog/dbugrpt test/Makefile])
 AC_OUTPUT
 
 echo \
