@@ -354,7 +354,8 @@ C<DBUG_INIT> macro. This section summarizes the currently available debugger
 options and the flag characters which enable or disable them. Arguments are
 enclosed in '<' and '>'. Arguments which are also enclosed in '[' and ']' are
 optional. The options in the debug control string are separated by the
-comma (,) or semi-colon (;) and may not have spaces.
+comma (,) or semi-colon (;) and may not have spaces. The argument of an option 
+follows the option and is separated by an equal sign (=).
 
 =over 4
 
@@ -362,7 +363,7 @@ comma (,) or semi-colon (;) and may not have spaces.
 
 Enable output from DBUG_PRINT macros.
 
-=item D[<time>]
+=item D=<time>
 
 Delay for specified time after each output line, to let output drain.
 Time is given in milliseconds (value of 1000 is one second). Default is
@@ -373,12 +374,12 @@ zero. Either tracing or debugging (options t or d) must be enabled.
 Turn on machine independent profiling. Timing results are collected and sent
 to output.
 
-=item o[<file>]
+=item o[=<file>]
 
 Redirect the debugger output stream to the specified file. A null argument
 causes output to be redirected to stderr.
 
-=item O<file>
+=item O=<file>
 
 Append the debugger output stream to the specified file.
 
@@ -606,15 +607,15 @@ with the arguments "1", "2", and "3".
 Note that the DBUG_PRINT takes exactly B<one> arguments enclosed in parentheses.
 
 Debug control strings consist of a header, the "-#", followed by a
-comma (or semi-colon) separated list of debugger arguments.
+comma (or semi-colon) separated list of debugger options.
 
 Each debugger argument is a single character flag followed by an
-optional argument specific to the given flag.
+optional equal sign and an argument specific to the given flag.
 
 Some examples are:
 
 	-#d,t,o
-	-#d,odbug.log
+	-#d,o=dbug.log
 
 The definition of the factorial function, symbolized as "N!", is given
 by:
@@ -818,7 +819,7 @@ profile report for each debugging context encountered as well as a
 total. Besides displaying timing results, also stack usage is printed. The
 stack usage is only determined for functions which have a
 dbug_enter/dbug_leave pair. Figure 11 is the output of the factorial program
-for determining the factorial of 3 when run with the debug control string "-#t,D1000,g".
+for determining the factorial of 3 when run with the debug control string "-#t,D=1000,g".
 
 	>main
 	|   >factorial
@@ -862,7 +863,7 @@ for determining the factorial of 3 when run with the debug control string "-#t,D
 	-------------------------------------------------------------------------------
 
 	Figure 11
- 	factorial -#t,D1000,g 3 | perl -S dbugrpt
+ 	factorial -#t,D=1000,g 3 | perl -S dbugrpt
 
 As you can see, it's quite self-evident. The 'weight' column is a metric
 obtained by multiplying the percentage of the calls and the percentage of the

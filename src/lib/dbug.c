@@ -232,11 +232,7 @@ typedef struct {
 #define OPTIONS_SEPARATORS ",;"
 #endif
 
-#if BREAK_POINTS_ALLOWED || FUNCTIONS_ALLOWED
-#define MODIFIER_SEPARATOR ':'
-#else
-/* A value for an option must follow the option immediately. No separator allowed. */
-#endif
+#define MODIFIER_SEPARATOR '='
 
 /* print: address of dbug context, I, major version, minor version, teeny version, name, context number, process id, flags */
 #define DBUG_INIT_FMT  "DBUG%c%p%cI%c%d.%d.%d%c%s%c%d%c%ld%c%d\n"
