@@ -28,7 +28,7 @@ RUNTESTDEFAULTFLAGS  = --tool dbug DBUG=$$top_builddir/test/dbugtest --srcdir $$
 
 EXTRA_DIST           = Imakefile
 
-TESTS = test1 test2 test3 test4 test5
+TESTS = test1 test2 test3 test4 test5 test6
 
 ## Each test depends on this Makefile, because the code is here.
 ## Each test must be a program too, because of the test support by automake
@@ -43,6 +43,18 @@ DBUGTEST = ./dbugtest
 STDOUT = /dev/null
 STDERR = /dev/null
 
+## Force each test to run again when make is invoked again.
+
+FORCE = force
+
+$(TESTS): $(FORCE)
+
+$(FORCE): ;
+
 test1 test2 test3 test4 test5:
 	$(DBUGTEST) $@ 1>$(STDOUT) 2>$(STDERR)
+	@echo : > $@
+
+test6:
+	$(DBUGTEST) $@ d,t,g,D=1000 d:t:g:D,1000 b c a d 1>$(STDOUT) 2>$(STDERR)
 	@echo : > $@

@@ -21,7 +21,7 @@
 #AC_DEFUN(AC_RCS_NAME, translit(regexp([$Name$], [dbug_\(.*\) ], [\1]), [_], [.]))
 
 AC_REVISION([$Revision$])
-AC_INIT([dbug],[3.1.0],[g.paulissen@chello.nl])
+AC_INIT([dbug],[3.2.0],[g.paulissen@chello.nl])
 
 # version check
 if test -f "$srcdir/VERSION"

@@ -4218,22 +4218,36 @@ test6( int argc, char **argv )
 int
 main( int argc, char **argv )
 {
-  if ( argc == 1 )
+  if ( argc <= 2 )
     {
-      assert( test1() == 0 );
-      (void) fprintf( stdout, "test1 passed\n" );
-      assert( test2() == 0 );
-      (void) fprintf( stdout, "test2 passed\n" );
-      assert( test3() == 0 );
-      (void) fprintf( stdout, "test3 passed\n" );
-      assert( test4() == 0 );
-      (void) fprintf( stdout, "test4 passed\n" );
-      assert( test5() == 0 );
-      (void) fprintf( stdout, "test5 passed\n" );
+      if ( argc == 1 || strcmp(argv[1], "test1") == 0 ) {
+        assert( test1() == 0 );
+        (void) fprintf( stdout, "test1 passed\n" );
+      }
+
+      if ( argc == 1 || strcmp(argv[1], "test2") == 0 ) {
+        assert( test2() == 0 );
+        (void) fprintf( stdout, "test2 passed\n" );
+      }
+
+      if ( argc == 1 || strcmp(argv[1], "test3") == 0 ) {
+        assert( test3() == 0 );
+        (void) fprintf( stdout, "test3 passed\n" );
+      }
+
+      if ( argc == 1 || strcmp(argv[1], "test4") == 0 ) {
+        assert( test4() == 0 );
+        (void) fprintf( stdout, "test4 passed\n" );
+      }
+
+      if ( argc == 1 || strcmp(argv[1], "test5") == 0 ) {
+        assert( test5() == 0 );
+        (void) fprintf( stdout, "test5 passed\n" );
+      }
     }
-  else
+  else if ( strcmp(argv[1], "test6") == 0 )
     {
-      assert( test6(argc, argv) == 0 );
+      assert( test6(argc-1, argv+1) == 0 );
       (void) fprintf( stdout, "test6 passed\n" );
     }
   return 0;
