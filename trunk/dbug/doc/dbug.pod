@@ -734,6 +734,10 @@ specified break points (separated by comma's). A null list means all break point
 Mark each debugger output line with the name of the source file
 containing the macro causing the output.
 
+=item h
+
+Print help.
+
 =item i
 
 Identify the process emitting each line of debug or trace output with
@@ -768,6 +772,10 @@ null list of functions implies that all functions are selected.
 =item T
 
 Print date/time of each output line.
+
+=item v
+
+Print the debug reporting tool version.
 
 =back
 
