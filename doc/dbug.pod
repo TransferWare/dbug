@@ -602,10 +602,11 @@ with the arguments "1", "2", and "3".
 Note that the DBUG_PRINT takes exactly B<one> arguments enclosed in parentheses.
 
 Debug control strings consist of a header, the "-#", followed by a
-semi-colon separated list of debugger arguments.
+comma separated list of debugger arguments.
 
 Each debugger argument is a single character flag followed by an
-optional comma separated list of arguments specific to the given flag.
+optional argument specific to the given flag.
+
 Some examples are:
 
 	-#d,t,o
