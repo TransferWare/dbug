@@ -253,15 +253,17 @@ DBUG_DUMP( const char *break_point,
 #    define DBUG_DONE() (void)dbug_done()
 #    define DBUG_POP() (void)dbug_done()
 #    define DBUG_ENTER_CTX(dbug_ctx, function) \
-	int dbug_level; \
-	(void)dbug_enter_ctx(dbug_ctx, __FILE__, function, __LINE__, &dbug_level)
+	{ \
+          int dbug_level; \
+	  (void)dbug_enter_ctx(dbug_ctx, __FILE__, function, __LINE__, &dbug_level)
 #    define DBUG_ENTER(function) \
-	int dbug_level; \
-	(void)dbug_enter(__FILE__, function, __LINE__, &dbug_level)
-#    define DBUG_LEAVE_CTX(dbug_ctx) (void)dbug_leave_ctx(dbug_ctx, __LINE__, &dbug_level)
-#    define DBUG_LEAVE() (void)dbug_leave(__LINE__, &dbug_level)
-#    define DBUG_RETURN(a1) { DBUG_LEAVE(); return (a1); }
-#    define DBUG_VOID_RETURN { DBUG_LEAVE(); return; }
+	{ \
+          int dbug_level; \
+	  (void)dbug_enter(__FILE__, function, __LINE__, &dbug_level)
+#    define DBUG_LEAVE_CTX(dbug_ctx) (void)dbug_leave_ctx(dbug_ctx, __LINE__, &dbug_level); }
+#    define DBUG_LEAVE() (void)dbug_leave(__LINE__, &dbug_level); }
+#    define DBUG_RETURN(a1) DBUG_LEAVE(); return (a1)
+#    define DBUG_VOID_RETURN DBUG_LEAVE(); return
 #    define DBUG_PRINT_CTX(dbug_ctx, break_point, arglist) \
        { (void)dbug_print_start_ctx(dbug_ctx, __LINE__, break_point); (void)dbug_print_end arglist ; }
 #    define DBUG_PRINT(break_point, arglist) \

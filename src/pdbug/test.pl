@@ -29,7 +29,7 @@ sub main
       $options = substr($ARGV[$ix], 2);
   }
 
-  pdbug::init( $options, $ARGV[0] );
+  pdbug::init( $options, 'test.pl' );
   pdbug::enter( "test.pl", "main", 1, $dbug_level );
   for (; $ix < $argc; $ix++) 
   {
