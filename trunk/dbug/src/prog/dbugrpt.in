@@ -6,8 +6,12 @@
 #
 # Usage:       dbugrpt [ options ]
 #
-# Notes:       The file dbugrpt is generated from dbugrpt.in by the m4 macro preprocessor.
-#              Please do not modify dbugrpt.
+# Notes:       The file dbugrpt is generated from dbugrpt.in by the m4 macro 
+#              preprocessor. The following macro's are expanded:
+#              - @PERL@
+#              - @DBUGRPT_PREFIX_SEPARATOR@
+#
+#              Please do not modify dbugrpt but dbugrpt.in instead.
 #
 
 use Getopt::Std;
@@ -62,13 +66,15 @@ my ( $TRACE_ON, $DEBUG_ON, $PROFILE_ON ) = ( 1, 2, 4 );
 
 my %dbug_uid_list;
 
-my ($version, $dbug_uid, $date, $name, $dbug_ctx, $pid, $flags, $maxcount, $stack_usage);
+my ($version, $dbug_uid, $date, $name, $dbug_ctx, $pid, $flags, $maxcount, 
+    $stack_usage);
 my ($file, $function, $line, $level, $break_point, $str, $time);
 my $old_dbug_uid = '';
 
 #
 # GJP 6-4-2000
-# Added @str for reading user defined input which also may contain # ($sep) in dbug_print
+# Added @str for reading user defined input which also may contain # ($sep) in 
+# dbug_print
 #
 my (@str);
 my $dbug_uid_tot = dbug_uid->init( "", "total", 0, 0, 0 );
@@ -78,7 +84,8 @@ my $dbug_uid_tot = dbug_uid->init( "", "total", 0, 0, 0 );
 
 # 10-5-2000: 
 # 
-# in user defined string a #D# might also appear, so check that $1 is only three fields
+# in user defined string a #D# might also appear, so check that $1 is only
+# three fields
 #
 my $dbug_init_fmt  = "^DBUG#([^#]*#[^#]*#[^#]*)#I#(.*)";
 my $dbug_done_fmt  = "^DBUG#([^#]*#[^#]*#[^#]*)#D#(.*)";
@@ -106,7 +113,8 @@ while (<STDIN>) {
         if ( $version ge '1.3.0' ) {
 
             if ( !defined( $dbug_uid_list{ $dbug_uid } ) ) {
-                $dbug_uid_list{ $dbug_uid } = dbug_uid->init( $version, $name, $dbug_ctx, $pid, $flags );
+                $dbug_uid_list{ $dbug_uid } = 
+                    dbug_uid->init( $version, $name, $dbug_ctx, $pid, $flags );
             }
         }
 
@@ -133,7 +141,8 @@ while (<STDIN>) {
         ( $file, $function, $line, $level, $time ) = split( /$sep/, $2 );
 
         if ( defined( $dbug_uid_list{ $dbug_uid } ) ) {
-            $dbug_uid_list{ $dbug_uid }->enter( $file, $function, $line, $level, $time, $date );
+            $dbug_uid_list{ $dbug_uid }->enter( $file, $function, $line,
+                                                $level, $time, $date );
         } else {
             carp "Debugging context $dbug_uid not defined.";
         }
@@ -146,7 +155,8 @@ while (<STDIN>) {
         ( $file, $function, $line, $level, $time ) = split( /$sep/, $2 );
 
         if ( defined( $dbug_uid_list{ $dbug_uid } ) ) {
-            $dbug_uid_list{ $dbug_uid }->leave( $file, $function, $line, $level, $time, $date );
+            $dbug_uid_list{ $dbug_uid }->leave( $file, $function, $line, $level, 
+                                                $time, $date );
         } else {
             carp "Debugging context $dbug_uid not defined.";
         }
@@ -163,7 +173,8 @@ while (<STDIN>) {
         $str = join( $sep, @str );
 
         if ( defined( $dbug_uid_list{ $dbug_uid } ) ) {
-            $dbug_uid_list{ $dbug_uid }->print( $file, $function, $line, $level, $break_point, $str, $date );
+            $dbug_uid_list{ $dbug_uid }->print( $file, $function, $line, $level, 
+                                                $break_point, $str, $date );
         } else {
             carp "Debugging context $dbug_uid not defined.";
         }
@@ -243,7 +254,7 @@ sub version {
 package dbug_uid;
 
 use strict;
-use Carp qw(carp croak);
+use Carp qw(carp);
 
 use constant TIME_FMT => '%7.3f';
 use constant PERC_FMT => '%3.2f';
@@ -458,7 +469,8 @@ sub is_break_point {
 #
 #  FUNCTION
 #
-#       is_profile_function    check to see if profiling is currently enabled for a function
+#       is_profile_function    check to see if profiling is currently enabled 
+#                              for a function
 #
 #  SYNOPSIS
 
@@ -484,7 +496,8 @@ sub is_profile_function {
 #
 #  FUNCTION
 #
-#       is_trace_function    check to see if tracing is currently enabled for a function
+#       is_trace_function    check to see if tracing is currently enabled 
+#                            for a function
 #
 #  SYNOPSIS
 #
@@ -511,10 +524,6 @@ sub call_push {
     my ($obj, $function, $level, $enter_time) = @_;
 
     my $r_dbug_stack = dbug_stack->new($function, $level, $enter_time);
-
-#   print STDOUT
-#       "\ndbug_uid::call_push; self: $obj; function: $function; level: $level; time: ",
-#       $enter_time, "\n";
 
     $obj->stack_push($r_dbug_stack);
 }
@@ -551,10 +560,6 @@ sub call_pop {
     if ( $dbug_stack->level() == $level ) {
         $enter_time = $dbug_stack->enter_time();
 
-#       print STDOUT
-#           "\ndbug_uid::call_pop; self: $obj; function: $function; level: $level; time: ",
-#           $leave_time - $enter_time, "\n";
-
         # set the time to time when leaving minus time when entering minus time of children
         $time = $leave_time - $enter_time - $dbug_stack->time_children;
 
@@ -578,7 +583,8 @@ sub call_pop {
         }
 
     } else {
-        carp(sprintf( "Level (%d) does not match level of stack top (%d)\n", $level, $dbug_stack->level() ));
+        carp(sprintf( "Level (%d) does not match level of stack top (%d)\n", 
+                      $level, $dbug_stack->level() ));
     }
 
     return ( defined($enter_time) ? ( $leave_time - $enter_time, $time ) : ( undef, undef ) );
@@ -594,7 +600,8 @@ sub call_top {
 
 $main::report_no = 0; # force a different report top and body by incorporating the number
 
-my ($g_function, $g_calls, $g_tot_calls, $g_time, $g_avg_time_per_call, $g_min_time_per_call, $g_max_time_per_call);
+my ($g_function, $g_calls, $g_tot_calls, $g_time, $g_avg_time_per_call, 
+    $g_min_time_per_call, $g_max_time_per_call);
 my ($g_tot_time, $g_perc_calls, $g_perc_time, $g_weight);
 
 sub done {
@@ -657,16 +664,26 @@ $total_line1 . "\n" .
                 $g_perc_time = 0;
             }
                 
-            if ($g_tot_calls > 0) {
-                $g_perc_calls = sprintf( PERC_FMT, ($g_calls * 100) / $g_tot_calls );
+            # issue 1061551 Timing incorrect error
+            # Since not all calls may be measured or the time measurement overhead is not
+            # insignificant the missing time is assigned to function UNKNOWN.
+            # The numbe of calls is undefined then.
+
+            if ( !defined($g_calls) ) {
+                $g_calls = '';
+                $g_perc_calls = '';
+                $g_weight = '';
+                $g_avg_time_per_call = '';
+                $g_min_time_per_call = '';
+                $g_max_time_per_call = '';
             } else {
-                $g_perc_calls = 0;
+                $g_perc_calls = ($g_tot_calls != 0 ? sprintf( PERC_FMT, ($g_calls * 100) / $g_tot_calls ): 0);
+                $g_weight = int($g_perc_time * $g_perc_calls);
+                $g_avg_time_per_call = sprintf( TIME_FMT, $g_time / $g_calls );
+                $g_min_time_per_call = ( defined($min_time) ? sprintf( TIME_FMT, $min_time / 1000 ) : 0 );
+                $g_max_time_per_call = ( defined($max_time) ? sprintf( TIME_FMT, $max_time / 1000 ) : 0 );
             }
-            $g_weight = int($g_perc_time * $g_perc_calls);
             $g_time = sprintf( TIME_FMT, $g_time / 1000 );
-            $g_avg_time_per_call = sprintf( TIME_FMT, $g_time / $g_calls );
-            $g_min_time_per_call = sprintf( TIME_FMT, $min_time / 1000 );
-            $g_max_time_per_call = sprintf( TIME_FMT, $max_time / 1000 );
     
             write;
         }
@@ -698,7 +715,7 @@ sub totals {
     my ($max_length, $tot_calls, $tot_time) = (24, 0, 0);
 
     foreach $function (keys %{$obj->{CALLS}}) {
-        $tot_calls += $obj->{CALLS}{ $function };
+        $tot_calls += $obj->{CALLS}{ $function } if defined($obj->{CALLS}{ $function });
         $tot_time += $obj->{TIME}{ $function };
 
 #           print STDOUT "\nTime for $function: ", $obj->{TIME}{ $function }, "\n";
@@ -710,15 +727,26 @@ sub totals {
 
     if ( defined($obj->start_time()) && defined($obj->end_time()) &&
          # GJP 23-02-2004 Round the floating point numbers
-         sprintf("%f", $tot_time) ne
-         sprintf("%f", $obj->end_time() - $obj->start_time()) ) {
-        carp
-            sprintf( "Timing incorrect: time in functions: %s; dbug session time: %s\n"
-                     , sprintf("%f", $tot_time / 1000)
-                     , sprintf("%f", ($obj->end_time() - $obj->start_time()))/1000 );
+         # GJP 14-04-2004 Not any more
+         $tot_time != $obj->end_time() - $obj->start_time() ) {
+        # issue 1061551 Timing incorrect error
+        # Since not all calls may be measured or the time measurement overhead is not
+        # insignificant the missing time is assigned to function UNKNOWN.
+
+        my ($file, $function, $level, $date) = (undef, '*** UNKNOWN ***', 1, undef);
+
+        $obj->{CALLS}{ $function } = undef;
+        $obj->{TIME}{ $function } = ($obj->end_time() - $obj->start_time() - $tot_time);
+
+        $dbug_uid_tot->{CALLS}{ $function } = undef
+            unless defined($dbug_uid_tot->{CALLS}{ $function });
+        $dbug_uid_tot->{TIME}{ $function } = ($obj->end_time() - $obj->start_time() - $tot_time)
+            unless defined($dbug_uid_tot->{TIME}{ $function });
+
+        $tot_time += ($obj->end_time() - $obj->start_time() - $tot_time);
     }
 
-    ($max_length, $tot_calls, $tot_time);
+    return ($max_length, $tot_calls, $tot_time);
 }
 
 sub prefix {
@@ -839,15 +867,11 @@ sub level {
 sub enter_time {
     my $obj = shift;
 
-#   printf STDOUT "\ndbug_stack::enter_time; self: %s; function: %s; level: %d; args: %s\n", $obj, $obj->function, $obj->level, "@_";
-
     @_ ? $obj->{ENTER_TIME} = shift : $obj->{ENTER_TIME};
 }
 
 sub time_children {
     my $obj = shift;
-
-#   printf STDOUT "\ndbug_stack::time_children; self: %s; function: %s; level: %d; args: %s\n", $obj, $obj->function, $obj->level, "@_";
 
     if (@_) {
         eval '$obj->{TIME_CHILDREN}' . "@_";

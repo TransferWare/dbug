@@ -6,6 +6,11 @@ See the end for copying conditions.
 Please send DBUG bug reports to g.paulissen@chello.nl.
 
 
+Release 4.1.0
+
+* [ 1061551 ] Timing incorrect error
+
+
 Release 4.0.0
 
 * imake support obsoleted.
