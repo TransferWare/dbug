@@ -62,12 +62,18 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "config.h"
 #include "dbug.h" /* self-test */
 
-#if !(HASVARARGS)
-#include "vargs.h"		/* Use our "fake" varargs */
+
+#if HASSTDARG
+#include <stdarg.h>
 #else
-#include <varargs.h>		/* Use system supplied varargs package */
+# if HASVARARGS
+# include <varargs.h>		/* Use system supplied varargs package */
+# else
+# include "vargs.h"		/* Use our "fake" varargs */
+# endif
 #endif
 
 #ifndef HZ
@@ -151,15 +157,15 @@ typedef int BOOLEAN;
 #endif
 
 /*
- *	Variables which are available externally but should only
+ *	Variables which are not available externally. They should only
  *	be accessed via the macro package facilities.
  */
 
-EXPORT FILE *_db_fp_ = stderr;		/* Output stream, default stderr */
-EXPORT FILE *_db_pfp_ = (FILE *)0;	/* Profile stream, 'dbugmon.out' */
-EXPORT char *_db_process_ = "dbug";	/* Pointer to process name; argv[0] */
-EXPORT BOOLEAN _db_on_ = FALSE;		/* TRUE if debugging currently on */
-EXPORT BOOLEAN _db_pon_ = FALSE;	/* TRUE if debugging currently on */
+LOCAL FILE *_db_fp_ = stderr;		/* Output stream, default stderr */
+LOCAL FILE *_db_pfp_ = (FILE *)0;	/* Profile stream, 'dbugmon.out' */
+LOCAL char *_db_process_ = "dbug";	/* Pointer to process name; argv[0] */
+LOCAL BOOLEAN _db_on_ = FALSE;		/* TRUE if debugging currently on */
+LOCAL BOOLEAN _db_pon_ = FALSE;		/* TRUE if profiling currently on */
 
 /*
  *	Externally supplied functions.
@@ -170,9 +176,44 @@ EXPORT BOOLEAN _db_pon_ = FALSE;	/* TRUE if debugging currently on */
 LOCAL VOID perror (char *s);	/* Fake system/library error print routine */
 #endif
 
-#if HASCHOWN || HASGETGID || HASGETPID || HASGETUID || HASACCESS || HASSLEEP
-#include <unistd.h>
-#endif
+#ifdef _WIN32
+/* different includes for getpid, access, and sleep */
+# if HASGETPID
+#  include <process.h>
+#  ifndef getpid
+#   define getpid _getpid
+#  endif
+# endif
+# if HASACCESS
+#  include <io.h>
+#  ifndef access
+#   define access _access
+#  endif
+#  /* _access of Visual C++ has the following modes: 
+#     * 0 for existence
+#     * 2 for write permission
+#     * 4 for read permission
+#     * 6 for bot read and write permission
+#  */
+#  define F_OK	0	/* Test for file existance */
+#  define X_OK	4	/* Test for execute permission */
+#  define W_OK	2	/* Test for write access */
+#  define R_OK	4	/* Test for read access */
+# endif
+# if HASSLEEP
+#  include <stdlib.h>
+#  ifndef sleep
+#   define sleep _sleep
+#  endif
+# endif
+
+#else /* #ifdef _WIN32 */
+/* ! _WIN32 */
+# if HASCHOWN || HASGETGID || HASGETPID || HASGETUID || HASACCESS || HASSLEEP
+# include <unistd.h>
+# endif
+
+#endif /* #ifdef _WIN32 */
 
 #if HASFTIME
 #include <sys/timeb.h>
@@ -235,23 +276,23 @@ LOCAL char *jmpfunc;		/* Remember current function for setjmp */
 LOCAL char *jmpfile;		/* Remember current file for setjmp */
 #endif
 
-LOCAL struct link *ListParse ();/* Parse a debug command string */
-LOCAL char *StrDup ();		/* Make a fresh copy of a string */
-LOCAL VOID OpenFile ();		/* Open debug output stream */
-LOCAL VOID OpenProfile ();	/* Open profile output stream */
-LOCAL VOID CloseFile ();	/* Close debug output stream */
-LOCAL VOID PushState ();	/* Push current debug state */
-LOCAL VOID ChangeOwner ();	/* Change file owner and group */
-LOCAL BOOLEAN DoTrace ();	/* Test for tracing enabled */
+LOCAL struct link *ListParse (char *);/* Parse a debug command string */
+LOCAL char *StrDup (char *);		/* Make a fresh copy of a string */
+LOCAL VOID OpenFile (char *);		/* Open debug output stream */
+LOCAL VOID OpenProfile (char *);	/* Open profile output stream */
+LOCAL VOID CloseFile (FILE *);	/* Close debug output stream */
+LOCAL VOID PushState (void);	/* Push current debug state */
+LOCAL VOID ChangeOwner (char *);	/* Change file owner and group */
+LOCAL BOOLEAN DoTrace (void);	/* Test for tracing enabled */
 LOCAL BOOLEAN DoProfile ( void );
 LOCAL int DelayArg (int value);
-LOCAL BOOLEAN Writable ();	/* Test to see if file is writable */
-LOCAL unsigned long Clock ();	/* Return current user time (ms) */
-LOCAL long *DbugMalloc ();	/* Allocate memory for runtime support */
-LOCAL char *BaseName ();	/* Remove leading pathname components */
-LOCAL VOID DoPrefix ();		/* Print debugger line prefix */
-LOCAL VOID FreeList ();		/* Free memory from linked list */
-LOCAL VOID Indent ();		/* Indent line to specified indent */
+LOCAL BOOLEAN Writable (char *);	/* Test to see if file is writable */
+LOCAL unsigned long Clock (void);	/* Return current user time (ms) */
+LOCAL long *DbugMalloc (int);	/* Allocate memory for runtime support */
+LOCAL char *BaseName (char *);	/* Remove leading pathname components */
+LOCAL VOID DoPrefix (int);		/* Print debugger line prefix */
+LOCAL VOID FreeList (struct link *);		/* Free memory from linked list */
+LOCAL VOID Indent (int);		/* Indent line to specified indent */
 
 				/* Supplied in Sys V runtime environ */
 
@@ -308,6 +349,61 @@ LOCAL int Delay ( int seconds );		/* Pause for given number of ticks */
 # endif
 #endif
 
+
+
+/*
+ *  FUNCTION
+ *
+ *	_db_get_on_    return whether debugging is on
+ *
+ *  DESCRIPTION
+ *
+ *	This function is created to make DBUG portable to Windows.
+ *	The dymamic library didn't seem to like exported variables,
+ *	hence I created this functions.
+ */
+
+int _db_get_on_ (void)
+{
+	return _db_on_;
+};
+
+
+
+/*
+ *  FUNCTION
+ *
+ *	_db_get_fp_    returns file pointer where output is being written to.
+ *
+ *  DESCRIPTION
+ *
+ *	This function is created to make DBUG portable to Windows.
+ *	The dymamic library didn't seem to like exported variables,
+ *	hence I created this functions.
+ */
+
+FILE *_db_get_fp_( void )
+{
+	return _db_fp_;
+};
+
+
+/*
+ *  FUNCTION
+ *
+ *	_db_set_process_    sets the process name
+ *
+ *  DESCRIPTION
+ *
+ *	This function is created to make DBUG portable to Windows.
+ *	The dymamic library didn't seem to like exported variables,
+ *	hence I created this functions.
+ */
+
+VOID _db_set_process_( char * process )
+{
+	_db_process_ = process;
+}
 
 
 /*
@@ -748,6 +844,13 @@ char *keyword
  */
 
 /*VARARGS1*/
+#if HASSTDARG
+VOID _db_doprnt_ (char *format, ...)
+{
+    va_list args;
+
+    va_start (args, format);
+#else
 VOID _db_doprnt_ (format, va_alist)
 char *format;
 va_dcl
@@ -755,6 +858,7 @@ va_dcl
     va_list args;
 
     va_start (args);
+#endif
     if (_db_keyword_ (u_keyword)) {
 	DoPrefix (u_line);
 	if (TRACING) {
@@ -796,8 +900,7 @@ va_dcl
  *
  */
 
-LOCAL struct link *ListParse (ctlp)
-char *ctlp;
+LOCAL struct link *ListParse (char *ctlp)
 {
     REGISTER char *start;
     REGISTER struct link *new;
@@ -845,9 +948,7 @@ char *ctlp;
  *
  */
 
-LOCAL BOOLEAN InList (linkp, cp)
-struct link *linkp;
-char *cp;
+LOCAL BOOLEAN InList (struct link *linkp, char *cp)
 {
     REGISTER struct link *scan;
     REGISTER BOOLEAN accept;
@@ -889,7 +990,7 @@ char *cp;
  *
  */
 
-LOCAL VOID PushState ()
+LOCAL VOID PushState (void)
 {
     REGISTER struct state *new;
 
@@ -932,7 +1033,7 @@ LOCAL VOID PushState ()
  *
  */
 
-LOCAL BOOLEAN DoTrace ()
+LOCAL BOOLEAN DoTrace (void)
 {
     REGISTER BOOLEAN trace;
 
@@ -1012,8 +1113,7 @@ LOCAL BOOLEAN DoProfile ( void )
  *
  */
 
-BOOLEAN _db_keyword_ (keyword)
-char *keyword;
+BOOLEAN _db_keyword_ (char *keyword)
 {
     REGISTER BOOLEAN accept;
 
@@ -1057,8 +1157,7 @@ char *keyword;
  *
  */
 
-LOCAL VOID Indent (indent)
-int indent;
+LOCAL VOID Indent (int indent)
 {
     REGISTER int count;
     AUTO char buffer[PRINTBUF];
@@ -1094,8 +1193,7 @@ int indent;
  *
  */
 
-LOCAL VOID FreeList (linkp)
-struct link *linkp;
+LOCAL VOID FreeList (struct link *linkp)
 {
     REGISTER struct link *old;
 
@@ -1130,8 +1228,7 @@ struct link *linkp;
  */
 
 
-LOCAL char *StrDup (string)
-char *string;
+LOCAL char *StrDup (char *string)
 {
     REGISTER char *new;
 
@@ -1161,8 +1258,7 @@ char *string;
  */
   
  
-LOCAL VOID DoPrefix (_line_)
-int _line_;
+LOCAL VOID DoPrefix (int _line_)
 {
     lineno++;
 #if HASGETPID
@@ -1206,8 +1302,7 @@ int _line_;
  *
  */
 
-LOCAL VOID OpenFile (name)
-char *name;
+LOCAL VOID OpenFile (char *name)
 {
     REGISTER FILE *fp;
     REGISTER BOOLEAN newfile;
@@ -1273,8 +1368,7 @@ char *name;
  *	investigated at this time [fnf; 24-Jul-87].
  */
 
-LOCAL VOID OpenProfile (name)
-char *name;
+LOCAL VOID OpenProfile (char *name)
 {
     REGISTER FILE *fp;
     REGISTER BOOLEAN newfile;
@@ -1326,8 +1420,7 @@ char *name;
  *
  */
 
-LOCAL VOID CloseFile (fp)
-FILE *fp;
+LOCAL VOID CloseFile (FILE *fp)
 {
     if (fp != stderr && fp != stdout) {
 	if (fclose (fp) == EOF) {
@@ -1359,8 +1452,7 @@ FILE *fp;
  *
  */
  
-LOCAL VOID DbugExit (why)
-char *why;
+LOCAL VOID DbugExit (char *why)
 {
     (VOID) fprintf (stderr, ERR_ABORT, _db_process_, why);
     (VOID) fflush (stderr);
@@ -1390,8 +1482,7 @@ char *why;
  *
  */
  
-LOCAL long *DbugMalloc (size)
-int size;
+LOCAL long *DbugMalloc (int size)
 {
     register long *new;
 
@@ -1421,8 +1512,7 @@ int size;
  *
  */
 
-LOCAL char *BaseName (pathname)
-char *pathname;
+LOCAL char *BaseName (char *pathname)
 {
     register char *base;
 
@@ -1457,15 +1547,14 @@ char *pathname;
  *
  */
 
-LOCAL BOOLEAN Writable (pathname)
-char *pathname;
+LOCAL BOOLEAN Writable (char *pathname)
 {
     REGISTER BOOLEAN granted;
-#if DIRSEP == '/'
+#if ( DIRSEP == '/' || TRUE )
     REGISTER char *lastslash;
 #endif
 
-#if DIRSEP != '/'
+#if ! ( DIRSEP == '/' || TRUE )
     granted = TRUE;
 #else
     granted = FALSE;
@@ -1474,7 +1563,7 @@ char *pathname;
 	    granted = TRUE;
 	}
     } else {
-	lastslash = strrchr (pathname, '/');
+	lastslash = strrchr (pathname, DIRSEP);
 	if (lastslash != NULL) {
 	    *lastslash = EOS;
 	} else {
@@ -1515,8 +1604,7 @@ char *pathname;
  *
  */
 
-LOCAL VOID ChangeOwner (pathname)
-char *pathname;
+LOCAL VOID ChangeOwner (char *pathname)
 {
 #if HASCHOWN
     if (chown (pathname, getuid (), getgid ()) == -1) {
@@ -1525,6 +1613,9 @@ char *pathname;
 	(VOID) fflush (stderr);
 	(VOID) Delay (stack -> delay);
     }
+#else
+    /* suppress warning about unreference formal parameter */
+    if (pathname) ;
 #endif
 }
 
@@ -1627,8 +1718,9 @@ LOCAL int DelayArg (int value)
  */
 
 #if ! HASSLEEP && ! HASDELAY
-Delay ( int seconds )
+int Delay ( int seconds )
 {
+  return 0;
 }
 #endif
 
@@ -1679,7 +1771,7 @@ LOCAL VOID perror (char *s)
 
 #include <sys/timeb.h>
 
-LOCAL unsigned long Clock ()
+LOCAL unsigned long Clock (void)
 {
   static struct timeb start;
   static int init = 0;
@@ -1721,7 +1813,7 @@ LOCAL unsigned long Clock ()
  * far.
  */
 
-LOCAL unsigned long Clock ()
+LOCAL unsigned long Clock (void)
 {
     struct rusage ru;
 
@@ -1742,11 +1834,11 @@ static int first_clock = TRUE;
 static struct DateStamp begin;
 static struct DateStamp elapsed;
 
-LOCAL unsigned long Clock ()
+LOCAL unsigned long Clock (void)
 {
     register struct DateStamp *now;
     register unsigned long millisec = 0;
-    extern VOID *AllocMem ();
+    IMPORT VOID *AllocMem (long);
 
     now = (struct DateStamp *) AllocMem ((long) sizeof (struct DateStamp), 0L);
     if (now != NULL) {
@@ -1764,6 +1856,11 @@ LOCAL unsigned long Clock ()
     return (millisec);
 }
 
+#  else
+LOCAL unsigned long Clock (void)
+{
+  return 0;
+}
 #  endif /* HASDATESTAMP */
 # endif	/* HASGETRUSAGE */
 #endif /* HASFTIME */
