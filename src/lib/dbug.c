@@ -79,7 +79,7 @@ static char vcid[] = "$Header$";
 #endif
 
 #ifndef HAVE_PTHREAD_H
-#define HAVE_PTHREAD_H
+#define HAVE_PTHREAD_H 0
 #endif
 
 #if HAVE_PTHREAD_H
