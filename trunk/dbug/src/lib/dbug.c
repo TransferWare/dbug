@@ -1097,7 +1097,7 @@ dbug_options_ctx( const dbug_ctx_t dbug_ctx, const char *options )
 	  break;
 
 	case 'o': /* open for writing */
-	  strcpy( open_mode, "w" );
+	  (void) strcpy( open_mode, "w" );
 	  /*@fallthrough@*/
 
 	case 'O': /* open for appending */
@@ -1112,7 +1112,23 @@ dbug_options_ctx( const dbug_ctx_t dbug_ctx, const char *options )
 #endif
 
 	  if ( *scan != '\0' )
-	    status = dbug_file_open( scan, open_mode, &dbug_ctx->file );
+	    {
+              /* replace %p by PID */
+              char *pid = strchr( scan, '%' );
+              char file[FILENAME_MAX];
+
+              if ( pid != NULL && pid[1] == 'p' )
+                {
+                  *pid = '\0'; /* terminate scan to part before % */
+                  (void) sprintf( file, "%s%d%s", 
+                                  scan, 
+                                  (int)getpid(), pid+2 );
+                  *pid = '%'; /* restore scan */
+                }
+              else
+                (void) strcpy( file, scan );
+              status = dbug_file_open( file, open_mode, &dbug_ctx->file );
+            }
 	  else
 	    status = dbug_file_open( STDERR_FILE_NAME, open_mode, &dbug_ctx->file );
 	  break;
