@@ -1831,7 +1831,8 @@ dbug_file_open( const char *name, const char *mode, file_t **result )
 	break;
 
       case ESRCH: /* could not find it */
-
+        status = 0; /* GJP 26-10-2000
+                       Otherwise ESRCH is returned */
 	/* 
 	 * *result is the last file_t
 	 */
@@ -1988,7 +1989,7 @@ dbug_file_fnd( const char *name, file_t **result )
 
       *result = curr;
       if ( strcmp( curr->fname.name, name ) == 0 )
-	  status = 0;
+	status = 0;
 
       curr = curr->next;
 
@@ -2281,7 +2282,7 @@ dbug_ctx_t
 dbug_ctx_get( void )
 {
 #if HASPTHREAD
-  return (dbug_ctx_t) pthread_getspecific( dbug_ctx_key.key );
+  return (dbug_ctx_t) ( dbug_ctx_key.ref_count > 0 ? pthread_getspecific( dbug_ctx_key.key ) : NULL );
 #else
   return g_dbug_ctx;
 #endif
@@ -2292,7 +2293,7 @@ dbug_errno_t
 dbug_ctx_set( const dbug_ctx_t dbug_ctx )
 {
 #if HASPTHREAD
-  return pthread_setspecific( dbug_ctx_key.key, dbug_ctx );
+  return ( dbug_ctx_key.ref_count > 0 ? pthread_setspecific( dbug_ctx_key.key, dbug_ctx ) : EACCES );
 #else
   g_dbug_ctx = dbug_ctx;
   return 0;
@@ -2304,7 +2305,7 @@ dbug_print_info_t*
 dbug_print_info_get( void )
 {
 #if HASPTHREAD
-  return (dbug_print_info_t*) pthread_getspecific( dbug_print_info_key.key );
+  return (dbug_print_info_t*) ( dbug_print_info_key.ref_count > 0 ? pthread_getspecific( dbug_print_info_key.key ) : NULL );
 #else
   return &g_dbug_print_info;
 #endif
@@ -2315,7 +2316,7 @@ dbug_errno_t
 dbug_print_info_set( const dbug_print_info_t *dbug_print_info )
 {
 #if HASPTHREAD
-  return pthread_setspecific( dbug_print_info_key.key, dbug_print_info );
+  return ( dbug_print_info_key.ref_count > 0 ? pthread_setspecific( dbug_print_info_key.key, dbug_print_info ) : EACCES );
 #else
   if ( dbug_print_info )
     g_dbug_print_info = *dbug_print_info;
