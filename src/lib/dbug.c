@@ -412,7 +412,7 @@ typedef struct {
 /* GMT in YYYYMMDDhhmmss format */
 #define DATE_FMT "%04d%02d%02d%02d%02d%02d"
 #define SEQ_FMT "%05hu"
-#define TIME_FMT "%ld"
+#define TIME_FMT "%015.3f"
 #define FILE_FMT "%s"
 #define FUNCTION_FMT "%s"
 #define LINE_FMT "%ld"
@@ -3302,7 +3302,7 @@ dbug_enter_ctx( const dbug_ctx_t dbug_ctx, const char *file, const char *functio
 #define DBUG_ENTER_CTX_STEPS (PRINT_STEP+1)
   } step_no;
   BOOLEAN print = FALSE;
-  long time = 0L;
+  double time = 0;
   const char *procname = "dbug_enter_ctx";
 
   _DBUG_ENTER( procname );
@@ -3381,7 +3381,7 @@ dbug_enter_ctx( const dbug_ctx_t dbug_ctx, const char *file, const char *functio
               else if ( dbug_level != NULL && dbug_ctx->stack.sp_min > dbug_level )
                 dbug_ctx->stack.sp_min = dbug_level;
               
-              time = (long) Clock();
+              time = Clock();
               print = (BOOLEAN) TRUE;
             }
 
@@ -3413,7 +3413,7 @@ dbug_enter_ctx( const dbug_ctx_t dbug_ctx, const char *file, const char *functio
                               dbug_ctx->separator,
                               (long)dbug_ctx->stack.count,
                               dbug_ctx->separator,
-                              (long)time );
+                              time );
               FFLUSH( dbug_ctx->file->fptr );
               DBUGUNLOCKFILE( dbug_ctx->file );
             }
@@ -3498,7 +3498,7 @@ dbug_leave_ctx( const dbug_ctx_t dbug_ctx, const int line, int *dbug_level )
 #define DBUG_LEAVE_CTX_STEPS (POP_STEP+1)
   } step_no;
   BOOLEAN print = FALSE;
-  long time = 0L;
+  double time = 0;
   const char *procname = "dbug_leave_ctx";
 
   _DBUG_ENTER( procname );
@@ -3547,13 +3547,13 @@ dbug_leave_ctx( const dbug_ctx_t dbug_ctx, const int line, int *dbug_level )
             {
               SLEEPMSEC(dbug_ctx->delay);
               time = -1;
-              print = (BOOLEAN)TRUE;
+              print = (BOOLEAN) TRUE;
             }
 
           if ( dbug_profile(dbug_ctx, call->function) != 0 ) 
             {
-              time = (long)Clock();
-              print = (BOOLEAN)TRUE;
+              time = Clock();
+              print = (BOOLEAN) TRUE;
             }
 
           if ( print != 0 )
@@ -3584,7 +3584,7 @@ dbug_leave_ctx( const dbug_ctx_t dbug_ctx, const int line, int *dbug_level )
                               dbug_ctx->separator,
                               (long)dbug_ctx->stack.count,
                               dbug_ctx->separator,
-                              (long)time );
+                              time );
               FFLUSH(dbug_ctx->file->fptr);
               DBUGUNLOCKFILE( dbug_ctx->file );
             }

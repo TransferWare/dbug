@@ -547,7 +547,7 @@ $total_line1 . "\n" .
                 $g_perc_calls = 0;
             }
             $g_weight = int($g_perc_time * $g_perc_calls);
-            $g_time = sprintf( "%7.3f", $g_time/1000 ); # in seconds
+            $g_time = sprintf( "%7.3f", $g_time / ( $version ge '3.0.0' ? 1 : 1000 ) );
             $g_time_per_call = sprintf( "%7.3f", $g_time / $g_calls );
     
             write;
@@ -560,7 +560,9 @@ $total_line1 . "\n" .
         print $total_line2, "\n";
 
         ( $g_function, $g_calls, $g_perc_calls, $g_time, $g_perc_time, $g_time_per_call, $g_weight ) = 
-            ( "Totals", $g_tot_calls, "100.00", sprintf( "%7.3f", $g_tot_time/1000 ), "100.00", "", "" );
+            ( "Totals", $g_tot_calls, "100.00",
+              sprintf( "%7.3f", $g_tot_time / ( $version ge '3.0.0' ? 1 : 1000 ) ),
+              "100.00", "", "" );
 
         write;
 
