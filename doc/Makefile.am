@@ -17,14 +17,12 @@
 
 MAINTAINERCLEANFILES = Makefile.in
 
-AUTOMAKE_OPTIONS     = ../src/lib/ansi2knr
-
-INCLUDES	     = -I$(top_builddir) -I$(top_srcdir)
+AUTOMAKE_OPTIONS     = $(top_srcdir)/src/lib/ansi2knr
 
 noinst_PROGRAMS      = factorial
 factorial_SOURCES    = main.c factorial.c
-LDADD                = ../src/lib/libdbug.la
-AM_CPPFLAGS          = -I../src/lib
+LDADD                = $(top_builddir)/src/lib/libdbug.la
+AM_CPPFLAGS          = -I$(top_srcdir)/src/lib
 
 EXTRA_DIST           = Imakefile test1.ref test2.ref test3.ref test4.ref test5.ref test6.ref dbug.pod dbug.html
 
@@ -37,41 +35,48 @@ all: dbug.html
 
 ## TEST section
 
+FACTORIAL = .libs/factorial
+
+# Ignore whitespace
+DIFF = diff -w
+
+doc_srcdir = $(top_srcdir)/doc
+
 test: test1 test2 test3 test4 test5 test6
 
 test1:
 	$(FACTORIAL) 1 2 3 4 5 > $@.log
 
 diff1:	test1
-	$(DIFF) test1.log test1.ref
+	$(DIFF) test1.log $(doc_srcdir)/test1.ref
 
 test2:
 	$(FACTORIAL) -#t 3 2 | perl -S dbugrpt > $@.log
 
 diff2:	test2
-	$(DIFF) test2.log test2.ref
+	$(DIFF) test2.log $(doc_srcdir)/test2.ref
 
 test3:
 	$(FACTORIAL) -#d,t 3 | perl -S dbugrpt > $@.log
 
 diff3:	test3
-	$(DIFF) test3.log test3.ref
+	$(DIFF) test3.log $(doc_srcdir)/test3.ref
 
 test4:
 	$(FACTORIAL) -#d 4 | perl -S dbugrpt -d result > $@.log
 
 diff4:	test4
-	$(DIFF) test4.log test4.ref
+	$(DIFF) test4.log $(doc_srcdir)/test4.ref
 
 test5:
 	$(FACTORIAL) -#d 3 | perl -S dbugrpt -t factorial -FL > $@.log
 
 diff5:	test5
-	$(DIFF) test5.log test5.ref
+	$(DIFF) test5.log $(doc_srcdir)/test5.ref
 
 test6:
 	$(FACTORIAL) -#t,D=1000,g 3 | perl -S dbugrpt > $@.log
 
 diff6:	test6
-	$(DIFF) test6.log test6.ref
+	$(DIFF) test6.log $(doc_srcdir)/test6.ref
 

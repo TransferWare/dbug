@@ -21,14 +21,20 @@
 #AC_DEFUN(AC_RCS_NAME, translit(regexp([$Name$], [dbug_\(.*\) ], [\1]), [_], [.]))
 
 AC_REVISION([$Revision$])
-AC_INIT([dbug],[3.0.0],[g.paulissen@chello.nl])
+AC_INIT([dbug],[3.1.0],[g.paulissen@chello.nl])
 
 # version check
-read version < VERSION
+if test -f "$srcdir/VERSION"
+then
+  read version < $srcdir/VERSION
+else
+  version=
+fi
+
 if test "$version" != "$PACKAGE_VERSION"
 then
-  echo "PACKAGE_VERSION $PACKAGE_VERSION and version $version from file VERSION mismatch." 1>&2
-  exit 1
+  echo "Updating file $srcdir/VERSION with package version $PACKAGE_VERSION." 1>&2
+  echo "$PACKAGE_VERSION" > $srcdir/VERSION
 fi
 
 AC_CONFIG_AUX_DIR([config])

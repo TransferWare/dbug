@@ -17,20 +17,18 @@
 
 MAINTAINERCLEANFILES = Makefile.in
 
-AUTOMAKE_OPTIONS     = ../src/lib/ansi2knr
-
-INCLUDES	     = -I$(top_builddir) -I$(top_srcdir)
+AUTOMAKE_OPTIONS     = $(top_srcdir)/src/lib/ansi2knr
 
 noinst_PROGRAMS      = dbugtest
-LDADD                = ../src/lib/libdbug.la
-AM_CPPFLAGS          = -I../src/lib
+LDADD                = $(top_builddir)/src/lib/libdbug.la
+AM_CPPFLAGS          = -I$(top_srcdir)/src/lib
 
 EXTRA_DIST           = Imakefile
 
 DIFFS = diff1 diff2 diff3 diff4 diff5 
 
 $(DIFFS) diff6:
-	$(SHELL) -c "cd $(TOP)/doc && $(MAKE) -f $(TOP)/doc/Makefile $@"
+	$(SHELL) -c "cd $(top_builddir)/doc && $(MAKE) -f $(top_builddir)/doc/Makefile $@"
 
 TESTS = test1 test2 test3 test4 test5
 
