@@ -68,7 +68,7 @@ On Windows systems using the Visual C++ compiler:
     ./configure --prefix=c:/usr/local CC=cl CFLAGS=-GD
 
 On Windows systems using the MinGW compiler:
-    PATH=/cygdrive/c/MinGW/bin:$PATH ./configure --prefix=c:/usr/local
+    ./configure --prefix=c:/usr/local
 
 Compiling For Multiple Architectures
 ====================================
