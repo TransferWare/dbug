@@ -251,7 +251,7 @@ sub version {
 package dbug_uid;
 
 use strict;
-use Carp qw(carp);
+use Carp qw(carp croak);
 
 sub init {
     my ($pkg, $version, $name, $dbug_ctx, $pid, $flags) = @_;
