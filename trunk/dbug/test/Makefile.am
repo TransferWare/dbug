@@ -25,9 +25,9 @@ AM_CPPFLAGS          = -I$(top_srcdir)/src/lib
 
 EXTRA_DIST           = Imakefile
 
-DIFFS = diff1 diff2 diff3 diff4 diff5 
+DIFFS = diff1 diff2 diff3 diff4 diff5 diff6
 
-$(DIFFS) diff6:
+$(DIFFS):
 	$(SHELL) -c "cd $(top_builddir)/doc && $(MAKE) -f $(top_builddir)/doc/Makefile $@"
 
 TESTS = test1 test2 test3 test4 test5

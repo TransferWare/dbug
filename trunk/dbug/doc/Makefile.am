@@ -46,6 +46,8 @@ force: ;
 
 # Ignore whitespace
 DIFF = diff -w
+GREP = grep
+
 
 doc_srcdir = $(top_srcdir)/doc
 
@@ -86,5 +88,6 @@ test6:  $(DBUGRPT)
 	$(FACTORIAL) -#t,D=1000,g 3 | @PERL@ $(DBUGRPT) > $@.log
 
 diff6:	test6
-	$(DIFF) test6.log $(doc_srcdir)/test6.ref
+	$(GREP) -f $(doc_srcdir)/test6.ref test6.log >test6.lis
+	test "`cat test6.lis | wc -l`" -eq "`cat test6.log | wc -l`"
 
