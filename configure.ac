@@ -85,12 +85,15 @@ AC_CHECK_FUNCS(
 )
 # Check for time related functions. One of them must be available.
 AC_CHECK_FUNCS(
-  [clock ftime getrusage],
+  [ftime getrusage clock],
   [break],
-  [AC_MSG_ERROR([One of the functions clock(), ftime(), getrusage(), Datestamp() must be available.])]
+  [AC_MSG_ERROR([One of the functions ftime(), getrusage() or clock() must be available.])]
 )
-# Check he Posix threads flockfile() function.
+# Check the Posix threads flockfile() function.
 AC_CHECK_FUNCS([flockfile])
+
+# Check sleep functions: stop if one is found. None found is allowed.
+AC_CHECK_FUNCS([sleep Delay], [break])
 
 # This is necessary so that .o files in LIBOBJS are also built via
 # the ANSI2KNR-filtering rules.

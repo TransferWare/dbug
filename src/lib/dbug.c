@@ -1119,7 +1119,7 @@ dbug_options_ctx( const dbug_ctx_t dbug_ctx, const char *options )
           while ( 0 );
 #endif
 
-          dbug_ctx->delay = (unsigned int) atoi(scan); 
+          dbug_ctx->delay = (unsigned int) atoi(scan);
           break;
 
 #if FUNCTIONS_ALLOWED

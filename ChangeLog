@@ -1,3 +1,8 @@
+2003-03-20  Gert-Jan Paulissen  <g.paulissen@chello.nl>
+
+        * configure.ac: Added check for functions sleep or Delay.
+	* configure.ac: Moved clock to the last of functions for measuring time.
+
 2003-03-10  Gert-Jan Paulissen  <g.paulissen@chello.nl>
 
         * Create VERSION file from PACKAGE_VERSION.

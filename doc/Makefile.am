@@ -37,6 +37,13 @@ all: dbug.html
 
 FACTORIAL = ./factorial
 
+DBUGRPT = $(top_builddir)/src/prog/dbugrpt
+
+$(DBUGRPT): force
+	cd `dirname $@` && make
+
+force: ;
+
 # Ignore whitespace
 DIFF = diff -w
 
@@ -50,32 +57,33 @@ test1:
 diff1:	test1
 	$(DIFF) test1.log $(doc_srcdir)/test1.ref
 
-test2:
-	$(FACTORIAL) -#t 3 2 | perl -S dbugrpt > $@.log
+test2:	$(DBUGRPT)
+	$(FACTORIAL) -#t 3 2 | @PERL@ $(DBUGRPT) > $@.log
 
 diff2:	test2
 	$(DIFF) test2.log $(doc_srcdir)/test2.ref
 
-test3:
-	$(FACTORIAL) -#d,t 3 | perl -S dbugrpt > $@.log
+test3:  $(DBUGRPT)
+	$(FACTORIAL) -#d,t 3 | @PERL@ $(DBUGRPT) > $@.log
 
 diff3:	test3
 	$(DIFF) test3.log $(doc_srcdir)/test3.ref
 
-test4:
-	$(FACTORIAL) -#d 4 | perl -S dbugrpt -d result > $@.log
+test4:  $(DBUGRPT)
+	$(FACTORIAL) -#d 4 | @PERL@ $(DBUGRPT) -d result > $@.log
 
 diff4:	test4
 	$(DIFF) test4.log $(doc_srcdir)/test4.ref
 
-test5:
-	$(FACTORIAL) -#d 3 | perl -S dbugrpt -t factorial -FL > $@.log
+test5:  $(DBUGRPT)
+# GJP 19-3-2003 Ignore changes due to differences between source and build locations.
+	$(FACTORIAL) -#d 3 | @PERL@ $(DBUGRPT) -t factorial -FL | sed -e 's!$(top_srcdir)/doc/!!g' > $@.log
 
 diff5:	test5
 	$(DIFF) test5.log $(doc_srcdir)/test5.ref
 
-test6:
-	$(FACTORIAL) -#t,D=1000,g 3 | perl -S dbugrpt > $@.log
+test6:  $(DBUGRPT)
+	$(FACTORIAL) -#t,D=1000,g 3 | @PERL@ $(DBUGRPT) > $@.log
 
 diff6:	test6
 	$(DIFF) test6.log $(doc_srcdir)/test6.ref

@@ -34,7 +34,9 @@ TESTS = test1 test2 test3 test4 test5
 
 test: $(DIFFS) $(TESTS)
 
+DBUGTEST = ./dbugtest
+
 $(TESTS):
-	dbugtest $@
+	$(DBUGTEST) $@ 1>/dev/null
 
 
