@@ -46,11 +46,11 @@ static char vcid[] = "$Header$";
  *
  *  NOTES
  *
- *      The "config.h" is needed for definitions of 
+ *      The <config.h> is needed for definitions of 
  *      
  *      - HAVE_SLEEP          Is there a sleep function.
  *      - HAVE_DELAY          Is there a Delay function.
- *      - SLEEP_GRANULARITY  Sleep granularity in Seconds (Unix) or not (Windows)
+ *      - SLEEP_GRANULARITY   Sleep granularity in Seconds (Unix) or not (Windows)
  *
  *  AUTHOR(S)
  *
@@ -62,22 +62,41 @@ static char vcid[] = "$Header$";
  *      seismo!bpa!sjuvax!bbanerje
  *
  *      Gert-Jan Paulissen      (thread support)
- *      e-mail: G.Paulissen@speed.a2000.nl
+ *      e-mail: g.paulissen@chello.nl
  */
 
-#include "config.h"
+#ifndef HAVE_CONFIG_H
+#define HAVE_CONFIG_H 1
+#endif
+
+#if HAVE_CONFIG_H
+#include <config.h>
+#endif
+
 #include "SleepMsec.h"
 
 #ifdef _WIN32
 # if HAVE_SLEEP
-#  include <stdlib.h>
-#  include <time.h>
+#  ifndef HAVE_STDLIB_H
+#   define HAVE_STDLIB_H 1
+#  endif
+#  if HAVE_STDLIB_H
+#   include <stdlib.h>
+#  endif
+#  ifndef HAVE_TIME_H
+#   define HAVE_TIME_H 1
+#  endif
+#  if HAVE_TIME_H
+#   include <time.h>
+#  endif
 #  ifndef sleep
 #   define sleep _sleep
 #  endif
 # endif
 #else
-# include <unistd.h>
+# if HAVE_UNISTD_H
+#  include <unistd.h>
+# endif
 #endif
 
 #ifndef HZ
