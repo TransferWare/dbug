@@ -1639,9 +1639,13 @@ LOCAL VOID ChangeOwner (char *pathname)
 
 VOID _db_setjmp_ ( void )
 {
+#if HASSETJMP
    jmplevel = stack -> level;
    jmpfunc = func;
    jmpfile = file;
+#else
+   ;
+#endif
 }
 
 
@@ -1770,6 +1774,16 @@ LOCAL VOID perror (char *s)
 #if HASCLOCK
 
 #include <time.h>
+
+#ifndef CLK_TCK
+# ifdef CLOCKS_PER_SEC
+#  define CLK_TCK CLOCKS_PER_SEC
+# else
+#  ifdef CLOCKS_PER_SECONDS
+#   define CLK_TCK CLOCKS_PER_SECONDS
+#  endif
+# endif
+#endif
 
 LOCAL unsigned long Clock (void)
 {
