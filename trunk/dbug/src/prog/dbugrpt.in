@@ -91,7 +91,7 @@ $| = 1; # auto flush
 select STDOUT;
 
 while (<STDIN>) {
-    chop;
+    s/(\n|\r)+//go; # remove linefeed and carriage return
 
     $dbug_uid = '';
 
@@ -416,6 +416,11 @@ sub is_trace_function {
 
 sub call_push {
     my ($obj, $function, $level, $time) = @_;
+
+    if ( $obj->version ge '3.0.0' ) {
+        $time *= 1000;
+    }
+
     my $r_dbug_stack = dbug_stack->new($function, $level, $time);
 
     push( @{$obj->{STACK}}, $r_dbug_stack );
@@ -423,6 +428,11 @@ sub call_push {
 
 sub call_pop {
     my ($obj, $function, $level, $leave_time) = @_;
+
+    if ( $obj->version ge '3.0.0' ) {
+        $leave_time *= 1000;
+    }
+
     my $dbug_stack = $obj->call_top();
     my $time = 0;
 
@@ -457,7 +467,10 @@ sub call_pop {
 
         if ( $#{$obj->{STACK}} >= 0 ) {
             $dbug_stack = $obj->call_top();
-            $dbug_stack->time_children( $leave_time - $enter_time );
+            # GJP 28-02-2003
+            # request id 695260
+            # Do not forget the previous calls, so update it.
+            $dbug_stack->time_children( $dbug_stack->time_children() + $leave_time - $enter_time );
         }
 
     } else {
@@ -547,7 +560,7 @@ $total_line1 . "\n" .
                 $g_perc_calls = 0;
             }
             $g_weight = int($g_perc_time * $g_perc_calls);
-            $g_time = sprintf( "%7.3f", $g_time / ( $version ge '3.0.0' ? 1 : 1000 ) );
+            $g_time = sprintf( "%7.3f", $g_time / 1000 );
             $g_time_per_call = sprintf( "%7.3f", $g_time / $g_calls );
     
             write;
@@ -561,7 +574,7 @@ $total_line1 . "\n" .
 
         ( $g_function, $g_calls, $g_perc_calls, $g_time, $g_perc_time, $g_time_per_call, $g_weight ) = 
             ( "Totals", $g_tot_calls, "100.00",
-              sprintf( "%7.3f", $g_tot_time / ( $version ge '3.0.0' ? 1 : 1000 ) ),
+              sprintf( "%7.3f", $g_tot_time / 1000 ),
               "100.00", "", "" );
 
         write;
@@ -573,16 +586,16 @@ $total_line1 . "\n" .
 sub prefix {
     my ($obj, $file, $line, $level, $date) = @_;
     
-    print( sprintf ("%04d-%02d-%02d %02d:%02d:%02d${DBUGRPT_PREFIX_SEPARATOR} ",
+    print( sprintf ("%04d-%02d-%02d %02d:%02d:%02d@DBUGRPT_PREFIX_SEPARATOR@ ",
                     substr($date, 0, 4), substr($date, 4, 2), substr($date, 6, 2),
                     substr($date, 8, 2), substr($date, 10, 2), substr($date, 12, 2)))
         if ($print_date);
-    print ($obj->pid(), "${DBUGRPT_PREFIX_SEPARATOR} ") if ($print_process_id);
-    print ($obj->lineno($obj->lineno()+1), "${DBUGRPT_PREFIX_SEPARATOR} ") if ($print_sequence);
-    print ($obj->name, "${DBUGRPT_PREFIX_SEPARATOR} ") if ($print_name);
-    print ($file, "${DBUGRPT_PREFIX_SEPARATOR} ") if ($print_source_file);
-    print ($line, "${DBUGRPT_PREFIX_SEPARATOR} ") if ($print_source_line);
-    print ($level, "${DBUGRPT_PREFIX_SEPARATOR} ") if ($print_level);
+    print ($obj->pid(), "@DBUGRPT_PREFIX_SEPARATOR@ ") if ($print_process_id);
+    print ($obj->lineno($obj->lineno()+1), "@DBUGRPT_PREFIX_SEPARATOR@ ") if ($print_sequence);
+    print ($obj->name, "@DBUGRPT_PREFIX_SEPARATOR@ ") if ($print_name);
+    print ($file, "@DBUGRPT_PREFIX_SEPARATOR@ ") if ($print_source_file);
+    print ($line, "@DBUGRPT_PREFIX_SEPARATOR@ ") if ($print_source_line);
+    print ($level, "@DBUGRPT_PREFIX_SEPARATOR@ ") if ($print_level);
 }
 
 sub indent {
@@ -627,9 +640,9 @@ sub print {
         if ($obj->tracing()) {
             $obj->indent($level+1);
         } else {
-            print ("$function${DBUGRPT_PREFIX_SEPARATOR} ");
+            print ("$function@DBUGRPT_PREFIX_SEPARATOR@ ");
         }
-        print ("$break_point${DBUGRPT_PREFIX_SEPARATOR} $str\n");
+        print ("$break_point@DBUGRPT_PREFIX_SEPARATOR@ $str\n");
     }
 }
 
