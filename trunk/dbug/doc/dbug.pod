@@ -148,7 +148,7 @@ will be found and corrected. At this point, the newly inserted print
 statements must be dealt with. One obvious solution is to simply
 delete them all.
 
-=head2 Debugging using the C preprocessor
+=head2 Debug disable techniques
 
 Beginners usually do this a few times until they have to repeat the
 entire process every time a new bug pops up. The second most obvious
@@ -800,4 +800,11 @@ most common problem is multiply allocated memory.
 =head1 AUTHOR
 
 I<Fred> I<Fish>
+
+=head1 HISTORY
+
+Originally, this library has been written by Fred Fish in the 80's.
+In 1999 Gert-Jan Paulissen modified the source slightly to make it
+more portable using ANSI C and an imake configuration. The documentation 
+is now in Perl's pod format.
 
