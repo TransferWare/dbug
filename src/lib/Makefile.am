@@ -25,6 +25,13 @@ include_HEADERS      = dbug.h
 
 lib_LTLIBRARIES	     = libdbug.la
 libdbug_la_SOURCES   = dbug.c Clock.c SleepMsec.c Clock.h SleepMsec.h vargs.h
-libdbug_la_LDFLAGS   = -no-undefined -version-info 0:0:0
+
+
+##
+## History of interface versions:
+## - 0:0:0 start
+## - 1:0:0 due to different format of timing info (in seconds) in the dbug output file
+
+libdbug_la_LDFLAGS   = -no-undefined -version-info 1:0:0
 
 EXTRA_DIST           = .lclintrc Imakefile dbug-def.msub dbugtest.ref
