@@ -787,12 +787,15 @@ int *_slevel_ )
     }
     if (stack -> level != *_slevel_ && (TRACING || DEBUGGING || PROFILING)) {
 	(VOID) fprintf (_db_fp_, ERR_MISSING_RETURN, _db_process_, func);
-    } else if (DoProfile ()) {
-	(VOID) fprintf (_db_pfp_, PROF_XFMT, Clock(), func);
-    } else if (DoTrace ()) {
-	DoPrefix (_line_);
-	Indent (stack -> level);
-	(VOID) fprintf (_db_fp_, "<%s\n", func);
+    } else {
+	if (DoProfile ()) {
+		(VOID) fprintf (_db_pfp_, PROF_XFMT, Clock(), func);
+    	} 
+	if (DoTrace ()) {
+		DoPrefix (_line_);
+		Indent (stack -> level);
+		(VOID) fprintf (_db_fp_, "<%s\n", func);
+	}
     }
     (VOID) fflush (_db_fp_);
     (VOID) Delay (stack -> delay);
