@@ -640,61 +640,61 @@ This is the output of the I<DBUG> library.
 
 Output of DBUG_INIT, DBUG_INIT_CTX, dbug_init and dbug_init_ctx
 
-A line containing 'DBUG', the address of dbug context, date (in GMT YYYYMMDDhhmmss
+A line containing 'DBUG', the UID (unique id) of dbug context, date (in GMT YYYYMMDDhhmmss
 format), a sequence number, 'I', major version, minor version,
-teeny version, name, context number, process id and the flags will be
+teeny version, name, address of dbug context, process id and the flags will be
 printed. Flags is a bit masked integer where tracing equals 1 (see C<t>),
 debugging equals 2 (see C<d>) and profiling equals 4 (see C<g>).
 
 This is the line printed: 
 
-DBUG#<dbug context>#<date>#<seq>#I#<major version>.<minor version>.<teeny version>#<name>#<context number>#<process id>#<flags>
+DBUG#<dbug uid>#<date>#<seq>#I#<major version>.<minor version>.<teeny version>#<name>#<dbug context>#<process id>#<flags>
 
 =item *
 
 Output of DBUG_DONE, DBUG_DONE_CTX, dbug_done and dbug_done_ctx
 
-A line containing 'DBUG', the address of the dbug context, date (in GMT YYYYMMDDhhmmss
+A line containing 'DBUG', the UID of the dbug context, date (in GMT YYYYMMDDhhmmss
 format), a sequence number, 'D', the maximum number of
 functions on the stack and the stack usage will be printed.
 
 This is the line printed: 
 
-DBUG#<dbug context>#<date>#<seq>#D#<maximum number of functions on the stack>#<stack usage>
+DBUG#<dbug uid>#<date>#<seq>#D#<maximum number of functions on the stack>#<stack usage>
 
 =item *
 
 Output of DBUG_ENTER, DBUG_ENTER_CTX, dbug_enter and dbug_enter_ctx
 
-A line consisting of 'DBUG', the address of dbug context, date (in GMT YYYYMMDDhhmmss
+A line consisting of 'DBUG', the UID of dbug context, date (in GMT YYYYMMDDhhmmss
 format), a sequence number, 'E', file, function, line, level
 and time (-1 if profiling is off else in milliseconds) is printed.
 
 This is the line printed: 
 
-DBUG#<address of dbug context>#<date>#<seq>#E#<file>#<function>#<line>#<level>#<time>
+DBUG#<dbug uid>#<date>#<seq>#E#<file>#<function>#<line>#<level>#<time>
 
 =item *
 
 Output of DBUG_LEAVE, DBUG_LEAVE_CTX, dbug_leave and dbug_leave_ctx
 
-A line consisting of 'DBUG', the address of dbug context, date (in GMT YYYYMMDDhhmmss
+A line consisting of 'DBUG', the UID of dbug context, date (in GMT YYYYMMDDhhmmss
 format), a sequence number, 'L', file, function, line, level
 and time (-1 if profiling is off else in milliseconds) is printed.
 
 This is the line printed: 
 
-DBUG#<dbug context>#<date>#<seq>#L#<file>#<function>#<line>#<level>#<time>
+DBUG#<dbug uid>#<date>#<seq>#L#<file>#<function>#<line>#<level>#<time>
 
 =item *
 
 Output of DBUG_PRINT, DBUG_PRINT_CTX, dbug_print and dbug_print_ctx
 
-A line consisting of 'DBUG', the address of dbug context, date (in GMT YYYYMMDDhhmmss
+A line consisting of 'DBUG', the UID of dbug context, date (in GMT YYYYMMDDhhmmss
 format), a sequence number, 'P', file, function, line, level,
 break point and user supplied parameters is printed.
 
-DBUG#<dbug context>#<date>#<seq>#P#<file>#<function>#<line>#<level>#<break point>#<user supplied parameters>
+DBUG#<dbug uid>#<date>#<seq>#P#<file>#<function>#<line>#<level>#<break point>#<user supplied parameters>
 
 =item *
 
@@ -702,7 +702,7 @@ Output of errors.
 
 Errors are printed to stderr in the following format:
 
-DBUG#<address of dbug context>#ERROR: <function name>: <description>
+DBUG#<dbug context>#ERROR: <function name>: <description>
 
 Status values are defined in <errno.h>.
 
