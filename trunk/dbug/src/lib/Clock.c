@@ -50,7 +50,6 @@
  *      - HAVE_CLOCK     Use clock()
  *      - HAVE_FTIME     Use ftime()
  *      - HAVE_GETRUSAGE Use getrusage()
- *      - HAVE_DATESTAMP Use Datestamp()
  *
  *  AUTHOR(S)
  *
@@ -77,6 +76,10 @@
 
 #if HAVE_STDLIB_H
 # include <stdlib.h>
+#endif
+
+#if HAVE_STDIO_H
+# include <stdio.h>
 #endif
 
 #if HAVE_CLOCK
@@ -114,23 +117,24 @@ static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
 #endif
 
-void Gmtime( struct tm *tm )
+void
+Gmtime( struct tm *tm )
 {
   time_t time_tmp; 
   struct tm *tm_tmp;
 
 #if defined(HAVE_PTHREAD_H) && HAVE_PTHREAD_H
-  pthread_mutex_lock( &mutex );
+  (void) pthread_mutex_lock( &mutex );
 #endif
 
-  (void) time(&time_tmp);
+  (void) time( &time_tmp );
   tm_tmp = gmtime( &time_tmp );
 
   if ( tm_tmp != NULL && tm != NULL )
     *tm = *tm_tmp;
 
 #if defined(HAVE_PTHREAD_H) && HAVE_PTHREAD_H
-  pthread_mutex_unlock( &mutex );
+  (void) pthread_mutex_unlock( &mutex );
 #endif
 }
 
@@ -141,69 +145,23 @@ void Gmtime( struct tm *tm )
 
 #if HAVE_CLOCK
 
-unsigned long Clock (void)
+double
+Clock(void)
 {
-  static clock_t start;
-  static int init = 0;
-  clock_t tmp;
-  unsigned long value;
-
-#if defined(HAVE_PTHREAD_H) && HAVE_PTHREAD_H
-  pthread_mutex_lock( &mutex );
-#endif
-
-  if ( init == 0 )
-  {
-    start = clock();
-    init = 1;
-
-    value = 0;
-  }
-  else
-  {
-    tmp = clock();
-      /* multiply by 1000 to get ms */
-    value = ( (clock_t)1000 * (tmp - start) ) / (CLOCKS_PER_SEC); 
-  }
-
-#if defined(HAVE_PTHREAD_H) && HAVE_PTHREAD_H
-  pthread_mutex_unlock( &mutex );
-#endif
-
-  return value;
+  return ((double) clock()) / ((double) CLOCKS_PER_SEC);
 }
 
 #else /* HAVE_CLOCK */
 
 # if HAVE_FTIME
 
-unsigned long Clock (void)
+double
+Clock(void)
 {
-  static struct timeb start;
-  static int init = 0;
-  unsigned long value;
   struct timeb tmp;
 
-#if defined(HAVE_PTHREAD_H) && HAVE_PTHREAD_H
-  pthread_mutex_lock( &mutex );
-#endif
-
-  if ( !init )
-  {
-    (void) ftime( &start );
-    init = 1;
-    value = 0;
-  }
-  else
-  {
-    (void) ftime( &tmp );
-    value = (tmp.time - start.time)*1000 + (tmp.millitm - start.millitm);
-  }
-
-#if defined(HAVE_PTHREAD_H) && HAVE_PTHREAD_H
-  pthread_mutex_unlock( &mutex );
-#endif
-  return value;
+  (void) ftime( &tmp );
+  return ((double) tmp.time) + ((double) tmp.millitm) / 1000.000;
 }
 
 # else /* HAVE_FTIME */
@@ -219,69 +177,25 @@ unsigned long Clock (void)
  * far.
  */
 
-unsigned long Clock (void)
+double
+Clock(void)
 {
-    struct rusage ru;
+  struct rusage ru;
 
-    getrusage (RUSAGE_SELF, &ru);
-    return ((ru.ru_utime.tv_sec * 1000) + (ru.ru_utime.tv_usec / 1000));
-}
-
-#  else /* HAVE_GETRUSAGE */
-#   if HAVE_DATESTAMP
-
-struct DateStamp {              /* Yes, this is a hack, but doing it right */
-        long ds_Days;           /* is incredibly ugly without splitting this */
-        long ds_Minute;         /* off into a separate file */
-        long ds_Tick;
-};
-
-static int first_clock = TRUE;
-static struct DateStamp begin;
-
-unsigned long Clock (void)
-{
-    register struct DateStamp *now;
-    register unsigned long millisec = 0;
-    extern void *AllocMem (long);
-
-    now = (struct DateStamp *) AllocMem ((long) sizeof (struct DateStamp), 0L);
-    if (now != NULL) {
-#if defined(HAVE_PTHREAD_H) && HAVE_PTHREAD_H
-        pthread_mutex_lock( &mutex );
-#endif
-        if (first_clock == TRUE) {
-            first_clock = FALSE;
-            DateStamp (now);
-            begin = *now;
-        }
-        DateStamp (now);
-        millisec = 24 * 3600 * (1000 / HZ) * (now -> ds_Days - begin.ds_Days);
-        millisec += 60 * (1000 / HZ) * (now -> ds_Minute - begin.ds_Minute);
-        millisec += (1000 / HZ) * (now -> ds_Tick - begin.ds_Tick);
-#if defined(HAVE_PTHREAD_H) && HAVE_PTHREAD_H
-        pthread_mutex_unlock( &mutex );
-#endif
-        FreeMem (now, (long) sizeof (struct DateStamp));
-    }
-    return (millisec);
+  getrusage(RUSAGE_SELF, &ru);
+  return ((double) ru.ru_utime.tv_sec) + ((double) ru.ru_utime.tv_usec) / 1000000;
 }
 
 #   else
-unsigned long Clock (void)
+
+double
+Clock(void)
 {
   return 0;
 }
-#   endif /* HAVE_DATESTAMP */
 
 #  endif        /* HAVE_GETRUSAGE */
 
 # endif /* HAVE_FTIME */
 
 #endif /* HAVE_CLOCK */
-
-
-
-
-
-

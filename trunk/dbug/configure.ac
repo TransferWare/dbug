@@ -18,10 +18,19 @@
 # Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 # Strip RCS keyword Name (e.g. '$Name$' into 2_1_0).
-AC_DEFUN(AC_RCS_NAME, translit(regexp([$Name$], [dbug_\(.*\) ], [\1]), [_], [.]))
+#AC_DEFUN(AC_RCS_NAME, translit(regexp([$Name$], [dbug_\(.*\) ], [\1]), [_], [.]))
 
 AC_REVISION([$Revision$])
-AC_INIT([dbug],[AC_RCS_NAME()],[g.paulissen@chello.nl])
+AC_INIT([dbug],[3.0.0],[g.paulissen@chello.nl])
+
+# version check
+read version < VERSION
+if test "$version" != "$PACKAGE_VERSION"
+then
+  echo "PACKAGE_VERSION $PACKAGE_VERSION and version $version from file VERSION mismatch." 1>&2
+  exit 1
+fi
+
 AC_CONFIG_AUX_DIR([config])
 AH_BOTTOM(
 [#if defined(STDC_HEADERS) && STDC_HEADERS
@@ -69,7 +78,7 @@ AC_CHECK_FUNCS(
 )
 # Check for time related functions. One of them must be available.
 AC_CHECK_FUNCS(
-  [clock ftime getrusage Datestamp],
+  [clock ftime getrusage],
   [break],
   [AC_MSG_ERROR([One of the functions clock(), ftime(), getrusage(), Datestamp() must be available.])]
 )

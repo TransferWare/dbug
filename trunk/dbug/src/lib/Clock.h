@@ -8,7 +8,10 @@
 #include <sys/time.h>
 #endif
 
-void Gmtime( struct tm *tm );
-unsigned long Clock(void);
+void
+Gmtime( struct tm *tm );
+
+double
+Clock(void);
 
 #endif

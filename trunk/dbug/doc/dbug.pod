@@ -599,7 +599,7 @@ Enable output from DBUG_PRINT macros.
 =item D=<time>
 
 Delay for specified time after each output line, to let output drain.
-Time is given in milliseconds (value of 1000 is one second). Default is
+Time is given in milliseconds (a value of 1000 is one second). Default is
 zero. Either tracing or debugging (options t or d) must be enabled.
 
 =item g
@@ -1173,8 +1173,8 @@ data (pthread_getspecific).
 
 =item Delay
 
-The delay argument in the debug control string is now specified in milliseconds, instead of tenths of
-seconds.
+The delay argument in the debug control string is now specified in
+milliseconds, instead of tenths of seconds.
 
 =item Debug control string
 
