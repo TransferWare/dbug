@@ -84,14 +84,29 @@
     extern FILE *_db_fp_;		/* Current debug output stream */
     extern char *_db_process_;		/* Name of current process */
     extern int _db_keyword_ ();		/* Accept/reject keyword */
-    extern void _db_push_ ();		/* Push state, set up new state */
-    extern void _db_pop_ ();		/* Pop previous debug state */
-    extern void _db_enter_ ();		/* New user function entered */
-    extern void _db_return_ ();		/* User function return */
-    extern void _db_pargs_ ();		/* Remember args for line */
+    extern void _db_push_ (char *control);		/* Push state, set up new state */
+    extern void _db_pop_ ( void );		/* Pop previous debug state */
+    extern void _db_enter_ (		/* New user function entered */
+char *_func_,
+char *_file_,
+int _line_,
+char **_sfunc_,
+char **_sfile_,
+int *_slevel_,
+char ***_sframep_
+);
+    extern void _db_return_ (		/* User function return */
+int _line_,
+char **_sfunc_,
+char **_sfile_,
+int *_slevel_ );
+    extern void _db_pargs_ (		/* Remember args for line */
+int _line_,
+char *keyword 
+);
     extern void _db_doprnt_ ();		/* Print debug output */
-    extern void _db_setjmp_ ();		/* Save debugger environment */
-    extern void _db_longjmp_ ();	/* Restore debugger environment */
+    extern void _db_setjmp_ ( void );		/* Save debugger environment */
+    extern void _db_longjmp_ ( void );	/* Restore debugger environment */
 # endif
 
 
@@ -129,7 +144,7 @@
 # else
 #    define DBUG_ENTER(a) \
 	auto char *_db_func_; auto char *_db_file_; auto int _db_level_; \
-	auto char *_db_framep_; \
+	auto char **_db_framep_; \
 	_db_enter_ (a,__FILE__,__LINE__,&_db_func_,&_db_file_,&_db_level_, \
 		    &_db_framep_)
 #    define DBUG_LEAVE \
