@@ -220,11 +220,22 @@ example of this usage.
 
 =head2 Debug macro's
 
-This section summarizes the usage of all currently defined macros in
-the I<dbug> package. The macros definitions are found in the user
-include file B<dbug.h> from the standard include directory.
+This section summarizes the usage of all currently defined macros in the
+I<dbug> package. These macro's can be used in C programs. The macros
+definitions are found in the user include file B<dbug.h>.
 
 =over 4
+
+=item DBUG_OFF
+
+This macro disables compilation of all other I<dbug> macro's. This will result
+in null macros expansions so that the resulting code will be smaller and
+faster. (The difference may be smaller than you think so this step is
+recommended only when absolutely necessary). In general, tradeoffs between
+space and efficiency are decided in favor of efficiency since space is seldom
+a problem on the new machines). By default this macro is disabled.
+
+EX: #define DBUG_OFF
 
 =item DBUG_ENTER 
 
@@ -241,7 +252,9 @@ EX: DBUG_ENTER ("main");
 
 =item DBUG_RETURN
 
- Used at each exit point of a function containing a DBUG_ENTER macro at
+=item DBUG_VOID_RETURN
+
+Used at each exit point of a function containing a DBUG_ENTER macro at
 the entry point. The argument is the value to return. Functions
 which return no value (void) should use the DBUG_VOID_RETURN macro.
 It is an error to have a DBUG_RETURN or DBUG_VOID_RETURN macro in a
@@ -304,11 +317,6 @@ a "-#d:t" control string).
 
 EX: DBUG_EXECUTE ("abort", abort ());
 
-=item DBUG_N
-
-These macros, where N is in the range 2-5, are currently obsolete and
-will be removed in a future release. Use the new DBUG_PRINT macro.
-
 =item DBUG_PRINT
 
 Used to do printing via the "fprintf" library function on the current
@@ -348,10 +356,62 @@ EX: DBUG_LONGJMP (env,val);
 
 =back
 
+=head2 Debug functions
+
+This section summarizes the usage of all currently defined functions in
+the I<dbug> package. The main purpose of these functions is to invoke them
+from external programs written in another language, such as Perl. The functions
+are found in the user include file B<dbug.h>.
+
+=over 4
+
+=item dbug_enter
+
+Used to tell the runtime support module the name of the function being
+entered. The arguments are a module name and an address to a long to store context for
+the return. See also C<DBUG_ENTER>.
+
+EX: long context; dbug_enter( "main", &context );
+
+=item dbug_leave
+
+Used at each exit point of a function containing a dbug_enter function at
+the entry point. See also C<DBUG_RETURN>.
+
+EX: dbug_leave( context );
+
+=item dbug_push
+
+See C<DBUG_PUSH>.
+
+=item dbug_print1
+
+=item dbug_print2
+
+=item dbug_print3
+
+=item dbug_print4
+
+=item dbug_print5
+
+To print as much as five string arguments. See also C<DBUG_PRINT>.
+
+EX: dbug_print2( "keyword", "This is %s and that is %s", "this", "that" );
+
+=item dbug_pop
+
+See C<DBUG_POP>.
+
+=item dbug_process
+
+See C<DBUG_PROCESS>.
+
+=back
+
 =head2 Debug Control String
 
 The debug control string is used to set the state of the debugger via
-the B<DBUG_PUSH> macro. This section summarizes the currently
+the C<DBUG_PUSH> macro. This section summarizes the currently
 available debugger options and the flag characters which enable or
 disable them. Argument lists enclosed in '[' and ']' are optional.
 
@@ -418,7 +478,7 @@ Limit debugger actions to the specified processes. A null list
 implies all processes. This is useful for processes which run child
 processes. Note that each debugger output line can be marked with the
 name of the current process via the 'P' flag. The process name must
-match the argument passed to the B<DBUG_PROCESS> macro.
+match the argument passed to the C<DBUG_PROCESS> macro.
 
 =item P
 
@@ -430,8 +490,8 @@ processes.
 
 =item r
 
-Used in conjunction with the B<DBUG_PUSH> macro to reset the current
-indentation level back to zero. Most useful with B<DBUG_PUSH> macros
+Used in conjunction with the C<DBUG_PUSH> macro to reset the current
+indentation level back to zero. Most useful with C<DBUG_PUSH> macros
 used to temporarily alter the debugger state.
 
 =item t[,N]
@@ -488,7 +548,7 @@ non-option argument.
 First of all, notice that all of the debugger functions are
 implemented via preprocessor macros. This does not detract from the
 readability of the code and makes disabling all debug compilation
-trivial (a single preprocessor symbol, B<DBUG_OFF>, forces the macro
+trivial (a single preprocessor symbol, C<DBUG_OFF>, forces the macro
 expansions to be null).
 
 Also notice the inclusion of the header file B<dbug.h> from the local
@@ -497,16 +557,16 @@ in the dbug source distribution directory). This file contains all
 the definitions for the debugger macros, which all have the form
 B<DBUG_XX...XX>.
 
-The B<DBUG_ENTER> macro informs that debugger that we have entered the
+The C<DBUG_ENTER> macro informs that debugger that we have entered the
 function named B<main>. It must be the very first "executable" line
 in a function, after all declarations and before any other executable
-line. The B<DBUG_PROCESS> macro is generally used only once per
+line. The C<DBUG_PROCESS> macro is generally used only once per
 program to inform the debugger what name the program was invoked with.
-The B<DBUG_PUSH> macro modifies the current debugger state by saving
+The C<DBUG_PUSH> macro modifies the current debugger state by saving
 the previous state and setting a new state based on the control string
-passed as its argument. The B<DBUG_PRINT> macro is used to print the
+passed as its argument. The C<DBUG_PRINT> macro is used to print the
 values of each argument for which a factorial is to be computed. The
-B<DBUG_RETURN> macro tells the debugger that the end of the current
+C<DBUG_RETURN> macro tells the debugger that the end of the current
 function has been reached and returns a value to the calling function.
 All of these macros will be fully explained in subsequent sections.
 
@@ -517,10 +577,10 @@ line of the form:
 
 The B<main> function recognizes the "-#d:t" string as a debugger
 control string, and passes the debugger arguments ("d:t") to the
-I<dbug> runtime support routines via the B<DBUG_PUSH> macro. This
+I<dbug> runtime support routines via the C<DBUG_PUSH> macro. This
 particular string enables output from
 
-the B<DBUG_PRINT> macro with the 'd' flag and enables function tracing
+the C<DBUG_PRINT> macro with the 'd' flag and enables function tracing
 with the 't' flag. The factorial function is then called three times,
 with the arguments "1", "2", and "3".
 
@@ -575,8 +635,8 @@ One advantage (some may not consider it so) to using the I<dbug>
 package is that it strongly encourages fully structured coding with
 only one entry and one exit point in each function. Multiple exit
 points, such as early returns to escape a loop, may be used, but each
-such point requires the use of an appropriate B<DBUG_RETURN> or
-B<DBUG_VOID_RETURN> macro.
+such point requires the use of an appropriate C<DBUG_RETURN> or
+C<DBUG_VOID_RETURN> macro.
 
 To build the factorial program on a B<UNIX> system, compile and link
 with the command:
@@ -640,11 +700,11 @@ argument, 3. Factorial called itself recursively to compute 2! and
 exited.
 
 Note that there is no matching entry point "main>" for the return
-point "<main" because at the time the B<DBUG_ENTER> macro was reached
+point "<main" because at the time the C<DBUG_ENTER> macro was reached
 in main, tracing was not enabled yet. It was only after the macro
-B<DBUG_PUSH> was executing that tracing became enabled. This implies
+C<DBUG_PUSH> was executing that tracing became enabled. This implies
 that the argument list should be processed as early as possible since
-all code preceding the first call to B<DBUG_PUSH> is essentially
+all code preceding the first call to C<DBUG_PUSH> is essentially
 invisible to B<dbug> (this can be worked around by inserting a
 temporary B<DBUG_PUSH(argv[1])> immediately after the
 B<DBUG_ENTER("main")> macro.
@@ -663,15 +723,15 @@ stdout rather than stderr, though this is not a prime consideration in
 this example.
 
 The mechanism used to produce "printf" style output is the
-B<DBUG_PRINT> macro.
+C<DBUG_PRINT> macro.
 
 To allow selection of output from specific macros, the first argument
-to every B<DBUG_PRINT> macro is a I<dbug> keyword.
+to every C<DBUG_PRINT> macro is a I<dbug> keyword.
 
 When this keyword appears in the argument list of the 'd' flag in a
 debug control string, as in "-#d,keyword1,keyword2,...:t", output from
 the corresponding macro is enabled. The default when there is no 'd'
-flag in the control string is to enable output from all B<DBUG_PRINT>
+flag in the control string is to enable output from all C<DBUG_PRINT>
 macros.
 
 Typically, a program will be run once, with no keywords specified, to
@@ -680,13 +740,13 @@ keywords are printed in the macro output line). Then the program will
 be run again, with the desired keywords, to examine only specific
 areas of interest.
 
-The second argument to a B<DBUG_PRINT> macro is a standard printf
+The second argument to a C<DBUG_PRINT> macro is a standard printf
 style format string and one or more arguments to print, all enclosed
 in parenthesis so that they collectively become a single macro
 argument. This is how variable numbers of printf arguments are
 supported. Also note that no explicit newline is required at the end
 of the format string. As a matter of style, two or three small
-B<DBUG_PRINT> macros are preferable to a single macro with a huge
+C<DBUG_PRINT> macros are preferable to a single macro with a huge
 format string. 
 
 =head2 Function level tracing and debugging
@@ -712,7 +772,7 @@ Figure 8 shows the output for default tracing and debug.
 	Figure 8
 	factorial -#d:t:o 3
 
-The output from the B<DBUG_PRINT> macro is indented to match the trace
+The output from the C<DBUG_PRINT> macro is indented to match the trace
 output for the function in which the macro occurs. When debugging is
 enabled, but not trace, the output starts at the left margin, without
 indentation.
