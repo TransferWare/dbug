@@ -1,3 +1,3 @@
-SUBDIRS    = lib prog
+SUBDIRS    = lib pdbug prog
 
 EXTRA_DIST = Imakefile
