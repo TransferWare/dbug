@@ -1795,14 +1795,14 @@ LOCAL unsigned long Clock (void)
   {
     start = clock();
     init = 1;
+    return 0;
   }
   else
   {
     tmp = clock();
+      /* multiply by 1000 to get ms */
+    return ( (clock_t)1000 * (tmp - start) ) / (CLK_TCK); 
   }
-
-    /* multiply by 1000 to get ms */
-  return ( (clock_t)1000 * (tmp - start) ) / (CLK_TCK); 
 }
 
 #else /* HASCLOCK */
@@ -1822,17 +1822,18 @@ LOCAL unsigned long Clock (void)
   {
     ftime( &start );
     init = 1;
+    return 0;
   }
   else
   {
     ftime( &tmp );
     tm = (tmp.time - start.time)*1000 + (tmp.millitm - start.millitm);
-  }
 #if 0
-  fprintf( stderr, "Elapsed time (%ld (s), %ld (ms), %ld (tot))\n", 
-    (long)(tmp.time - start.time), (long)(tmp.millitm - start.millitm), tm );
+    fprintf( stderr, "Elapsed time (%ld (s), %ld (ms), %ld (tot))\n", 
+      (long)(tmp.time - start.time), (long)(tmp.millitm - start.millitm), tm );
 #endif
-  return tm;
+    return tm;
+  }
 }
 
 # else /* HASFTIME */
