@@ -318,9 +318,11 @@ typedef struct {
 
 #include "dbug.h" /* self-test */
 
+/* dmalloc.h/u_alloc.h must be the last in the include list */
 #if HASDMALLOC
-/* dmalloc.h must be the last in the include list */
 #include <dmalloc.h>
+#elif HASULIB
+#include <u_alloc.h>
 #endif
 
 #ifndef NDEBUG
