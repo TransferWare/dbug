@@ -878,6 +878,25 @@ va_dcl
 
     va_start (args);
 #endif
+
+
+#ifdef _WIN32
+/* 
+ * Windows DLL: because doubles may be printed the floating point library must be loaded 
+ * So print a double.
+ * See also run-time error R6002
+ */
+    {
+	static int execute = FALSE;
+
+	if ( execute )
+	{
+	    printf( "%f", (double)0 );
+	}
+    }
+#endif
+
+
     if (_db_keyword_ (u_keyword)) {
 	DoPrefix (u_line);
 	if (TRACING) {
