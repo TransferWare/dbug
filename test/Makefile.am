@@ -19,24 +19,27 @@ MAINTAINERCLEANFILES = Makefile.in
 
 AUTOMAKE_OPTIONS     = $(top_srcdir)/src/lib/ansi2knr
 
-noinst_PROGRAMS      = dbugtest
-LDADD                = $(top_builddir)/src/lib/libdbug.la
+check_PROGRAMS       = dbugtest
+dbugtest_LDADD       = $(top_builddir)/src/lib/libdbug.la
 AM_CPPFLAGS          = -I$(top_srcdir)/src/lib
 
 EXTRA_DIST           = Imakefile
 
-DIFFS = diff1 diff2 diff3 diff4 diff5 diff6
-
-$(DIFFS):
-	$(SHELL) -c "cd $(top_builddir)/doc && $(MAKE) -f $(top_builddir)/doc/Makefile $@"
-
 TESTS = test1 test2 test3 test4 test5
 
-test: $(DIFFS) $(TESTS)
+## Each test depends on this Makefile, because the code is here.
+## Each test must be a program too, because of the test support by automake
+## Therefore let each test be a script with a single true command (:).
+
+$(TESTS): Makefile
+
+CLEANFILES           = $(TESTS)
 
 DBUGTEST = ./dbugtest
 
-$(TESTS):
-	$(DBUGTEST) $@ 1>/dev/null
+STDOUT = /dev/null
+STDERR = /dev/null
 
-
+test1 test2 test3 test4 test5:
+	$(DBUGTEST) $@ 1>$(STDOUT) 2>$(STDERR)
+	@echo : > $@
