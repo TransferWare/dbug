@@ -351,7 +351,11 @@ typedef struct {
 #endif
 
 #ifndef DEBUG_DBUG
-#define DEBUG_DBUG !defined(NDEBUG)
+# if !defined(NDEBUG) || NDEBUG == 0
+#  define DEBUG_DBUG 0
+# else
+#  define DEBUG_DBUG 1
+# endif
 #endif
 
 #if DEBUG_DBUG
