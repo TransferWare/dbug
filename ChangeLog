@@ -1,3 +1,7 @@
+2003-08-21  Gert-Jan Paulissen  <g.paulissen@chello.nl>
+
+        * Added dejagnu testsuite.
+
 2003-03-20  Gert-Jan Paulissen  <g.paulissen@chello.nl>
 
         * configure.ac: Added check for functions sleep or Delay.
