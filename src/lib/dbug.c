@@ -2130,6 +2130,7 @@ dbug_file_close( file_t **file )
  */
 {
   dbug_errno_t status = 0;
+  unsigned int ref_count;
 
 #if DEBUG_DBUG
   const char *procname = "dbug_file_close";
@@ -2147,19 +2148,18 @@ dbug_file_close( file_t **file )
   else
     {
 #if HASPTHREAD
-      (void) pthread_mutex_lock( &(*file)->mutex );
+      status = pthread_mutex_lock( &(*file)->mutex );
 #endif
-      
-      /* decrement ref_count if applicable and return */
+      /* GJP 16-02-2001
+         Check ref_count and do not forget the case when it becomes 0
+      */ 
+      ref_count = --(*file)->fname.ref_count;
 
-      if ( (*file)->fname.ref_count > 0 )
-	{
-	  (*file)->fname.ref_count--;
 #if HASPTHREAD
-	  (void) pthread_mutex_unlock( &(*file)->mutex );
+      status = pthread_mutex_unlock( &(*file)->mutex );
 #endif
-	}
-      else /* (*file)->ref_count == 0 */
+
+      if ( ref_count == 0 )
 	{
 	  if ( (*file)->fname.name != NULL )
 	    FREE( (*file)->fname.name );
@@ -2181,6 +2181,8 @@ dbug_file_close( file_t **file )
 	  FREE( *file );
 	  *file = NULL;
 	}
+
+      status = 0; /* no check on file mutex */
     }
 
   /* first in line */
