@@ -243,9 +243,9 @@ debugging context is generated. DBUG_INIT uses an internal debugging
 context. In a multi-threaded environment (POSIX threads), thread specific data
 is used for DBUG_INIT.
 
-EX: DBUG_INIT ("Odbug.log;d;t", NULL); 
+EX: DBUG_INIT ("Odbug.log,d,t", NULL); 
 
-EX: dbug_ctx_t dbug_ctx; DBUG_INIT_CTX ("d;t", NULL, &dbug_ctx); 
+EX: dbug_ctx_t dbug_ctx; DBUG_INIT_CTX ("d,t", NULL, &dbug_ctx); 
 
 EX: DBUG_INIT ("", "Process DBUG");
 
@@ -360,7 +360,7 @@ C<DBUG_INIT> macro. This section summarizes the currently available debugger
 options and the flag characters which enable or disable them. Arguments are
 enclosed in '<' and '>'. Arguments which are also enclosed in '[' and ']' are
 optional. The options in the debug control string are separated by the
-semi-colon (;) and may not have spaces.
+comma (,) and may not have spaces.
 
 =over 4
 
@@ -471,7 +471,7 @@ flag characters which enable or disable them.
 =item d[<break points>]
 
 Enable output from DBUG_PRINT macros which have a break point which is in the list of
-specified break points. A null list means all break points are enabled.
+specified break points (separated by comma's). A null list means all break points are enabled.
 
 =item F
 
@@ -590,10 +590,10 @@ explained in subsequent sections.
 To use the debugger, the factorial program is invoked with a command
 line of the form:
 
-	factorial -#d;t 1 2 3 | perl -S dbugrpt
+	factorial -#d,t 1 2 3 | perl -S dbugrpt
 
-The B<main> function recognizes the "-#d;t" string as a debugger control
-string, and passes the debugger arguments ("d;t") to the I<dbug> runtime
+The B<main> function recognizes the "-#d,t" string as a debugger control
+string, and passes the debugger arguments ("d,t") to the I<dbug> runtime
 support routines via the C<DBUG_INIT> macro. This particular string enables
 output from the C<DBUG_PRINT> macro with the 'd' flag and enables function
 tracing with the 't' flag. The factorial function is then called three times,
@@ -608,8 +608,8 @@ Each debugger argument is a single character flag followed by an
 optional comma separated list of arguments specific to the given flag.
 Some examples are:
 
-	-#d;t;o
-	-#d;odbug.log
+	-#d,t,o
+	-#d,odbug.log
 
 The definition of the factorial function, symbolized as "N!", is given
 by:
@@ -758,7 +758,7 @@ Figure 8 shows the output for default tracing and debug.
 
 	
 	Figure 8
-	factorial -#d;t 3 | perl -S dbugrpt
+	factorial -#d,t 3 | perl -S dbugrpt
 
 The output from the C<DBUG_PRINT> macro is indented to match the trace
 output for the function in which the macro occurs. When debugging is

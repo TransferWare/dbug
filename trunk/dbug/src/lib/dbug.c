@@ -223,11 +223,11 @@ typedef struct {
 #endif
 
 #ifndef OPTIONS_SEPARATOR
-#define OPTIONS_SEPARATOR ';'
+#define OPTIONS_SEPARATOR ','
 #endif
 
 #ifndef MODIFIER_SEPARATOR
-#define MODIFIER_SEPARATOR ','
+#define MODIFIER_SEPARATOR '\0'
 #endif
 
 /* print: major version, minor version, teeny version, address of dbug context, name, context number, process id, flags */
