@@ -3,31 +3,31 @@
 #endif /* lint */
 
 /******************************************************************************
- *									      *
- *	                           N O T I C E				      *
- *									      *
- *	              Copyright Abandoned, 1987, Fred Fish		      *
- *									      *
- *									      *
- *	This previously copyrighted work has been placed into the  public     *
- *	domain  by  the  author  and  may be freely used for any purpose,     *
- *	private or commercial.						      *
- *									      *
- *	Because of the number of inquiries I was receiving about the  use     *
- *	of this product in commercially developed works I have decided to     *
- *	simply make it public domain to further its unrestricted use.   I     *
- *	specifically  would  be  most happy to see this material become a     *
- *	part of the standard Unix distributions by AT&T and the  Berkeley     *
- *	Computer  Science  Research Group, and a standard part of the GNU     *
- *	system from the Free Software Foundation.			      *
- *									      *
- *	I would appreciate it, as a courtesy, if this notice is  left  in     *
- *	all copies and derivative works.  Thank you.			      *
- *									      *
- *	The author makes no warranty of any kind  with  respect  to  this     *
- *	product  and  explicitly disclaims any implied warranties of mer-     *
- *	chantability or fitness for any particular purpose.		      *
- *									      *
+ *                                                                            *
+ *                                 N O T I C E                                *
+ *                                                                            *
+ *                    Copyright Abandoned, 1987, Fred Fish                    *
+ *                                                                            *
+ *                                                                            *
+ *      This previously copyrighted work has been placed into the  public     *
+ *      domain  by  the  author  and  may be freely used for any purpose,     *
+ *      private or commercial.                                                *
+ *                                                                            *
+ *      Because of the number of inquiries I was receiving about the  use     *
+ *      of this product in commercially developed works I have decided to     *
+ *      simply make it public domain to further its unrestricted use.   I     *
+ *      specifically  would  be  most happy to see this material become a     *
+ *      part of the standard Unix distributions by AT&T and the  Berkeley     *
+ *      Computer  Science  Research Group, and a standard part of the GNU     *
+ *      system from the Free Software Foundation.                             *
+ *                                                                            *
+ *      I would appreciate it, as a courtesy, if this notice is  left  in     *
+ *      all copies and derivative works.  Thank you.                          *
+ *                                                                            *
+ *      The author makes no warranty of any kind  with  respect  to  this     *
+ *      product  and  explicitly disclaims any implied warranties of mer-     *
+ *      chantability or fitness for any particular purpose.                   *
+ *                                                                            *
  ******************************************************************************
  */
 
@@ -35,11 +35,11 @@
 /*
  *  FILE
  *
- *	Clock.c  defines Clock routine.
+ *      Clock.c  defines Clock routine.
  *
  *  DESCRIPTION
  *
- *	This module defines the Clock() routine, which returns the 
+ *      This module defines the Clock() routine, which returns the 
  *      elapsed time in milliseconds. Depending on the implementaition
  *      this may be user time or CPU time.
  *
@@ -54,12 +54,12 @@
  *
  *  AUTHOR(S)
  *
- *	Fred Fish		(base code)
- *	Enhanced Software Technologies, Tempe, AZ
- *	asuvax!mcdphx!estinc!fnf
+ *      Fred Fish               (base code)
+ *      Enhanced Software Technologies, Tempe, AZ
+ *      asuvax!mcdphx!estinc!fnf
  *
- *	Binayak Banerjee	(profiling enhancements)
- *	seismo!bpa!sjuvax!bbanerje
+ *      Binayak Banerjee        (profiling enhancements)
+ *      seismo!bpa!sjuvax!bbanerje
  *
  *      Gert-Jan Paulissen      (thread support)
  *      e-mail: G.Paulissen@speed.a2000.nl
@@ -105,7 +105,7 @@ void Gmtime( struct tm *tm )
   (void) time(&time_tmp);
   tm_tmp = gmtime( &time_tmp );
 
-  if ( tm_tmp && tm )
+  if ( tm_tmp != NULL && tm != NULL )
     *tm = *tm_tmp;
 
 #if defined(HASPTHREADS) && HASPTHREADS
@@ -131,7 +131,7 @@ unsigned long Clock (void)
   pthread_mutex_lock( &mutex );
 #endif
 
-  if ( !init )
+  if ( init == 0 )
   {
     start = clock();
     init = 1;
@@ -209,10 +209,10 @@ unsigned long Clock (void)
 #  else /* HASGETRUSAGE */
 #   if HASDATESTAMP
 
-struct DateStamp {		/* Yes, this is a hack, but doing it right */
-	long ds_Days;		/* is incredibly ugly without splitting this */
-	long ds_Minute;		/* off into a separate file */
-	long ds_Tick;
+struct DateStamp {              /* Yes, this is a hack, but doing it right */
+        long ds_Days;           /* is incredibly ugly without splitting this */
+        long ds_Minute;         /* off into a separate file */
+        long ds_Tick;
 };
 
 static int first_clock = TRUE;
@@ -229,19 +229,19 @@ unsigned long Clock (void)
 #if defined(HASPTHREADS) && HASPTHREADS
         pthread_mutex_lock( &mutex );
 #endif
-	if (first_clock == TRUE) {
-	    first_clock = FALSE;
-	    DateStamp (now);
-	    begin = *now;
-	}
-	DateStamp (now);
-	millisec = 24 * 3600 * (1000 / HZ) * (now -> ds_Days - begin.ds_Days);
-	millisec += 60 * (1000 / HZ) * (now -> ds_Minute - begin.ds_Minute);
-	millisec += (1000 / HZ) * (now -> ds_Tick - begin.ds_Tick);
+        if (first_clock == TRUE) {
+            first_clock = FALSE;
+            DateStamp (now);
+            begin = *now;
+        }
+        DateStamp (now);
+        millisec = 24 * 3600 * (1000 / HZ) * (now -> ds_Days - begin.ds_Days);
+        millisec += 60 * (1000 / HZ) * (now -> ds_Minute - begin.ds_Minute);
+        millisec += (1000 / HZ) * (now -> ds_Tick - begin.ds_Tick);
 #if defined(HASPTHREADS) && HASPTHREADS
         pthread_mutex_unlock( &mutex );
 #endif
-	FreeMem (now, (long) sizeof (struct DateStamp));
+        FreeMem (now, (long) sizeof (struct DateStamp));
     }
     return (millisec);
 }
@@ -253,7 +253,7 @@ unsigned long Clock (void)
 }
 #   endif /* HASDATESTAMP */
 
-#  endif	/* HASGETRUSAGE */
+#  endif        /* HASGETRUSAGE */
 
 # endif /* HASFTIME */
 
