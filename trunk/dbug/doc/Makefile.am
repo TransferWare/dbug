@@ -35,7 +35,7 @@ all: dbug.html
 
 ## TEST section
 
-FACTORIAL = .libs/factorial
+FACTORIAL = ./factorial
 
 # Ignore whitespace
 DIFF = diff -w

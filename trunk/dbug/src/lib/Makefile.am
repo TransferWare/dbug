@@ -19,7 +19,6 @@ MAINTAINERCLEANFILES = Makefile.in
 
 AUTOMAKE_OPTIONS     = ansi2knr
 
-#INCLUDES	     = -I$(top_builddir) -I$(top_srcdir)
 AM_CPPFLAGS          = -I$(top_srcdir)/src/lib
 
 include_HEADERS      = dbug.h
