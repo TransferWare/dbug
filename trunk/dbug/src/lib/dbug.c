@@ -1767,9 +1767,35 @@ LOCAL VOID perror (char *s)
  * own for whatever system that you have.
  */
 
-#if HASFTIME
+#if HASCLOCK
 
-#include <sys/timeb.h>
+#include <time.h>
+
+LOCAL unsigned long Clock (void)
+{
+  static clock_t start;
+  static int init = 0;
+  clock_t tmp;
+
+  if ( !init )
+  {
+    start = clock();
+    init = 1;
+  }
+  else
+  {
+    tmp = clock();
+  }
+
+    /* multiply by 1000 to get ms */
+  return ( (clock_t)1000 * (tmp - start) ) / (CLK_TCK); 
+}
+
+#else /* HASCLOCK */
+
+# if HASFTIME
+
+# include <sys/timeb.h>
 
 LOCAL unsigned long Clock (void)
 {
@@ -1795,18 +1821,18 @@ LOCAL unsigned long Clock (void)
   return tm;
 }
 
-#else /* HASFTIME */
+# else /* HASFTIME */
 
-# if HASGETRUSAGE
+#  if HASGETRUSAGE
 
-# include <sys/param.h>
+#  include <sys/param.h>
 
 /*
  * Definition of the Clock() routine for 4.3 BSD.
  */
 
-# include <sys/time.h>
-# include <sys/resource.h>
+#  include <sys/time.h>
+#  include <sys/resource.h>
 
 /*
  * Returns the user time in milliseconds used by this process so
@@ -1821,8 +1847,8 @@ LOCAL unsigned long Clock (void)
     return ((ru.ru_utime.tv_sec * 1000) + (ru.ru_utime.tv_usec / 1000));
 }
 
-# else /* HASGETRUSAGE */
-#  if HASDATESTAMP
+#  else /* HASGETRUSAGE */
+#   if HASDATESTAMP
 
 struct DateStamp {		/* Yes, this is a hack, but doing it right */
 	long ds_Days;		/* is incredibly ugly without splitting this */
@@ -1856,11 +1882,12 @@ LOCAL unsigned long Clock (void)
     return (millisec);
 }
 
-#  else
+#   else
 LOCAL unsigned long Clock (void)
 {
   return 0;
 }
-#  endif /* HASDATESTAMP */
-# endif	/* HASGETRUSAGE */
-#endif /* HASFTIME */
+#   endif /* HASDATESTAMP */
+#  endif	/* HASGETRUSAGE */
+# endif /* HASFTIME */
+#endif /* HASCLOCK */
