@@ -23,7 +23,7 @@ INCLUDES	     = -I$(top_builddir) -I$(top_srcdir)
 include_HEADERS      = dbug.h
 
 lib_LTLIBRARIES	     = libdbug.la
-libulib_la_SOURCES   = dbug.c Clock.c SleepMsec.c Clock.h SleepMsec.h vargs.h
-libulib_la_LDFLAGS   = -no-undefined -version-info 0:0:0
+libdbug_la_SOURCES   = dbug.c Clock.c SleepMsec.c Clock.h SleepMsec.h vargs.h
+libdbug_la_LDFLAGS   = -no-undefined -version-info 0:0:0
 
 EXTRA_DIST           = Imakefile dbug-def.msub dbugtest.ref

@@ -421,7 +421,7 @@ typedef struct {
    - date
    - seq
    - I
-   - major version, minor version, teeny version
+   - version
    - name
    - address of dbug context
    - process id
@@ -433,7 +433,7 @@ typedef struct {
   DATE_FMT SEP_FMT \
   SEQ_FMT SEP_FMT \
   "I" SEP_FMT \
-  "%d.%d.%d" SEP_FMT \
+  "%s" SEP_FMT \
   "%s" SEP_FMT \
   "%p" SEP_FMT \
   "%lu" SEP_FMT \
@@ -2824,9 +2824,7 @@ dbug_init_ctx( const char * options, const char *name, dbug_ctx_t* dbug_ctx )
                               (*dbug_ctx)->seq,
                               (*dbug_ctx)->separator,
                               (*dbug_ctx)->separator,
-                              DBUG_MAJOR_VERSION,
-                              DBUG_MINOR_VERSION,
-                              DBUG_TEENY_VERSION,
+                              PACKAGE_VERSION,
                               (*dbug_ctx)->separator,
                               (*dbug_ctx)->name,
                               (*dbug_ctx)->separator,

@@ -18,7 +18,9 @@
 
 #! /bin/sh
 
-set -x
+test ! -d autom4te.cache || rm -fr autom4te.cache
+
+set -ex
 aclocal -I config
 libtoolize --force --copy
 autoheader
