@@ -11,8 +11,11 @@ Bugs
   $ make check
   fail.
   2) Use the GNU C compiler with the -mno-cygwin option. However a shared DBUG
-  library (DLL) results in rebase errors for other programs linked with the
-  DLL.
+  library (DLL) might result in rebase errors for other programs linked with the
+  DLL. This can be solved by building the library with the --enable-shared
+  configure option.
 
-  The best solution is to build the DBUG library static with the standard GNU
-  compiler and the -mno-cygwin option.
+
+  The second approach is probably best:
+
+  $ configure [ --disable-shared ] ... CC="gcc -mno-cygwin"
