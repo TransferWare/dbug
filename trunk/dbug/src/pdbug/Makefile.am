@@ -22,6 +22,6 @@ EXTRA_DIST           = Makefile.PL pdbug.html pdbug.pm pdbug.xs test.pl
 ## DOCUMENTATION section
 
 pdbug.html: pdbug.pm
-	@PERL@ -S pod2html --infile=$? --outfile=$@
+	$(PERL) -S pod2html --infile=$? --outfile=$@
 
 all: pdbug.html

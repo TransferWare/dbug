@@ -237,15 +237,7 @@ _EOT_
 }
 
 sub version {
-    my ($Name, $Revision) = (substr('$Name$', 1), substr('$Revision$', 1));
-    my $version = "";
-
-    if ( $Name =~ m/^Name: (.+) / ) {
-        $version = $1;
-    } elsif ( $Revision =~ m/^Revision: (.+) / ) {
-        $version = $1;
-    }
-    print STDOUT "dbugrpt version: $version\n";
+    print STDOUT "dbugrpt version: @PACKAGE_VERSION@\n";
 }
 
 package dbug_uid;
@@ -629,7 +621,8 @@ sub done {
         if ( defined($obj->start_time()) && defined($obj->end_time()) &&
              $g_tot_time != $obj->end_time() - $obj->start_time() ) {
             croak
-                "Timing incorrect: start time: ", $obj->start_time(),
+                "Timing incorrect: g_tot_time: ", $g_tot_time,
+		"; start time: ", $obj->start_time(),
                 "; end time: ", $obj->end_time(),
                 "; total time: ", $g_tot_time;
         }
