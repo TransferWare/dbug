@@ -80,33 +80,31 @@
  */
 
 #ifndef DBUG_OFF
-    extern int _db_on_;			/* TRUE if debug currently enabled */
-    extern FILE *_db_fp_;		/* Current debug output stream */
-    extern char *_db_process_;		/* Name of current process */
-    extern int _db_keyword_ ();		/* Accept/reject keyword */
+    extern int _db_get_on_ (void);			/* TRUE if debug currently enabled */
+    extern FILE *_db_get_fp_( void );			/* Current debug output stream */
+    extern void _db_set_process_( char * process);	/* Name of current process */
+    extern int _db_keyword_ (char *keyword);		/* Accept/reject keyword */
     extern void _db_push_ (char *control);		/* Push state, set up new state */
-    extern void _db_pop_ ( void );		/* Pop previous debug state */
-    extern void _db_enter_ (		/* New user function entered */
-char *_func_,
-char *_file_,
-int _line_,
-char **_sfunc_,
-char **_sfile_,
-int *_slevel_,
-char ***_sframep_
-);
-    extern void _db_return_ (		/* User function return */
-int _line_,
-char **_sfunc_,
-char **_sfile_,
-int *_slevel_ );
-    extern void _db_pargs_ (		/* Remember args for line */
-int _line_,
-char *keyword 
-);
-    extern void _db_doprnt_ ();		/* Print debug output */
-    extern void _db_setjmp_ ( void );		/* Save debugger environment */
-    extern void _db_longjmp_ ( void );	/* Restore debugger environment */
+    extern void _db_pop_ ( void );			/* Pop previous debug state */
+    extern void _db_enter_ (				/* New user function entered */
+			    char *_func_,
+			    char *_file_,
+			    int _line_,
+			    char **_sfunc_,
+			    char **_sfile_,
+			    int *_slevel_,
+			    char ***_sframep_ );
+    extern void _db_return_ (				/* User function return */
+			     int _line_,
+			     char **_sfunc_,
+			     char **_sfile_,
+			     int *_slevel_ );
+    extern void _db_pargs_ (				/* Remember args for line */
+			    int _line_,
+			    char *keyword );
+    extern void _db_doprnt_ (char *format, ...);	/* Print debug output */
+    extern void _db_setjmp_ ( void );			/* Save debugger environment */
+    extern void _db_longjmp_ ( void );			/* Restore debugger environment */
 # endif
 
 
@@ -153,9 +151,9 @@ char *keyword
 /*   define DBUG_RETURN(a1) {DBUG_LEAVE; return(a1);}  Alternate form */
 #    define DBUG_VOID_RETURN {DBUG_LEAVE; return;}
 #    define DBUG_EXECUTE(keyword,a1) \
-	{if (_db_on_) {if (_db_keyword_ (keyword)) { a1 }}}
+	{if (_db_get_on_()) {if (_db_keyword_ (keyword)) { a1 }}}
 #    define DBUG_PRINT(keyword,arglist) \
-	{if (_db_on_) {_db_pargs_(__LINE__,keyword); _db_doprnt_ arglist;}}
+	{if (_db_get_on_()) {_db_pargs_(__LINE__,keyword); _db_doprnt_ arglist;}}
 #    define DBUG_2(keyword,format) \
 	DBUG_PRINT(keyword,(format))		/* Obsolete */
 #    define DBUG_3(keyword,format,a1) \
@@ -166,80 +164,12 @@ char *keyword
 	DBUG_PRINT(keyword,(format,a1,a2,a3))	/* Obsolete */
 #    define DBUG_PUSH(a1) _db_push_ (a1)
 #    define DBUG_POP() _db_pop_ ()
-#    define DBUG_PROCESS(a1) (_db_process_ = a1)
-#    define DBUG_FILE (_db_fp_)
+#    define DBUG_PROCESS(a1) _db_set_process_(a1)
+#    define DBUG_FILE (_db_get_fp_())
 #    define DBUG_SETJMP(a1) (_db_setjmp_ (), setjmp (a1))
 #    define DBUG_LONGJMP(a1,a2) (_db_longjmp_ (), longjmp (a1, a2))
 # endif
 
-/*
-|| Configuration issues.
-*/
-
-#ifndef HASVARARGS
-#define HASVARARGS 1
-#endif
-
-/* perror: <errno.h> */
-#ifndef HASPERROR
-#define HASPERROR 1
-#endif
-
-/* chown: <unistd.h> */
-#ifndef HASCHOWN
-#define HASCHOWN 1
-#endif
-
-/* getgid: <unistd.h> */
-#ifndef HASGETGID
-#define HASGETGID 1
-#endif
-
-/* getpid: <unistd.h> */
-#ifndef HASGETPID
-#define HASGETPID 1
-#endif
-
-/* chown: <unistd.h> */
-#ifndef HASGETUID
-#define HASGETUID 1
-#endif
-
-/* access: <unistd.h> */
-#ifndef HASACCESS
-#define HASACCESS 1
-#endif
-
-/* ftime: <sys/timeb.h> */
-#ifndef HASFTIME
-#define HASFTIME 1
-#endif
-
-/* getrusage: <sys/resource.h> */
-#ifndef HASGETRUSAGE
-#define HASGETRUSAGE 1
-#endif
-
-#ifndef HASDATESTAMP
-#define HASDATESTAMP 0 /* amiga */
-#endif
-
-/* sleep: <unistd.h> */
-#ifndef HASSLEEP
-#define HASSLEEP 1
-#endif
-
-#ifndef HASDELAY
-#define HASDELAY 0 /* amiga */
-#endif
-
-#ifndef HASSETJMP
-#define HASSETJMP 1
-#endif
-
-#ifndef DIRSEP
-#define DIRSEP '/'
-#endif
 
 
 
