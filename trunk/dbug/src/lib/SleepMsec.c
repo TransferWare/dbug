@@ -77,14 +77,8 @@ static char vcid[] = "$Header$";
 
 #ifdef _WIN32
 # if HAVE_SLEEP
-#  ifndef HAVE_STDLIB_H
-#   define HAVE_STDLIB_H 1
-#  endif
 #  if HAVE_STDLIB_H
 #   include <stdlib.h>
-#  endif
-#  ifndef HAVE_TIME_H
-#   define HAVE_TIME_H 1
 #  endif
 #  if HAVE_TIME_H
 #   include <time.h>

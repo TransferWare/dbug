@@ -1,0 +1,675 @@
+#!@PERL@ -w
+#
+# $Header$
+#
+# Description: Print output of the DBUG library in a human readable format.
+#
+# Usage:       dbugrpt [ options ]
+#
+# Notes:       The file dbugrpt is generated from dbugrpt.in by the m4 macro preprocessor.
+#              Please do not modify dbugrpt.
+#
+
+use Getopt::Std;
+use strict;
+use Carp qw(carp);
+
+getopts('d:FhiLnNPt:Tv');
+
+my %break_points_allowed = ();
+for (split( /,/, ( defined($::opt_d) ? $::opt_d : "" ) )) { 
+    $break_points_allowed{$_} = 1; 
+}
+my $nr_break_points_allowed = keys %break_points_allowed;
+my $print_source_file = $::opt_F;
+my $print_help = $::opt_h;
+my $print_process_id = $::opt_i;
+my $print_source_line = $::opt_L;
+my $print_level = $::opt_n;
+my $print_sequence = $::opt_N;
+my $print_name = $::opt_P;
+my $print_date = $::opt_T;
+my $print_version = $::opt_v;
+my %functions_allowed = ();
+for (split( /,/, ( defined($::opt_t) ? $::opt_t : "" ) )) { 
+    $functions_allowed{$_} = 1; 
+}
+my $nr_functions_allowed = keys %functions_allowed;
+
+if ( $print_help ) {
+    &usage;
+    exit;
+} elsif ( $print_version ) {
+    &version;
+    exit;
+}
+
+undef $::opt_d;
+undef $::opt_F;
+undef $::opt_h;
+undef $::opt_i;
+undef $::opt_L;
+undef $::opt_n;
+undef $::opt_N;
+undef $::opt_P;
+undef $::opt_t;
+undef $::opt_T;
+undef $::opt_v;
+
+my $sep = '#';
+
+my ( $TRACE_ON, $DEBUG_ON, $PROFILE_ON ) = ( 1, 2, 4 );
+
+my %dbug_uid_list;
+
+my ($version, $dbug_uid, $date, $name, $dbug_ctx, $pid, $flags, $maxcount, $stack_usage);
+my ($file, $function, $line, $level, $break_point, $str, $time);
+my $old_dbug_uid = '';
+
+#
+# GJP 6-4-2000
+# Added @str for reading user defined input which also may contain # ($sep) in dbug_print
+#
+my (@str);
+my $dbug_uid_tot = dbug_uid->init( "", "total", 0, 0, 0 );
+
+# All DBUG lines have the format DBUG separator DBUG CONTEXT and some
+# operation id
+
+# 10-5-2000: 
+# 
+# in user defined string a #D# might also appear, so check that $1 is only three fields
+#
+my $dbug_init_fmt  = "^DBUG#([^#]*#[^#]*#[^#]*)#I#(.*)";
+my $dbug_done_fmt  = "^DBUG#([^#]*#[^#]*#[^#]*)#D#(.*)";
+my $dbug_enter_fmt = "^DBUG#([^#]*#[^#]*#[^#]*)#E#(.*)";
+my $dbug_leave_fmt = "^DBUG#([^#]*#[^#]*#[^#]*)#L#(.*)";
+my $dbug_print_fmt = "^DBUG#([^#]*#[^#]*#[^#]*)#P#(.*)";
+
+$| = 1; # auto flush
+
+select STDOUT;
+
+while (<STDIN>) {
+    chop;
+
+    $dbug_uid = '';
+
+    if ( m/$dbug_init_fmt/ ) {
+
+        # dbug_init
+
+        ( $dbug_uid, $date, undef ) = split( $sep, $1 );
+
+        ( $version, $name, $dbug_ctx, $pid, $flags ) = split( /$sep/, $2 );
+
+        if ( $version ge '1.3.0' ) {
+
+            if ( !defined( $dbug_uid_list{ $dbug_uid } ) ) {
+                $dbug_uid_list{ $dbug_uid } = dbug_uid->init( $version, $name, $dbug_ctx, $pid, $flags );
+            }
+        }
+
+    } elsif ( m/$dbug_done_fmt/ ) {
+
+        # dbug_done
+
+        ( $dbug_uid, $date, undef ) = split( $sep, $1 );
+
+        ( $maxcount, $stack_usage ) = split( /$sep/, $2 );
+
+        if ( defined( $dbug_uid_list{ $dbug_uid } ) ) {
+            $dbug_uid_list{ $dbug_uid }->done( $maxcount, $stack_usage );
+            undef $dbug_uid_list{ $dbug_uid };
+        } else {
+            carp "Debugging context $dbug_uid not defined.";
+        }
+    } elsif ( m/$dbug_enter_fmt/ ) {
+
+        # dbug_enter
+
+        ( $dbug_uid, $date, undef ) = split( $sep, $1 );
+
+        ( $file, $function, $line, $level, $time ) = split( /$sep/, $2 );
+
+        if ( defined( $dbug_uid_list{ $dbug_uid } ) ) {
+            $dbug_uid_list{ $dbug_uid }->enter( $file, $function, $line, $level, $time, $date );
+        } else {
+            carp "Debugging context $dbug_uid not defined.";
+        }
+    } elsif ( m/$dbug_leave_fmt/ ) {
+
+        # dbug_leave
+
+        ( $dbug_uid, $date, undef ) = split( $sep, $1 );
+
+        ( $file, $function, $line, $level, $time ) = split( /$sep/, $2 );
+
+        if ( defined( $dbug_uid_list{ $dbug_uid } ) ) {
+            $dbug_uid_list{ $dbug_uid }->leave( $file, $function, $line, $level, $time, $date );
+        } else {
+            carp "Debugging context $dbug_uid not defined.";
+        }
+    } elsif ( m/$dbug_print_fmt/ ) {
+
+        # dbug_print
+
+        ( $dbug_uid, $date, undef ) = split( $sep, $1 );
+
+        # GJP 6-4-2000
+        # Read user defined string as a list because it may contain the 
+        # separator as well. Then convert it to a scalar by using join.
+        ( $file, $function, $line, $level, $break_point, @str ) = split( /$sep/, $2 );
+        $str = join( $sep, @str );
+
+        if ( defined( $dbug_uid_list{ $dbug_uid } ) ) {
+            $dbug_uid_list{ $dbug_uid }->print( $file, $function, $line, $level, $break_point, $str, $date );
+        } else {
+            carp "Debugging context $dbug_uid not defined.";
+        }
+    } else {
+        print $_, "\n"; # any normal line in the input
+    }
+
+    # GJP 16-06-2000
+    # If dbug uid's are different (threads) print an empty line for better readability
+
+    if ( $dbug_uid ne '' ) {
+        if ( $old_dbug_uid ne '' && $old_dbug_uid ne $dbug_uid ) {
+            print "\n";
+        }
+        $old_dbug_uid = $dbug_uid;
+    }
+}
+
+# print totals
+
+$dbug_uid_tot->done(0, 0);
+
+# end of main
+
+sub usage {
+
+    printf STDOUT <<"_EOT_";
+
+Usage: dbugrpt <options>
+
+  where options are:
+
+  -d <break points>    Enable output from DBUG_PRINT macros which have a
+                       break point which is in the list of specified
+                       break points (separated by a comma).
+                       A null list means all break points are enabled.
+
+  -F                   Mark each debugger output line with the name of the
+                       source file containing the macro causing the output.
+
+  -h                   This help.
+
+  -i                   Identify the process emitting each line of debug
+                       or trace output with the process id for that process.
+
+  -L                   Mark each debugger output line with the source file
+                       line number of the macro causing the output.
+
+  -n                   Mark each debugger output line with the
+                       current function nesting depth.
+
+  -N                   Sequentially number each debugger output line
+                       starting at 1. This is useful for reference purposes
+                       when debugger output is interspersed with program output.
+
+  -P                   Mark each debugger output line with the name of the
+                       debugging context as supplied to DBUG_INIT.
+
+  -t <functions>       Limit debugger and profiling actions to the specified list
+                       of comma separated functions. A null list of functions
+                       implies that all functions are selected.
+
+  -T                   Print date/time of each output line.
+
+  -v                   Print the version.
+
+Dbugrpt reads from stdin.
+
+_EOT_
+  exit(1);
+}
+
+sub version {
+    my ($Name, $Revision) = (substr('$Name$', 1), substr('$Revision$', 1));
+    my $version = "";
+
+    if ( $Name =~ m/^Name: (.+) / ) {
+        $version = $1;
+    } elsif ( $Revision =~ m/^Revision: (.+) / ) {
+        $version = $1;
+    }
+    print STDOUT "dbugrpt version: $version\n";
+}
+
+package dbug_uid;
+
+use strict;
+use Carp qw(carp);
+
+sub init {
+    my ($pkg, $version, $name, $dbug_ctx, $pid, $flags) = @_;
+    my $r_dbug_uid = {
+        VERSION => $version,
+        NAME => $name,
+        DBUG_CTX => $dbug_ctx,
+        PID => $pid,
+        FLAGS => $flags,
+        LINENO => 0,
+        STACK => [],
+        TIME => {}, # time spent for each function
+        CALLS => {} # number of calls for each function
+        };
+
+    bless $r_dbug_uid, $pkg;
+
+    # set profiling on for $dbug_uid_tot if any is set
+    if ( $flags & $PROFILE_ON ) {
+        $dbug_uid_tot->{FLAGS} = $PROFILE_ON;
+    }
+
+    return $r_dbug_uid;
+}
+
+sub version {
+    my $obj = shift;
+
+    @_ ? $obj->{VERSION} = shift : $obj->{VERSION};
+}
+
+sub name {
+    my $obj = shift;
+
+    @_ ? $obj->{NAME} = shift : $obj->{NAME};
+}
+
+sub dbug_ctx {
+    my $obj = shift;
+
+    @_ ? $obj->{DBUG_CTX} = shift : $obj->{DBUG_CTX};
+}
+
+sub pid {
+    my $obj = shift;
+
+    @_ ? $obj->{PID} = shift : $obj->{PID};
+}
+
+sub lineno {
+    my $obj = shift;
+
+    @_ ? $obj->{LINENO} = shift : $obj->{LINENO};
+}
+
+sub tracing {
+    my $obj = shift;
+
+    $obj->{FLAGS} & $TRACE_ON;
+}
+
+sub profiling {
+    my $obj = shift;
+
+    $obj->{FLAGS} & $PROFILE_ON;
+}
+
+sub debugging {
+    my $obj = shift;
+
+    $obj->{FLAGS} & $DEBUG_ON;
+}
+
+#
+#  FUNCTION
+#
+#       is_break_point    test keyword for member of keyword list
+#
+#  SYNOPSIS
+#
+
+sub is_break_point {
+    my ($dbug_uid, $function, $break_point) = @_;
+
+#
+#  DESCRIPTION
+#
+#       Test a break point to determine if it is in the currently active
+#       break point list.  As with the function list, a break point is accepted
+#       if the list is null, otherwise it must match one of the list
+#       members.  When debugging is not on, no break points are accepted.
+#       After the maximum trace level is exceeded, no break points are
+#       accepted (this behavior subject to change).  Additionally,
+#       the current function and process must be accepted based on
+#       their respective lists.
+#
+#       Returns TRUE if break point accepted, FALSE otherwise.
+#
+
+    $dbug_uid->debugging &&
+        (
+         $nr_functions_allowed == 0 ||
+         defined( $functions_allowed{ $function } )
+         ) &&
+             (
+              $nr_break_points_allowed == 0 ||
+              defined( $break_points_allowed{ $break_point } ) 
+              );
+}
+
+#
+#  FUNCTION
+#
+#       is_profile_function    check to see if profiling is currently enabled for a function
+#
+#  SYNOPSIS
+
+sub is_profile_function {
+    my ($dbug_uid, $function) = @_;
+
+#
+#  DESCRIPTION
+#
+#       Checks to see if profiling is enabled based on whether the
+#       user has specified profiling, the maximum trace depth has
+#       not yet been reached, the current function is selected,
+#       and the current process is selected.  Returns TRUE if
+#       profiling is enabled, FALSE otherwise.
+#
+#
+
+    $dbug_uid->profiling &&
+        ( $nr_functions_allowed == 0 ||
+          defined( $functions_allowed{ $function } ) );
+}
+
+#
+#  FUNCTION
+#
+#       is_trace_function    check to see if tracing is currently enabled for a function
+#
+#  SYNOPSIS
+#
+
+sub is_trace_function {
+    my ($dbug_uid, $function) = @_;
+
+#
+#  DESCRIPTION
+#
+#       Checks to see if tracing is enabled based on whether the
+#       user has specified tracing, the current function is selected,
+#       and the current process is selected.  Returns TRUE if
+#       tracing is enabled, FALSE otherwise.
+#
+#
+
+    $dbug_uid->tracing &&
+        ( $nr_functions_allowed == 0 ||
+          defined( $functions_allowed{ $function } ) );
+}
+
+sub call_push {
+    my ($obj, $function, $level, $time) = @_;
+    my $r_dbug_stack = dbug_stack->new($function, $level, $time);
+
+    push( @{$obj->{STACK}}, $r_dbug_stack );
+}
+
+sub call_pop {
+    my ($obj, $function, $level, $leave_time) = @_;
+    my $dbug_stack = $obj->call_top();
+    my $time = 0;
+
+    # adjust for incomplete enter/leave combinations
+
+    while ( $dbug_stack->level() > $level ) {
+        pop( @{$obj->{STACK}} );
+        $dbug_stack = $obj->call_top();
+    }
+
+    if ( $dbug_stack->level() == $level ) {
+        my ( $enter_time, $time_children ) = ( $dbug_stack->time(), $dbug_stack->time_children() );
+
+        # set the time to time when leaving minus time when entering minus time used by children
+        $time = $leave_time - $enter_time - $time_children;
+
+        $dbug_stack->time( $time );
+
+        # update time and calls for function
+
+        ${$obj->{TIME}}{ $function } += $time;
+        ${$obj->{CALLS}}{ $function }++;
+
+        # update time and calls for function for total
+
+        ${$dbug_uid_tot->{TIME}}{ $function } += $time;
+        ${$dbug_uid_tot->{CALLS}}{ $function }++;
+
+        pop( @{$obj->{STACK}} );
+
+        # update the time_children for next in the hierarchy
+
+        if ( $#{$obj->{STACK}} >= 0 ) {
+            $dbug_stack = $obj->call_top();
+            $dbug_stack->time_children( $leave_time - $enter_time );
+        }
+
+    } else {
+        carp(sprintf( "Level (%d) does not match level of stack top (%d)\n", $level, $dbug_stack->level() ));
+    }
+}
+
+sub call_top {
+    my ($obj) = @_;
+
+    ${$obj->{STACK}}[$#{$obj->{STACK}}];
+}
+
+# declare variables for write
+
+$main::report_no = 0; # force a different report top and body by incorporating the number
+
+my ($g_function, $g_calls, $g_tot_calls, $g_time, $g_time_per_call);
+my ($g_tot_time, $g_perc_calls, $g_perc_time, $g_weight);
+
+sub done {
+    my ($obj, $maxcount, $stack_usage) = @_;
+    my $dbug_name = $obj->name();
+
+    if ($obj->profiling())
+    {
+        my $max_length = 24;
+        ($g_tot_calls, $g_tot_time) = (0, 0);
+
+        foreach $function (keys %{$obj->{CALLS}}) {
+            $g_tot_calls += $obj->{CALLS}{ $function };
+            $g_tot_time += $obj->{TIME}{ $function };
+            if ( length( $function ) > $max_length ) {
+                $max_length = length( $function );
+            }
+        }
+
+        my $total_line1 = 
+( "=" x $max_length ) . " ======= ======= =========== ====== =========== =======";
+        my $total_line2 = 
+( " " x $max_length ) . " ======= ======= =========== ======                    ";
+
+        $main::report_no++;
+
+        $^ = "top_${main::report_no}";
+        $~ = "fmt_${main::report_no}";
+
+        my $format_top = 
+"format $^ =\n\n" .
+"-------------------------------------------------------------------------------\n" .
+"Profile of execution for debug context '$dbug_name'\n" .
+"Stack usage: $stack_usage bytes\n" .
+"Execution times are in seconds\n\n" .
+( " " x $max_length ) . " Calls           Time\n" .
+( " " x $max_length ) . " -----           ----\n" .
+"function" . (" " x ($max_length - 8)) . " # calls % calls        time % time   time/call  weight\n" .
+$total_line1 . "\n" .
+".\n";
+
+        eval $format_top;
+
+        my $format = 
+"format $~ =\n" .
+"@" . ("<" x ( $max_length - 1 )) . " @>>>>>> @>>>>>> @>>>>>>>>>> @>>>>> @>>>>>>>>>> @>>>>>>\n" .
+"\$g_function,\$g_calls,\$g_perc_calls,\$g_time,\$g_perc_time,\$g_time_per_call,\$g_weight\n" .
+".\n";
+
+        eval $format;
+
+        $^L = "\n"; # no form feed on a new page but a new line
+
+        $- = 0; # force a new page
+
+        foreach $function (sort(keys %{$obj->{CALLS}})) {
+            ( $g_function, $g_calls, $g_time ) = 
+                ( $function, $obj->{CALLS}{ $function }, $obj->{TIME}{ $function } );
+
+            if ($g_tot_time > 0) {
+                $g_perc_time = sprintf( "%3.2f", ($g_time * 100) / $g_tot_time );
+            } else {
+                $g_perc_time = 0;
+            }
+                
+            if ($g_tot_calls > 0) {
+                $g_perc_calls = sprintf( "%3.2f", ($g_calls * 100) / $g_tot_calls );
+            } else {
+                $g_perc_calls = 0;
+            }
+            $g_weight = int($g_perc_time * $g_perc_calls);
+            $g_time = sprintf( "%7.3f", $g_time/1000 ); # in seconds
+            $g_time_per_call = sprintf( "%7.3f", $g_time / $g_calls );
+    
+            write;
+        }
+
+        # Print a total line
+
+        $- -= 2; # adjust for using print twice
+
+        print $total_line2, "\n";
+
+        ( $g_function, $g_calls, $g_perc_calls, $g_time, $g_perc_time, $g_time_per_call, $g_weight ) = 
+            ( "Totals", $g_tot_calls, "100.00", sprintf( "%7.3f", $g_tot_time/1000 ), "100.00", "", "" );
+
+        write;
+
+        print "-" x length( $total_line1 ), "\n";
+    }
+}
+
+sub prefix {
+    my ($obj, $file, $line, $level, $date) = @_;
+    
+    print( sprintf ("%04d-%02d-%02d %02d:%02d:%02d${DBUGRPT_PREFIX_SEPARATOR} ",
+                    substr($date, 0, 4), substr($date, 4, 2), substr($date, 6, 2),
+                    substr($date, 8, 2), substr($date, 10, 2), substr($date, 12, 2)))
+        if ($print_date);
+    print ($obj->pid(), "${DBUGRPT_PREFIX_SEPARATOR} ") if ($print_process_id);
+    print ($obj->lineno($obj->lineno()+1), "${DBUGRPT_PREFIX_SEPARATOR} ") if ($print_sequence);
+    print ($obj->name, "${DBUGRPT_PREFIX_SEPARATOR} ") if ($print_name);
+    print ($file, "${DBUGRPT_PREFIX_SEPARATOR} ") if ($print_source_file);
+    print ($line, "${DBUGRPT_PREFIX_SEPARATOR} ") if ($print_source_line);
+    print ($level, "${DBUGRPT_PREFIX_SEPARATOR} ") if ($print_level);
+}
+
+sub indent {
+    my ($obj, $level) = @_;
+
+    print ("|   " x ($level-1));
+}
+
+sub enter {
+    my ($obj, $file, $function, $line, $level, $time, $date) = @_;
+
+    if ($obj->is_trace_function($function)) {
+        $obj->prefix($file, $line, $level, $date);
+        $obj->indent($level);
+        print (">$function\n");
+    } 
+
+    if ($obj->is_profile_function($function)) {
+        $obj->call_push($function, $level, $time);
+    }
+}
+
+sub leave {
+    my ($obj, $file, $function, $line, $level, $time, $date) = @_;
+
+    if ($obj->is_trace_function($function)) {
+        $obj->prefix($file, $line, $level, $date);
+        $obj->indent($level);
+        print ("<$function\n");
+    } 
+
+    if ($obj->is_profile_function($function)) {
+        $obj->call_pop($function, $level, $time);
+    }
+}
+
+sub print {
+    my ($obj, $file, $function, $line, $level, $break_point, $str, $date) = @_;
+
+    if ( $obj->is_break_point( $function, $break_point ) ) {
+        $obj->prefix($file, $line, $level, $date);
+        if ($obj->tracing()) {
+            $obj->indent($level+1);
+        } else {
+            print ("$function${DBUGRPT_PREFIX_SEPARATOR} ");
+        }
+        print ("$break_point${DBUGRPT_PREFIX_SEPARATOR} $str\n");
+    }
+}
+
+package dbug_stack;
+
+use strict;
+use Carp qw(carp);
+
+sub new {
+    my ($pkg, $function, $level, $time) = @_;
+    my $r_dbug_stack = {
+        FUNCTION => $function,
+        LEVEL => $level,
+        TIME => $time,
+        TIME_CHILDREN => 0
+        };
+
+    bless $r_dbug_stack, $pkg;
+
+    return $r_dbug_stack;
+}
+
+sub function {
+    my $obj = shift;
+
+    @_ ? $obj->{FUNCTION} = shift : $obj->{FUNCTION};
+}
+
+sub level {
+    my $obj = shift;
+
+    @_ ? $obj->{LEVEL} = shift : $obj->{LEVEL};
+}
+
+sub time {
+    my $obj = shift;
+
+    @_ ? $obj->{TIME} = shift : $obj->{TIME};
+}
+
+sub time_children {
+    my $obj = shift;
+
+    @_ ? $obj->{TIME_CHILDREN} = shift : $obj->{TIME_CHILDREN};
+}

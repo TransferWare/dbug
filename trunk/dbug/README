@@ -1,0 +1,16 @@
+-*- indented-text -*-
+
+This is `DBUG', a Posix-threads debugging library.
+
+DBUG itself consists of the library, libdbug.la, and the headers installed
+in `/usr/local/include/ulib'.
+
+Installation is described in INSTALL. Installation using imake is
+described in README.imake.
+
+The documentation is doc/dbug.html.
+
+
+Local Variables:
+fill-column: 72
+End:

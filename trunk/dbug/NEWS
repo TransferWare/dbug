@@ -1,0 +1,10 @@
+DBUG NEWS - History of user visible changes.		-*- indented-text -*-
+Copyright (C) 2002 G.J. Paulissen 
+
+New in <version>; <date>; G.J. Paulissen:
+* Implement GNU build system.
+
+
+Local Variables:
+fill-column: 72
+End:
