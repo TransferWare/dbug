@@ -68,11 +68,11 @@ static char vcid[] = "$Header$";
 
 #include "config.h"
 
-#ifndef HASUNISTD
-#define HASUNISTD 1
+#ifndef HAVE_UNISTD_H
+#define HAVE_UNISTD_H 1
 #endif
 
-#if HASUNISTD
+#if HAVE_UNISTD_H
 #include <unistd.h>
 #endif
 
@@ -86,17 +86,17 @@ static char vcid[] = "$Header$";
 
 #ifdef _WIN32
 /* different includes for getpid, access, and sleep */
-# if HASGETPID
+# if HAVE_GETPID
 #  include <process.h>
 #  ifndef getpid
 #   define getpid _getpid
 #  endif
-# endif /* HASGETPID */
+# endif /* HAVE_GETPID */
 
 #else /* #ifdef _WIN32 */
 
 /* ! _WIN32 */
-# if HASGETPID
+# if HAVE_GETPID
 # include <unistd.h>
 # endif
 
@@ -111,10 +111,10 @@ static char vcid[] = "$Header$";
 #include <assert.h>
 
 
-#if HASSTDARG
+#if HAVE_STDARG_H
 #include <stdarg.h>
 #else
-# if HASVARARGS
+# if HAVE_VARARGS_H
 # /*@-usevarargs@*/
 # include <varargs.h>           /* Use system supplied varargs package */
 # else
@@ -287,7 +287,7 @@ typedef struct {
   char uid[14+3+1];             /* unique identifier between several runs of a program 
                                    includes date/time of creation and
                                    ctx_nr modulo UID_CTX_NR_MODULO */
-#if HASGETPID
+#if HAVE_GETPID
   unsigned long pid;            /* process id */
 #endif
   int flags;                    /* Current state flags */
@@ -330,9 +330,9 @@ typedef struct {
 #include "dbug.h" /* self-test */
 
 /* dmalloc.h/u_alloc.h must be the last in the include list */
-#if HASDMALLOC
+#if HAVE_DMALLOC_H
 #include <dmalloc.h>
-#elif HASULIB
+#elif HAVE_U_ALLOC_H
 #include <u_alloc.h>
 #endif
 
@@ -898,7 +898,7 @@ dbug_ctx_print( const dbug_ctx_t dbug_ctx )
   _DBUG_ENTER( procname );
   _DBUG_PRINT( "input", ( "%s", PTR_STR(dbug_ctx) ) );
 
-#if HASGETPID
+#if HAVE_GETPID
   pid = dbug_ctx->pid;
 #endif
 
@@ -1066,7 +1066,7 @@ dbug_options_ctx( const dbug_ctx_t dbug_ctx, const char *options )
   (void) strcpy(control, options);
 
   dbug_ctx->delay = 0;
-#if HASGETPID
+#if HAVE_GETPID
   dbug_ctx->pid = (unsigned long) getpid();
 #endif
   dbug_ctx->flags = 0;
@@ -2827,7 +2827,7 @@ dbug_init_ctx( const char * options, const char *name, dbug_ctx_t* dbug_ctx )
                               (*dbug_ctx)->separator,
                               (void*)(*dbug_ctx),
                               (*dbug_ctx)->separator,
-#if HASGETPID
+#if HAVE_GETPID
                               (*dbug_ctx)->pid,
 #else
                               0L,
@@ -3661,7 +3661,7 @@ dbug_leave( const int line, int *dbug_level )
  *  SYNOPSIS
  */
 
-#if HASSTDARG
+#if HAVE_STDARG_H
 dbug_errno_t
 dbug_print_ctx( const dbug_ctx_t dbug_ctx, const int line, const char *break_point, const char *format, ... )
 #else
@@ -3689,7 +3689,7 @@ va_dcl
   dbug_errno_t status = 0;
   va_list args;
 
-#if HASSTDARG
+#if HAVE_STDARG_H
   va_start(args, format);
 #else
   va_start(args);
@@ -3702,7 +3702,7 @@ va_dcl
   return status;
 }
 
-#if HASSTDARG
+#if HAVE_STDARG_H
 dbug_errno_t
 dbug_print( const int line, const char *break_point, const char *format, ... )
 #else
@@ -3717,7 +3717,7 @@ va_dcl
   dbug_errno_t status = 0;
   va_list args;
 
-#if HASSTDARG
+#if HAVE_STDARG_H
   va_start(args, format);
 #else
   va_start(args);
@@ -3804,7 +3804,7 @@ dbug_print_start( const int line, const char *break_point )
  *  SYNOPSIS
  */
 
-#if HASSTDARG
+#if HAVE_STDARG_H
 dbug_errno_t
 dbug_print_end( const char *format, ... )
 #else
@@ -3830,7 +3830,7 @@ va_dcl
   dbug_print_info_t *dbug_print_info;
   va_list args;
 
-#if HASSTDARG
+#if HAVE_STDARG_H
   va_start(args, format);
 #else
   va_start(args);

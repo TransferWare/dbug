@@ -47,10 +47,10 @@
  *
  *      The "config.h" is needed for definitions of 
  *      
- *      - HASCLOCK     Use clock()
- *      - HASFTIME     Use ftime()
- *      - HASGETRUSAGE Use getrusage()
- *      - HASDATESTAMP Use Datestamp()
+ *      - HAVE_CLOCK     Use clock()
+ *      - HAVE_FTIME     Use ftime()
+ *      - HAVE_GETRUSAGE Use getrusage()
+ *      - HAVE_DATESTAMP Use Datestamp()
  *
  *  AUTHOR(S)
  *
@@ -62,21 +62,21 @@
  *      seismo!bpa!sjuvax!bbanerje
  *
  *      Gert-Jan Paulissen      (thread support)
- *      e-mail: G.Paulissen@speed.a2000.nl
+ *      e-mail: g.paulissen@chello.nl
  */
 
 #include "config.h"
 #include "Clock.h"
 
-#if HASCLOCK
+#if HAVE_CLOCK
 #include <time.h>
 #endif
 
-#if HASFTIME
+#if HAVE_FTIME
 #include <sys/timeb.h>
 #endif
 
-#if HASGETRUSAGE
+#if HAVE_GETRUSAGE
 #include <sys/param.h>
 #include <sys/time.h>
 #ifndef __LCLINT__
@@ -118,7 +118,7 @@ void Gmtime( struct tm *tm )
  * own for whatever system that you have.
  */
 
-#if HASCLOCK
+#if HAVE_CLOCK
 
 unsigned long Clock (void)
 {
@@ -152,9 +152,9 @@ unsigned long Clock (void)
   return value;
 }
 
-#else /* HASCLOCK */
+#else /* HAVE_CLOCK */
 
-# if HASFTIME
+# if HAVE_FTIME
 
 unsigned long Clock (void)
 {
@@ -185,9 +185,9 @@ unsigned long Clock (void)
   return value;
 }
 
-# else /* HASFTIME */
+# else /* HAVE_FTIME */
 
-#  if HASGETRUSAGE
+#  if HAVE_GETRUSAGE
 
 /*
  * Definition of the Clock() routine for 4.3 BSD.
@@ -206,8 +206,8 @@ unsigned long Clock (void)
     return ((ru.ru_utime.tv_sec * 1000) + (ru.ru_utime.tv_usec / 1000));
 }
 
-#  else /* HASGETRUSAGE */
-#   if HASDATESTAMP
+#  else /* HAVE_GETRUSAGE */
+#   if HAVE_DATESTAMP
 
 struct DateStamp {              /* Yes, this is a hack, but doing it right */
         long ds_Days;           /* is incredibly ugly without splitting this */
@@ -251,13 +251,13 @@ unsigned long Clock (void)
 {
   return 0;
 }
-#   endif /* HASDATESTAMP */
+#   endif /* HAVE_DATESTAMP */
 
-#  endif        /* HASGETRUSAGE */
+#  endif        /* HAVE_GETRUSAGE */
 
-# endif /* HASFTIME */
+# endif /* HAVE_FTIME */
 
-#endif /* HASCLOCK */
+#endif /* HAVE_CLOCK */
 
 
 

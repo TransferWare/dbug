@@ -48,9 +48,9 @@ static char vcid[] = "$Header$";
  *
  *      The "config.h" is needed for definitions of 
  *      
- *      - HASSLEEP          Is there a sleep function.
- *      - HASDELAY          Is there a Delay function.
- *      - SLEEPGRANULARITY  Sleep granularity in Seconds (Unix) or not (Windows)
+ *      - HAVE_SLEEP          Is there a sleep function.
+ *      - HAVE_DELAY          Is there a Delay function.
+ *      - SLEEP_GRANULARITY  Sleep granularity in Seconds (Unix) or not (Windows)
  *
  *  AUTHOR(S)
  *
@@ -69,7 +69,7 @@ static char vcid[] = "$Header$";
 #include "SleepMsec.h"
 
 #ifdef _WIN32
-# if HASSLEEP
+# if HAVE_SLEEP
 #  include <stdlib.h>
 #  include <time.h>
 #  ifndef sleep
@@ -105,11 +105,11 @@ void SleepMsec(unsigned int value)
 {
     unsigned int delayarg = 0;
     
-#if HASDELAY
+#if HAVE_DELAY
     delayarg = (HZ * value) / 1000;     /* Delay in ticks for Delay () */
 #else
-# if HASSLEEP
-#  if SLEEPGRANULARITY == 'S'
+# if HAVE_SLEEP
+#  if SLEEP_GRANULARITY == 'S'
     delayarg = value / 1000;            /* Delay is in seconds for sleep () */
 #  else
     delayarg = ( CLOCKS_PER_SEC * value ) / 1000;       /* Delay is in ticks for sleep () */
@@ -123,10 +123,10 @@ void SleepMsec(unsigned int value)
 
     /*@-noeffect@*/
 
-#if HASDELAY
+#if HAVE_DELAY
     (void) Delay( delayarg );           /* Pause for given number of ticks */
 #else
-# if HASSLEEP
+# if HAVE_SLEEP
     /*@-unrecog@*/
     (void) sleep( delayarg );
     /*@=unrecog@*/
