@@ -18,9 +18,7 @@
 # Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 # Strip RCS keyword Name (e.g. '$Name$' into 2_1_0).
-AC_DEFUN(AC_RCS_NAME, regexp([$Name$], [dbug_\(.*\) ], [\1]))
-
-AC_DEFUN(AC_DBUG_MAJOR_
+AC_DEFUN(AC_RCS_NAME, translit(regexp([$Name$], [dbug_\(.*\) ], [\1]), [_], [.]))
 
 AC_REVISION([$Revision$])
 AC_INIT([dbug],[AC_RCS_NAME()],[g.paulissen@chello.nl])
