@@ -170,6 +170,31 @@
 #    define DBUG_LONGJMP(a1,a2) (_db_longjmp_ (), longjmp (a1, a2))
 # endif
 
+
+/*
+ *	These procedures provide a user interface for external programs 
+ *	who can not use macro's. An example is a Perl program. 
+ *	The dbug_call_info parameter is a handle and will be set by 
+ *	dbug_enter and reset by dbug_leave.
+ *
+ */
 
-
+extern void dbug_enter( char * i_module, long *o_dbug_call_info );
+extern void dbug_leave( long i_dbug_call_info );
+extern void dbug_push( char * i_options );
+extern void dbug_print1( 
+	char * i_keyword, char * i_fmt, char * i_arg1 );
+extern void dbug_print2( 
+	char * i_keyword, char * i_fmt, char * i_arg1, char * i_arg2 );
+extern void dbug_print3( 
+	char * i_keyword, char * i_fmt, char * i_arg1, char * i_arg2, 
+	char * i_arg3 );
+extern void dbug_print4( 
+	char * i_keyword, char * i_fmt, char * i_arg1, char * i_arg2, 
+	char * i_arg3, char * i_arg4 );
+extern void dbug_print5( 
+	char * i_keyword, char * i_fmt, char * i_arg1, char * i_arg2, 
+	char * i_arg3, char * i_arg4, char * i_arg5 );
+extern void dbug_pop( void );
+extern void dbug_process( char * i_process );
 
