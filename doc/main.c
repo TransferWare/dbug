@@ -24,7 +24,7 @@ int main (int argc, char *argv[])
     DBUG_ENTER("main");
     for (; ix < argc; ix++) 
       {
-	DBUG_PRINT((__LINE__, "args", "argv[%d] = %s", ix, argv[ix]));
+	DBUG_PRINT("args", ("argv[%d] = %s", ix, argv[ix]));
 	result = factorial (atoi (argv[ix]));
 	printf ("%d\n", result);
 	fflush( stdout );
