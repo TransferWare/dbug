@@ -137,6 +137,8 @@ typedef struct {
      0 means once allocated but not used anywhere, i.e. may be freed
      > 0 means referenced somewhere */
   unsigned int ref_count; 
+
+  unsigned int size; /* allocated size */
 } name_t;
 
 
@@ -325,7 +327,20 @@ typedef struct {
 #include <u_alloc.h>
 #endif
 
-#ifndef NDEBUG
+/* 
+ * - watchmalloc writes 0xbaddcafe to each allocated (malloc(), realloc()) block (4 bytes) 
+ * - watchmalloc writes 0xdeadbeef to each freed (free()) block (4 bytes) 
+ *   but the first block seems to be 0x00000000
+ */
+#ifndef HASWATCHMALLOC 
+#define HASWATCHMALLOC 0
+#endif
+
+#ifndef DEBUG_DBUG
+#define DEBUG_DBUG !defined(NDEBUG)
+#endif
+
+#if DEBUG_DBUG
 
 #define _DBUG_ENTER( procname ) \
   { FLOCKFILE(stdout); (void)fprintf( stdout, "> %s\n", procname ); FUNLOCKFILE(stdout); }
@@ -518,7 +533,7 @@ typedef int BOOLEAN;
  * declaration of static functions 
  */
 
-#ifndef NDEBUG
+#if DEBUG_DBUG
 static
 void
 dbug_ctx_print( const dbug_ctx_t dbug_ctx );
@@ -542,10 +557,16 @@ static
 dbug_errno_t
 dbug_options_ctx( const dbug_ctx_t dbug_ctx, const char *options );
 
-#ifndef NDEBUG
+#if DEBUG_DBUG
 static
 void
 dbug_names_print( names_t *names );
+#endif
+
+#if HASWATCHMALLOC
+static
+void
+dbug_names_check( names_t *names );
 #endif
 
 static
@@ -568,7 +589,7 @@ static
 dbug_errno_t
 dbug_names_del( names_t *names, const char *name );
 
-#ifndef NDEBUG
+#if DEBUG_DBUG
 static
 void
 dbug_stack_print( call_stack_t *stack );
@@ -594,7 +615,7 @@ static
 dbug_errno_t
 dbug_stack_top( call_stack_t *stack, /*@out@*/ call_t **top );
 
-#ifndef NDEBUG
+#if DEBUG_DBUG
 static
 void
 dbug_files_print( void );
@@ -838,7 +859,7 @@ _dbug_print_ctx( const dbug_ctx_t dbug_ctx, const int line, const char *break_po
   return status;
 }
 
-#ifndef NDEBUG
+#if DEBUG_DBUG
 static
 void
 dbug_ctx_print( const dbug_ctx_t dbug_ctx )
@@ -1131,7 +1152,7 @@ dbug_options_ctx( const dbug_ctx_t dbug_ctx, const char *options )
   return status;
 }
 
-#ifndef NDEBUG
+#if DEBUG_DBUG
 static
 void
 dbug_names_print( names_t *names )
@@ -1148,11 +1169,44 @@ dbug_names_print( names_t *names )
   for ( idx = 0; idx < names->count; idx++ )
     {
       _DBUG_PRINT( "info", 
-		   ( "idx: %d; name: %s; ref_count: %d", 
-		     idx, names->array[idx].name, names->array[idx].ref_count ) );
+		   ( "idx: %d; name: %*.*s; ref_count: %d", 
+		     idx, 
+                     names->array[idx].size-1, 
+                     names->array[idx].size-1, 
+                     names->array[idx].name, 
+                     names->array[idx].ref_count ) );
     }
 
   _DBUG_LEAVE();
+}
+#endif
+
+#if HASWATCHMALLOC
+static
+void
+dbug_names_check( names_t *names )
+{
+  int idx;
+
+  for ( idx = 0; idx < names->count; idx++ )
+    {
+      int nr;
+      const unsigned long baddcafe = 0xbaddcafe;
+      const unsigned long deadbeef = 0xdeadbeef;
+      const unsigned long null = 0x00000000;
+
+      for ( nr = 0; nr < names->array[idx].size/4; nr++ )
+        {
+          /* must be initialised after malloc */
+          assert( memcmp( &names->array[idx].name[4*nr], &baddcafe, 4 ) != 0 );
+
+          /* must not be freed */
+          if ( nr == 0 )
+            assert( memcmp( &names->array[idx].name[4*nr], &null    , 4 ) != 0 );
+          else
+            assert( memcmp( &names->array[idx].name[4*nr], &deadbeef, 4 ) != 0 );
+        }
+    }
 }
 #endif
 
@@ -1160,7 +1214,7 @@ static
 dbug_errno_t
 dbug_names_init( names_t *names )
 {
-#ifndef NDEBUG
+#if DEBUG_DBUG
   const char *procname = "dbug_names_init";
 #endif
 
@@ -1171,7 +1225,7 @@ dbug_names_init( names_t *names )
   names->size = names->count = 0L;
   names->magic = NAMES_MAGIC;
 
-#ifndef NDEBUG
+#if DEBUG_DBUG
   dbug_names_print( names );
   _DBUG_LEAVE();
 #endif
@@ -1186,7 +1240,7 @@ dbug_names_done( names_t *names )
   size_t idx;
   dbug_errno_t status = 0;
 
-#ifndef NDEBUG
+#if DEBUG_DBUG
   const char *procname = "dbug_names_done";
 
   _DBUG_ENTER( procname );
@@ -1253,9 +1307,10 @@ dbug_names_ins( names_t *names, const char *name, name_t **result )
 {
   size_t ins_idx; /* index to insert into */
   size_t idx; /* help variable */
+  char *new_name = NULL;
   dbug_errno_t status = 0;
 
-#ifndef NDEBUG
+#if DEBUG_DBUG
   const char *procname = "dbug_names_ins";
 
   _DBUG_ENTER( procname );
@@ -1266,81 +1321,116 @@ dbug_names_ins( names_t *names, const char *name, name_t **result )
   if ( !NAMES_VALID(names) )
     status = EINVAL;
   else
-    switch( status = dbug_names_fnd( names, name, result ) )
-      {
-      case 0:
-	(*result)->ref_count++;
+    {
+      assert( names->size >= names->count );
+      assert( names->count == 0 || ( names->count > 0 && names->array != NULL ) );
+      assert( names->size % NAMES_SIZE_EXPAND == 0 );
 
-	status = EEXIST;
-	break;
+      /* all elements at least names->count NULL */
+      assert( names->size == names->count ||
+	      /* names->size > names->count && */ names->array[names->count].name == NULL );
 
-      case ESRCH: /* could not find it */
+      switch( status = dbug_names_fnd( names, name, result ) )
+	{
+	case 0:
+	  (*result)->ref_count++;
 
-	/* 
-	 * *result is the name_t with its name > name 
-	 * if *result is NULL there is no name_t with its name > name 
-	 */
+	  status = EEXIST;
+	  break;
+	  
+	case ESRCH: /* could not find it */
+	  new_name = (char*)MALLOC(strlen(name)+1);
+	  if ( new_name == NULL )
+	    {
+	      status = ENOMEM;
+	      break;
+	    }
 
-	if ( (*result) == NULL ) /* new name will be at index count */
-	  {
-	    ins_idx = names->count;
-	  }
-	else
-	  ins_idx = (size_t) ( (*result) - names->array );
+	  /* 
+	   * *result is the name_t with its name > name 
+	   * if *result is NULL there is no name_t with its name > name 
+	   */
 
-        /*
-         * Expand if necessary
-         */
+	  if ( (*result) == NULL ) /* new name will be at index count */
+	    {
+	      ins_idx = names->count;
+	    }
+	  else
+	    ins_idx = (size_t) ( (*result) - names->array );
 
-        if ( names->size == names->count )
-          {
-            size_t size = sizeof(name_t) * ( names->size + NAMES_SIZE_EXPAND );
-            name_t *ptr = (name_t *) MALLOC( size );
+	  /*
+	   * Expand if necessary
+	   */
+
+	  if ( names->size == names->count )
+	    {
+	      size_t size = sizeof(name_t) * ( names->size + NAMES_SIZE_EXPAND );
+	      name_t *ptr = (name_t *) MALLOC( size );
       
-#ifndef NDEBUG
-	    _DBUG_PRINT( "info", ( "Expanding names: names->size: %d",
-				   names->size ) );
+#if DEBUG_DBUG
+	      _DBUG_PRINT( "info", ( "Expanding names: names->size: %d",
+				     names->size ) );
 #endif
 
-            if ( ptr == NULL )
-              {
-                status = ENOMEM;
-                break;
-              }
-            else
-              {
-		memcpy( ptr, names->array, sizeof(name_t) * names->size );
-		if ( names->array != NULL )
-		  FREE( names->array );
-            	names->array = ptr;
-            	names->size += NAMES_SIZE_EXPAND;
-              }
-          }
+	      if ( ptr == NULL )
+		{
+		  status = ENOMEM;
+		  break;
+		}
+	      else
+		{
+		  memcpy( ptr, names->array, sizeof(name_t) * names->size );
+		  if ( names->array != NULL )
+		    FREE( names->array );
+		  names->array = ptr;
 
-	/* shift elements up from ins_idx to the end */
+		  for ( idx = names->size; idx < names->size + NAMES_SIZE_EXPAND; idx++ )
+		    {
+		      names->array[idx].name = NULL;
+		      names->array[idx].ref_count = 0;
+		      names->array[idx].size = 0;
+		    }
 
-	for ( idx = names->count + 1; idx > ins_idx; idx-- )
-	  names->array[idx] = names->array[idx-1];
+		  names->size += NAMES_SIZE_EXPAND;
+		}
+	    }
 
-	names->array[ins_idx].name = (char*)MALLOC(strlen(name)+1);
-	if ( names->array[ins_idx].name == NULL )
-	  {
-	    status = ENOMEM;
-	    break;
-	  }
+	  /* shift elements up from ins_idx to the end */
 
-	strcpy(names->array[ins_idx].name, name);
-	names->array[ins_idx].ref_count = 1;
-	names->count++;
-	*result = &names->array[ins_idx];
-	status = 0;
-	break;
+	  assert( ins_idx >= 0 );
+	  assert( ( ins_idx == names->count && (*result) == NULL ) ||
+		  ( ins_idx < names->count && (*result) != NULL ) );
 
-      default:
-	break;
-      }
+          /* GJP 28-11-2000
+           * BUG: Move from [ins_idx .. names->count-1] to [ins_idx+1 .. names->count] (inclusive)
+           *      Do not move from [ins_idx .. names->count] to [ins_idx+1 .. names->count+1] 
+           */
+	  for ( idx = names->count; idx > ins_idx; idx-- )
+	    {
+	      names->array[idx] = names->array[idx-1];
+	      assert( names->array[idx].name != NULL );
+	    }
 
-#ifndef NDEBUG
+	  names->array[ins_idx].name = new_name;
+	  strcpy(names->array[ins_idx].name, name);
+	  names->array[ins_idx].ref_count = 1;
+	  names->array[ins_idx].size = strlen(new_name)+1;
+	  names->count++;
+
+	  *result = &names->array[ins_idx];
+	  status = 0;
+	  break;
+
+	default:
+	  break;
+	}
+
+#if HASWATCHMALLOC
+      dbug_names_check( names );
+#endif    
+    }
+
+#if DEBUG_DBUG
   dbug_names_print( names );
   _DBUG_PRINT( "info", 
 	       ( "result: %s", 
@@ -1382,7 +1472,7 @@ dbug_names_fnd( names_t *names, const char *name, name_t **result )
   int cmp;
   dbug_errno_t status = ESRCH;
 
-#ifndef NDEBUG
+#if DEBUG_DBUG
   const char *procname = "dbug_names_fnd";
   
   _DBUG_ENTER( procname );
@@ -1421,7 +1511,7 @@ dbug_names_fnd( names_t *names, const char *name, name_t **result )
 	status = 0;
     }
 
-#ifndef NDEBUG
+#if DEBUG_DBUG
   dbug_names_print( names );
   _DBUG_PRINT( "info", 
 	       ( "result: %s", 
@@ -1464,7 +1554,7 @@ dbug_names_del( names_t *names, const char *name )
   size_t idx; /* help variable */
   dbug_errno_t status = 0;
 
-#ifndef NDEBUG
+#if DEBUG_DBUG
   const char *procname = "dbug_names_del";
 
   _DBUG_ENTER( procname );
@@ -1474,41 +1564,47 @@ dbug_names_del( names_t *names, const char *name )
   if ( !NAMES_VALID(names) )
     status = EINVAL;
   else
-    switch( status = dbug_names_fnd( names, name, &result ) )
-      {
-      case 0:
-	/* 
-	 * *result is the name_t with its name == name 
-	 */
+    {
+      switch( status = dbug_names_fnd( names, name, &result ) )
+        {
+        case 0:
+  	  /* 
+	   * *result is the name_t with its name == name 
+	   */
 
-	/* decrement ref_count if applicable and return */
+	  /* decrement ref_count if applicable and return */
 
-	if ( result->ref_count > 0 )
-	  {
-	    result->ref_count--;
-	  }
-	else /* result->ref_count == 0 */
-	  {
-	    if ( result->name != NULL )
-	      FREE( result->name );
+	  if ( result->ref_count > 0 )
+	    {
+	      result->ref_count--;
+	    }
+	  else /* result->ref_count == 0 */
+	    {
+	      if ( result->name != NULL )
+	        FREE( result->name );
 
-	    del_idx = (size_t) ( result - names->array );
+	      del_idx = (size_t) ( result - names->array );
 
-	    /* shift elements down from del_idx to the end */
+	      /* shift elements down from del_idx to the end */
 	  
-	    for ( idx = del_idx; idx < names->count - 1; idx++ )
-	      names->array[idx] = names->array[idx+1];
+	      for ( idx = del_idx; idx < names->count - 1; idx++ )
+	        names->array[idx] = names->array[idx+1];
 
-	    names->count--;
-	  }
+	      names->count--;
+	    }
 
-	break;
+	  break;
 
-      default:
-	break;
-      }
+        default:
+	  break;
+        }
 
-#ifndef NDEBUG
+#if HASWATCHMALLOC
+      dbug_names_check( names );
+#endif    
+
+    }
+#if DEBUG_DBUG
   dbug_names_print( names );
   _DBUG_PRINT( "output", ( "status: %d", status ) );  
   _DBUG_LEAVE();
@@ -1517,7 +1613,7 @@ dbug_names_del( names_t *names, const char *name )
   return status;
 }
 
-#ifndef NDEBUG
+#if DEBUG_DBUG
 static
 void
 dbug_stack_print( call_stack_t *stack )
@@ -1548,7 +1644,7 @@ dbug_stack_init( call_stack_t *stack )
 {
   dbug_errno_t status = 0;
 
-#ifndef NDEBUG
+#if DEBUG_DBUG
   const char *procname = "dbug_stack_init";
 
   _DBUG_ENTER( procname );
@@ -1580,7 +1676,7 @@ dbug_stack_done( call_stack_t *stack )
 {
   dbug_errno_t status = 0;
 
-#ifndef NDEBUG
+#if DEBUG_DBUG
   const char *procname = "dbug_stack_done";
 
   _DBUG_ENTER( procname );
@@ -1614,7 +1710,7 @@ dbug_stack_push( call_stack_t *stack, call_t *call )
 {
   dbug_errno_t status = 0;
 
-#ifndef NDEBUG
+#if DEBUG_DBUG
   const char *procname = "dbug_stack_push";
 
   _DBUG_ENTER( procname );
@@ -1651,7 +1747,7 @@ dbug_stack_push( call_stack_t *stack, call_t *call )
 	stack->maxcount = stack->count;
     }
 
-#ifndef NDEBUG
+#if DEBUG_DBUG
   dbug_stack_print( stack );
   _DBUG_PRINT( "output", ( "status: %d", status ) );  
   _DBUG_LEAVE();
@@ -1666,7 +1762,7 @@ dbug_stack_pop( call_stack_t *stack )
 {
   dbug_errno_t status = 0;
 
-#ifndef NDEBUG
+#if DEBUG_DBUG
   const char *procname = "dbug_stack_pop";
 
   _DBUG_ENTER( procname );
@@ -1680,7 +1776,7 @@ dbug_stack_pop( call_stack_t *stack )
   else
     status = EPERM;
 
-#ifndef NDEBUG
+#if DEBUG_DBUG
   dbug_stack_print( stack );
   _DBUG_PRINT( "output", ( "status: %d", status ) );  
   _DBUG_LEAVE();
@@ -1695,7 +1791,7 @@ dbug_stack_top( call_stack_t *stack, call_t **top )
 {
   dbug_errno_t status = 0;
 
-#ifndef NDEBUG
+#if DEBUG_DBUG
   const char *procname = "dbug_stack_top";
 
   _DBUG_ENTER( procname );
@@ -1709,7 +1805,7 @@ dbug_stack_top( call_stack_t *stack, call_t **top )
   else
     status = EPERM;
 
-#ifndef NDEBUG
+#if DEBUG_DBUG
   dbug_stack_print( stack );
   _DBUG_PRINT( "info", ( "top: %s", ( status == 0 ? (*top)->function : "(nil)" ) ) );
   _DBUG_PRINT( "output", ( "status: %d", status ) );  
@@ -1719,7 +1815,7 @@ dbug_stack_top( call_stack_t *stack, call_t **top )
   return status;
 }
 
-#ifndef NDEBUG
+#if DEBUG_DBUG
 
 /* pre, post: dbug_adm_mutex is locked */
 static
@@ -1748,8 +1844,10 @@ dbug_files_print( void )
       assert( curr->next == NULL || curr->next->prev == curr );
 
       _DBUG_PRINT( "info", 
-		   ( "idx: %d; file name: %s; ref_count: %d", 
-		     idx, curr->fname.name, curr->fname.ref_count ) );
+		   ( "idx: %d; file name: %*.*s; ref_count: %d", 
+		     idx, 
+                     curr->fname.size-1, curr->fname.size-1, curr->fname.name, 
+                     curr->fname.ref_count ) );
 
       curr = curr->next;
       idx++;
@@ -1795,7 +1893,7 @@ dbug_file_open( const char *name, const char *mode, file_t **result )
   dbug_errno_t status = 0;
   file_t *new = NULL;
 
-#ifndef NDEBUG
+#if DEBUG_DBUG
   const char *procname = "dbug_file_open";
 
   _DBUG_ENTER( procname );
@@ -1841,7 +1939,7 @@ dbug_file_open( const char *name, const char *mode, file_t **result )
 	break;
 
       default:
-	break;
+        break;
       }
 
   if ( new != NULL )
@@ -1922,7 +2020,7 @@ dbug_file_open( const char *name, const char *mode, file_t **result )
     (void) pthread_mutex_unlock( &dbug_adm_mutex );
 #endif
 
-#ifndef NDEBUG
+#if DEBUG_DBUG
   dbug_files_print();
   _DBUG_PRINT( "output", ( "status: %d", status ) );
   _DBUG_LEAVE();
@@ -1968,7 +2066,7 @@ dbug_file_fnd( const char *name, file_t **result )
   file_t *curr;
   dbug_errno_t status = ESRCH;
 
-#ifndef NDEBUG
+#if DEBUG_DBUG
   const char *procname = "dbug_files_fnd";
   
   _DBUG_ENTER( procname );
@@ -1998,7 +2096,7 @@ dbug_file_fnd( const char *name, file_t **result )
 #endif
     }
 
-#ifndef NDEBUG
+#if DEBUG_DBUG
   _DBUG_PRINT( "output", ( "status: %d", status ) );
   _DBUG_LEAVE();
 #endif
@@ -2033,7 +2131,7 @@ dbug_file_close( file_t **file )
 {
   dbug_errno_t status = 0;
 
-#ifndef NDEBUG
+#if DEBUG_DBUG
   const char *procname = "dbug_file_close";
 
   _DBUG_ENTER( procname );
@@ -2095,7 +2193,7 @@ dbug_file_close( file_t **file )
     (void) pthread_mutex_unlock( &dbug_adm_mutex );
 #endif
 
-#ifndef NDEBUG
+#if DEBUG_DBUG
   dbug_files_print();
   _DBUG_PRINT( "output", ( "status: %d", status ) );  
   _DBUG_LEAVE();
@@ -2112,7 +2210,7 @@ dbug_ctx_data_done( void *data )
 {
   dbug_ctx_t dbug_ctx = (dbug_ctx_t)data;
 
-#ifndef NDEBUG
+#if DEBUG_DBUG
   const char *procname = "dbug_ctx_data_done";
 
   _DBUG_ENTER( procname );
@@ -2131,7 +2229,7 @@ static
 void
 dbug_print_info_data_done( void *data )
 {
-#ifndef NDEBUG
+#if DEBUG_DBUG
   const char *procname = "dbug_print_info_data_done";
 
   _DBUG_ENTER( procname );
@@ -2160,7 +2258,7 @@ dbug_key_init( dbug_key_t *dbug_key )
 #define DBUG_KEY_INIT_STEPS (UNLOCK_STEP+1)
   } step_no;
 
-#ifndef NDEBUG
+#if DEBUG_DBUG
   const char *procname = "dbug_key_init";
 
   _DBUG_ENTER( procname );
@@ -2225,7 +2323,7 @@ dbug_key_done( dbug_key_t *dbug_key )
 #define DBUG_KEY_DONE_STEPS (UNLOCK_STEP+1)
   } step_no;
 
-#ifndef NDEBUG
+#if DEBUG_DBUG
   const char *procname = "dbug_key_init";
 
   _DBUG_ENTER( procname );
@@ -2730,7 +2828,7 @@ dbug_init( const char * options, const char *name )
  */
 {
   dbug_errno_t status = 0;
-#ifndef NDEBUG
+#if DEBUG_DBUG
   const char *procname = "dbug_init";
 #endif
 #if HASPTHREAD
@@ -2993,7 +3091,7 @@ dbug_done( void )
 {
   dbug_errno_t status = 0;
   dbug_ctx_t dbug_ctx; /* local dbug_ctx */
-#ifndef NDEBUG
+#if DEBUG_DBUG
   const char *procname = "dbug_done";
 #endif
 
@@ -3501,7 +3599,7 @@ dbug_print_start_ctx( const dbug_ctx_t dbug_ctx, const int line, const char *bre
 {
   dbug_errno_t status = 0;
   dbug_print_info_t *dbug_print_info;
-#ifndef NDEBUG
+#if DEBUG_DBUG
   const char *procname = "dbug_print_start_ctx";
 #endif
 
@@ -3651,7 +3749,7 @@ dbug_dump( const int line,
 }
 
 
-#if !defined(NDEBUG) && defined(DBUGTEST)
+#if DEBUG_DBUG && defined(DBUGTEST)
 
 int main( int argc, char **argv )
 {
