@@ -3610,11 +3610,13 @@ dbug_print_start_ctx( const dbug_ctx_t dbug_ctx, const int line, const char *bre
 	       ( "dbug_ctx: %s; line: %d; break_point: %s", 
 		 PTR_STR(dbug_ctx), line, break_point ) );
 
-  dbug_print_info = dbug_print_info_get();
-
-  dbug_print_info->dbug_ctx = dbug_ctx;
-  dbug_print_info->line = line;
-  dbug_print_info->break_point = (char *)break_point;
+  /* PR-051270-5204 */
+  if ( (dbug_print_info = dbug_print_info_get()) != NULL )
+    {
+      dbug_print_info->dbug_ctx = dbug_ctx;
+      dbug_print_info->line = line;
+      dbug_print_info->break_point = (char *)break_point;
+    }
 
   _DBUG_PRINT( "output", ( "status: %d", status ) );
   _DBUG_LEAVE();
@@ -3678,15 +3680,17 @@ va_dcl
   dbug_print_info_t *dbug_print_info;
   va_list args;
 
-  dbug_print_info = dbug_print_info_get();
-
 #if HASSTDARG
   va_start(args, format);
 #else
   va_start(args);
 #endif
 
-  status = _dbug_print_ctx( dbug_print_info->dbug_ctx, dbug_print_info->line, dbug_print_info->break_point, format, args );
+  /* PR-051270-5204 */
+  if ( ( dbug_print_info = dbug_print_info_get() ) != NULL )
+    {
+      status = _dbug_print_ctx( dbug_print_info->dbug_ctx, dbug_print_info->line, dbug_print_info->break_point, format, args );
+    }
 
   va_end(args);
 
