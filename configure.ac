@@ -18,7 +18,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 AC_REVISION([$Revision$])
-AC_INIT([dbug],[3.4.0],[g.paulissen@chello.nl])
+AC_INIT([dbug],[4.0.0],[g.paulissen@chello.nl])
 
 # version check
 if test -f "$srcdir/VERSION"
