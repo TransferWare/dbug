@@ -73,6 +73,8 @@ AC_CHECK_FUNCS(
   [break],
   [AC_MSG_ERROR([One of the functions clock(), ftime(), getrusage(), Datestamp() must be available.])]
 )
+# Check he Posix threads flockfile() function.
+AC_CHECK_FUNCS([flockfile])
 
 # This is necessary so that .o files in LIBOBJS are also built via
 # the ANSI2KNR-filtering rules.
