@@ -261,6 +261,8 @@ LOCAL VOID CloseFile ();	/* Close debug output stream */
 LOCAL VOID PushState ();	/* Push current debug state */
 LOCAL VOID ChangeOwner ();	/* Change file owner and group */
 LOCAL BOOLEAN DoTrace ();	/* Test for tracing enabled */
+LOCAL BOOLEAN DoProfile ( void );
+LOCAL int DelayArg (int value);
 LOCAL BOOLEAN Writable ();	/* Test to see if file is writable */
 LOCAL unsigned long Clock ();	/* Return current user time (ms) */
 LOCAL long *DbugMalloc ();	/* Allocate memory for runtime support */
@@ -433,8 +435,7 @@ IMPORT int Delay ();		/* Pause for given number of ticks */
  */
 
 
-VOID _db_push_ (control)
-char *control;
+VOID _db_push_ (char *control)
 {
     REGISTER char *scan;
     REGISTER struct link *temp;
@@ -544,7 +545,7 @@ char *control;
  *
  */
 
-VOID _db_pop_ ()
+VOID _db_pop_ ( void )
 {
     REGISTER struct state *discard;
 
@@ -610,15 +611,15 @@ VOID _db_pop_ ()
  *
  */
 
-VOID _db_enter_ (_func_, _file_, _line_, _sfunc_, _sfile_, _slevel_,
-		 _sframep_)
-char *_func_;
-char *_file_;
-int _line_;
-char **_sfunc_;
-char **_sfile_;
-int *_slevel_;
-char ***_sframep_;
+VOID _db_enter_ (
+char *_func_,
+char *_file_,
+int _line_,
+char **_sfunc_,
+char **_sfile_,
+int *_slevel_,
+char ***_sframep_
+)
 {
     long stackused;
 
@@ -680,11 +681,11 @@ char ***_sframep_;
  *
  */
 
-VOID _db_return_ (_line_, _sfunc_, _sfile_, _slevel_)
-int _line_;
-char **_sfunc_;
-char **_sfile_;
-int *_slevel_;
+VOID _db_return_ (
+int _line_,
+char **_sfunc_,
+char **_sfile_,
+int *_slevel_ )
 {
     if (!init_done) {
 	_db_push_ ("");
@@ -729,9 +730,10 @@ int *_slevel_;
 *
  */
 
-VOID _db_pargs_ (_line_, keyword)
-int _line_;
-char *keyword;
+VOID _db_pargs_ (
+int _line_,
+char *keyword 
+)
 {
     u_line = _line_;
     u_keyword = keyword;
@@ -984,7 +986,7 @@ LOCAL BOOLEAN DoTrace ()
  *
  */
 
-LOCAL BOOLEAN DoProfile ()
+LOCAL BOOLEAN DoProfile ( void )
 {
     REGISTER BOOLEAN profile;
 
@@ -1616,7 +1618,7 @@ char *pathname;
  *
  */
 
-VOID _db_setjmp_ ()
+VOID _db_setjmp_ ( void )
 {
    jmplevel = stack -> level;
    jmpfunc = func;
@@ -1641,7 +1643,7 @@ VOID _db_setjmp_ ()
  *
  */
 
-VOID _db_longjmp_ ()
+VOID _db_longjmp_ ( void )
 {
     stack -> level = jmplevel;
     if (jmpfunc) {
@@ -1676,8 +1678,7 @@ VOID _db_longjmp_ ()
  *
  */
 
-LOCAL int DelayArg (value)
-int value;
+LOCAL int DelayArg (int value)
 {
     unsigned int delayarg = 0;
     
