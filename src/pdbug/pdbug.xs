@@ -52,45 +52,90 @@ constant(name,arg)
 	int		arg
 
 void 
-enter( i_module, o_dbug_call_info ) 
-	char* i_module
-	long &o_dbug_call_info
+init_ctx( options, name, dbug_ctx )
+	char* options
+	char* name
+	void* &dbug_ctx
 CODE:
-	dbug_enter( i_module, &o_dbug_call_info );
+	dbug_init_ctx( options, name, &dbug_ctx );
 OUTPUT:
-	o_dbug_call_info
+	dbug_ctx
 
 void 
-leave( i_dbug_call_info )
-	long i_dbug_call_info
+init( options, name )
+	char* options
+	char* name
 CODE:
-	dbug_leave( i_dbug_call_info );
+	dbug_init( options, name );
 
 void 
-push( i_options )
-	char* i_options
+done_ctx( dbug_ctx )
+	void* &dbug_ctx
 CODE:
-	dbug_push( i_options );
+	dbug_done_ctx( &dbug_ctx );
+OUTPUT:
+	dbug_ctx
 
 void 
-print(  i_keyword, i_fmt, i_arg1, i_arg2=0, i_arg3=0, i_arg4=0, i_arg5=0 ) 
-	char* i_keyword
-	char* i_fmt
-	char* i_arg1
-	char* i_arg2
-	char* i_arg3
-	char* i_arg4
-	char* i_arg5
+done()
 CODE:
-	dbug_print5( i_keyword, i_fmt, i_arg1, i_arg2, i_arg3, i_arg4, i_arg5 );
+	dbug_done();
 
 void 
-pop()
+enter_ctx( dbug_ctx, file, function, line, dbug_level ) 
+	void* dbug_ctx       
+	char* file
+	char* function
+	int line
+	int &dbug_level
 CODE:
-	dbug_pop();
+	dbug_enter_ctx( dbug_ctx, file, function, line, &dbug_level );
+OUTPUT:
+	dbug_level
 
 void 
-process( i_process )
-	char* i_process
+enter( file, function, line, dbug_level ) 
+	char* file
+	char* function
+	int line
+	int &dbug_level
 CODE:
-	dbug_process( i_process );
+	dbug_enter( file, function, line, &dbug_level );
+OUTPUT:
+	dbug_level
+
+void 
+leave_ctx( dbug_ctx, line, dbug_level ) 
+	void* dbug_ctx       
+	int line
+	int &dbug_level
+CODE:
+	dbug_leave_ctx( dbug_ctx, line, &dbug_level );
+OUTPUT:
+	dbug_level
+
+void 
+leave( line, dbug_level ) 
+	int line
+	int &dbug_level
+CODE:
+	dbug_leave( line, &dbug_level );
+OUTPUT:
+	dbug_level
+
+void 
+print_ctx( dbug_ctx, line, break_point, str ) 
+	void* dbug_ctx
+	int line
+	char* break_point
+	char* str
+CODE:
+	dbug_print_ctx( dbug_ctx, line, break_point, str );
+
+void 
+print( line, break_point, str ) 
+	int line
+	char* break_point
+	char* str
+CODE:
+	dbug_print( line, break_point, str );

@@ -1,27 +1,36 @@
 #include <stdio.h>
-/* User programs should use <local/dbug.h> */
+#include <stdlib.h>
 #include "dbug.h"
 
-main (argc, argv)
-int argc;
-char *argv[];
+main (int argc, char *argv[])
 {
-    register int result, ix;
-    extern int factorial (), atoi ();
-
-    DBUG_ENTER ("main");
-    DBUG_PROCESS (argv[0]);
-    for (ix = 1; ix < argc && argv[ix][0] == '-'; ix++) {
-	switch (argv[ix][1]) {
-	    case '#':
-		DBUG_PUSH (&(argv[ix][2]));
-		break;
+  int result, ix;
+  char *options = "";
+  extern int factorial (int value);
+  
+  for (ix = 1; ix < argc && argv[ix][0] == '-'; ix++) 
+    {
+      switch (argv[ix][1]) 
+	{
+	case '#':
+	  options = &(argv[ix][2]);
+	  break;
 	}
     }
-    for (; ix < argc; ix++) {
-	DBUG_PRINT ("args", ("argv[%d] = %s", ix, argv[ix]));
+
+  DBUG_INIT( options, argv[0] );
+  {
+    DBUG_ENTER("main");
+    for (; ix < argc; ix++) 
+      {
+	DBUG_PRINT((__LINE__, "args", "argv[%d] = %s", ix, argv[ix]));
 	result = factorial (atoi (argv[ix]));
 	printf ("%d\n", result);
-    }
-    DBUG_RETURN (0);
+	fflush( stdout );
+      }
+    DBUG_LEAVE();
+  }
+  DBUG_DONE();
+
+  return (0);
 }
