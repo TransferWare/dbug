@@ -362,6 +362,9 @@ sub min_time {
         my $time = shift;
         my $r_old_time = \${$obj->{MIN_TIME}}{$function};
 
+	# [ 719574 ] zero min time shows minus sign
+	$time = 0 if ( $time < 0 );
+
         if ( !defined($$r_old_time) || $$r_old_time > $time ) {
             $$r_old_time = $time;
         }
@@ -376,6 +379,9 @@ sub max_time {
     if ( @_ ) {
         my $time = shift;
         my $r_old_time = \${$obj->{MAX_TIME}}{$function};
+
+	# [ 719574 ] zero min time shows minus sign
+	$time = 0 if ( $time < 0 );
 
         if ( !defined($$r_old_time) || $$r_old_time < $time ) {
             $$r_old_time = $time;

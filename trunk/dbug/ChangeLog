@@ -1,3 +1,8 @@
+2003-08-31  Gert-Jan Paulissen  <g.paulissen@chello.nl>
+
+	* Solved tracker bug
+	[ 719574 ] zero min time shows minus sign
+
 2003-08-21  Gert-Jan Paulissen  <g.paulissen@chello.nl>
 
         * Added dejagnu testsuite.
