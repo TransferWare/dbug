@@ -366,7 +366,7 @@ LOCAL int Delay ( int seconds );		/* Pause for given number of ticks */
 int _db_get_on_ (void)
 {
 	return _db_on_;
-};
+}
 
 
 
@@ -385,7 +385,7 @@ int _db_get_on_ (void)
 FILE *_db_get_fp_( void )
 {
 	return _db_fp_;
-};
+}
 
 
 /*
