@@ -443,7 +443,7 @@ containing the macro causing the output.
 Turn on machine independent profiling. A profiling data collection
 file, named dbugmon.out, will be written for postprocessing by the
 "analyze" program. The accuracy of this feature is relatively unknown
-at this time.
+at this time. See also C<README.prof>.
 
 =item i
 
