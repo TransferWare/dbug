@@ -1,0 +1,40 @@
+>main
+|   >factorial
+|   |   >factorial
+|   |   |   >factorial
+|   |   |   <factorial
+|   |   <factorial
+|   <factorial
+6
+<main
+
+-------------------------------------------------------------------------------
+Profile of execution for debug context 'factorial'
+Stack usage: 40 bytes
+Execution times are in seconds
+
+                         Calls           Time
+                         -----           ----
+function                 # calls % calls        time % time   time/call  weight
+======================== ======= ======= =========== ====== =========== =======
+factorial                      3   75.00       5.000  71.63       1.667    5372
+main                           1   25.00       1.980  28.37       1.980     709
+                         ======= ======= =========== ======                    
+Totals                         4  100.00       6.980 100.00
+-------------------------------------------------------------------------------
+
+
+-------------------------------------------------------------------------------
+Profile of execution for debug context 'total'
+Stack usage: 0 bytes
+Execution times are in seconds
+
+                         Calls           Time
+                         -----           ----
+function                 # calls % calls        time % time   time/call  weight
+======================== ======= ======= =========== ====== =========== =======
+factorial                      3   75.00       5.000  71.63       1.667    5372
+main                           1   25.00       1.980  28.37       1.980     709
+                         ======= ======= =========== ======                    
+Totals                         4  100.00       6.980 100.00
+-------------------------------------------------------------------------------
