@@ -36,5 +36,5 @@ dist-hook:
 ## @end 1
 
 EXTRA_DIST              = bootstrap Imakefile DISTRIBUTE MANIFEST MANIFEST.SKIP \
-			Makefile.PL README.imake VERSION \
+			Makefile.PL README.imake VERSION BUGS \
 			config.msub
