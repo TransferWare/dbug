@@ -39,7 +39,5 @@ EXTRA_DIST              = bootstrap Imakefile DISTRIBUTE MANIFEST MANIFEST.SKIP 
 			Makefile.PL README.html README.imake \
 			cmp/DBUG.cmp cmp/DBUG_CORE.cmp cmp/DBUG_DEV.cmp \
 			cmp/DBUG_DOC.cmp cmp/DBUG_RUN.cmp \
-			config.msub \
-			src/pdbug/Makefile.PL src/pdbug/pdbug.html src/pdbug/pdbug.pm \
-			src/pdbug/pdbug.xs src/pdbug/test.pl
+			config.msub
 
