@@ -87,55 +87,40 @@ dbug_init_ctx( const char * options, const char *name, dbug_ctx_t* dbug_ctx );
 
 extern
 dbug_errno_t
+dbug_init( const char * options, const char *name );
+
+extern
+dbug_errno_t
 dbug_done_ctx( dbug_ctx_t* dbug_ctx );
 
 extern
 dbug_errno_t
-dbug_enter_ctx( const dbug_ctx_t dbug_ctx, const char *where, const char *module, const int line, const char *sp );
+dbug_done( void );
 
 extern
 dbug_errno_t
-dbug_leave_ctx( const dbug_ctx_t dbug_ctx );
+dbug_enter_ctx( const dbug_ctx_t dbug_ctx, const char *file, const char *function, const int line, int *dbug_level );
 
 extern
 dbug_errno_t
-dbug_print_ctx( const dbug_ctx_t dbug_ctx, const char *keyword, const char *format, ... );
+dbug_enter( const char *file, const char *function, const int line, int *dbug_level );
 
-#if 0
+extern
+dbug_errno_t
+dbug_leave_ctx( const dbug_ctx_t dbug_ctx, const int line, int *dbug_level );
 
-/*
- *	Internally used dbug variables which must be global.
- */
+extern
+dbug_errno_t
+dbug_leave( const int line, int *dbug_level );
 
-#ifndef DBUG_OFF
-    extern int _db_get_on_ (void);			/* TRUE if debug currently enabled */
-    extern FILE *_db_get_fp_( void );			/* Current debug output stream */
-    extern void _db_set_process_( char * process);	/* Name of current process */
-    extern int _db_keyword_ (char *keyword);		/* Accept/reject keyword */
-    extern void _db_push_ (char *control);		/* Push state, set up new state */
-    extern void _db_pop_ ( void );			/* Pop previous debug state */
-    extern void _db_enter_ (				/* New user function entered */
-			    char *_func_,
-			    char *_file_,
-			    int _line_,
-			    char **_sfunc_,
-			    char **_sfile_,
-			    int *_slevel_,
-			    char ***_sframep_ );
-    extern void _db_return_ (				/* User function return */
-			     int _line_,
-			     char **_sfunc_,
-			     char **_sfile_,
-			     int *_slevel_ );
-    extern void _db_pargs_ (				/* Remember args for line */
-			    int _line_,
-			    char *keyword );
-    extern void _db_doprnt_ (char *format, ...);	/* Print debug output */
-    extern void _db_setjmp_ ( void );			/* Save debugger environment */
-    extern void _db_longjmp_ ( void );			/* Restore debugger environment */
-# endif
+extern
+dbug_errno_t
+dbug_print_ctx( const dbug_ctx_t dbug_ctx, const int line, const char *break_point, const char *format, ... );
 
-
+extern
+dbug_errno_t
+dbug_print( const int line, const char *break_point, const char *format, ... );
+
 /*
  *	These macros provide a user interface into functions in the
  *	dbug runtime support library.  They isolate users from changes
@@ -152,81 +137,32 @@ dbug_print_ctx( const dbug_ctx_t dbug_ctx, const char *keyword, const char *form
  */
 
 # ifdef DBUG_OFF
-#    define DBUG_ENTER(a1)
-#    define DBUG_RETURN(a1) return(a1)
-#    define DBUG_VOID_RETURN return
-#    define DBUG_EXECUTE(keyword,a1)
-#    define DBUG_PRINT(keyword,arglist)
-#    define DBUG_2(keyword,format)		/* Obsolete */
-#    define DBUG_3(keyword,format,a1)		/* Obsolete */
-#    define DBUG_4(keyword,format,a1,a2)	/* Obsolete */
-#    define DBUG_5(keyword,format,a1,a2,a3)	/* Obsolete */
-#    define DBUG_PUSH(a1)
-#    define DBUG_POP()
-#    define DBUG_PROCESS(a1)
-#    define DBUG_FILE (stderr)
-#    define DBUG_SETJMP setjmp
-#    define DBUG_LONGJMP longjmp
+#    define DBUG_INIT_CTX(options,name,dbug_ctx)
+#    define DBUG_INIT(options,name)
+#    define DBUG_DONE_CTX(dbug_ctx)
+#    define DBUG_DONE()
+#    define DBUG_ENTER_CTX(dbug_ctx,function)
+#    define DBUG_ENTER(function)
+#    define DBUG_LEAVE_CTX(dbug_ctx)
+#    define DBUG_LEAVE()
+#    define DBUG_PRINT_CTX(arglist)
+#    define DBUG_PRINT(arglist)
 # else
-#    define DBUG_ENTER(a) \
-	auto char *_db_func_; auto char *_db_file_; auto int _db_level_; \
-	auto char **_db_framep_; \
-	_db_enter_ (a,__FILE__,__LINE__,&_db_func_,&_db_file_,&_db_level_, \
-		    &_db_framep_)
-#    define DBUG_LEAVE \
-	(_db_return_ (__LINE__, &_db_func_, &_db_file_, &_db_level_))
-#    define DBUG_RETURN(a1) return (DBUG_LEAVE, (a1))
-/*   define DBUG_RETURN(a1) {DBUG_LEAVE; return(a1);}  Alternate form */
-#    define DBUG_VOID_RETURN {DBUG_LEAVE; return;}
-#    define DBUG_EXECUTE(keyword,a1) \
-	{if (_db_get_on_()) {if (_db_keyword_ (keyword)) { a1 }}}
-#    define DBUG_PRINT(keyword,arglist) \
-	{if (_db_get_on_()) {_db_pargs_(__LINE__,keyword); _db_doprnt_ arglist;}}
-#    define DBUG_2(keyword,format) \
-	DBUG_PRINT(keyword,(format))		/* Obsolete */
-#    define DBUG_3(keyword,format,a1) \
-	DBUG_PRINT(keyword,(format,a1))		/* Obsolete */
-#    define DBUG_4(keyword,format,a1,a2) \
-	DBUG_PRINT(keyword,(format,a1,a2))	/* Obsolete */
-#    define DBUG_5(keyword,format,a1,a2,a3) \
-	DBUG_PRINT(keyword,(format,a1,a2,a3))	/* Obsolete */
-#    define DBUG_PUSH(a1) _db_push_ (a1)
-#    define DBUG_POP() _db_pop_ ()
-#    define DBUG_PROCESS(a1) _db_set_process_(a1)
-#    define DBUG_FILE (_db_get_fp_())
-#    define DBUG_SETJMP(a1) (_db_setjmp_ (), setjmp (a1))
-#    define DBUG_LONGJMP(a1,a2) (_db_longjmp_ (), longjmp (a1, a2))
+#    define DBUG_INIT_CTX(options,name,dbug_ctx) dbug_init_ctx(options,name,dbug_ctx)
+#    define DBUG_INIT(options,name) dbug_init(options,name)
+#    define DBUG_DONE_CTX(dbug_ctx) dbug_done_ctx(dbug_ctx)
+#    define DBUG_DONE() dbug_done()
+#    define DBUG_ENTER_CTX(dbug_ctx,function) \
+	int dbug_level; \
+	dbug_enter_ctx(dbug_ctx,__FILE__,function,__LINE__,&dbug_level)
+#    define DBUG_ENTER(function) \
+	int dbug_level; \
+	dbug_enter(__FILE__,function,__LINE__,&dbug_level)
+#    define DBUG_LEAVE_CTX(dbug_ctx) dbug_leave_ctx(dbug_ctx, __LINE__, &dbug_level)
+#    define DBUG_LEAVE() dbug_leave(__LINE__, &dbug_level)
+#    define DBUG_PRINT_CTX(arglist) dbug_print_ctx arglist
+#    define DBUG_PRINT(arglist) dbug_print arglist
 # endif
-
-
-/*
- *	These procedures provide a user interface for external programs 
- *	who can not use macro's. An example is a Perl program. 
- *	The dbug_call_info parameter is a handle and will be set by 
- *	dbug_enter and reset by dbug_leave.
- *
- */
-
-extern void dbug_enter( char * i_module, long *o_dbug_call_info );
-extern void dbug_leave( long i_dbug_call_info );
-extern void dbug_push( char * i_options );
-extern void dbug_print1( 
-	char * i_keyword, char * i_fmt, char * i_arg1 );
-extern void dbug_print2( 
-	char * i_keyword, char * i_fmt, char * i_arg1, char * i_arg2 );
-extern void dbug_print3( 
-	char * i_keyword, char * i_fmt, char * i_arg1, char * i_arg2, 
-	char * i_arg3 );
-extern void dbug_print4( 
-	char * i_keyword, char * i_fmt, char * i_arg1, char * i_arg2, 
-	char * i_arg3, char * i_arg4 );
-extern void dbug_print5( 
-	char * i_keyword, char * i_fmt, char * i_arg1, char * i_arg2, 
-	char * i_arg3, char * i_arg4, char * i_arg5 );
-extern void dbug_pop( void );
-extern void dbug_process( char * i_process );
-
-#endif /* #if 0 */
 
 #ifdef __cplusplus
 };

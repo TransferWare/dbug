@@ -18,39 +18,43 @@ print "ok 1\n";
 # (correspondingly "not ok 13") depending on the success of chunk 13
 # of the test code):
 
-sub main {
-	my ($result, $ix, $handle);
-	my $argc = $#ARGV + 1;
+sub main 
+{
+  my ($result, $ix, $dbug_level);
+  my $options = "";
+  my $argc = $#ARGV + 1;
         
-	pdbug::enter( "main", $handle );
+  for ($ix = 0; $ix < $argc && $ARGV[$ix] =~ m/^-#/; $ix++) 
+  {
+      $options = substr($ARGV[$ix], 2);
+  }
 
-	pdbug::process($ARGV[0]);
-
-	for ($ix = 0; $ix < $argc; $ix++) {
-                if ( $ARGV[$ix] =~ m/^-#/ ) {
-			pdbug::push( substr($ARGV[$ix], 2) );
-                } else {
-	                pdbug::print ("args", "argv[%s] = %s", "$ix", $ARGV[$ix] );
-        	        $result = &factorial ( $ARGV[$ix] );
-                	printf ("%d\n", $result);
-		}
-	}
-	pdbug::leave( $handle );
+  pdbug::init( $options, $ARGV[0] );
+  pdbug::enter( "test.pl", "main", 1, $dbug_level );
+  for (; $ix < $argc; $ix++) 
+  {
+    pdbug::print( 2, "args", sprintf( "argv[%d] = %d", $ix, $ARGV[$ix] ) );
+    $result = &factorial ( $ARGV[$ix] );
+    printf ("%d\n", $result);
+  }
+  pdbug::leave( 3, $dbug_level );
+  pdbug::done( );
 }
 
         
-sub factorial {
-	my $value = $_[0];
-	my $handle;
+sub factorial 
+{
+  my $value = $_[0];
+  my $dbug_level;
 
-	pdbug::enter ("factorial", $handle);
-	pdbug::print ("find", "find %s factorial" , "$value" );
-	if ($value > 1) {
-		$value *= &factorial ($value - 1);
-	}
-	pdbug::print ("result", "result is %s", "$value" );
-	pdbug::leave( $handle );
-	$value;
+  pdbug::enter( "test.pl", "factorial", 4, $dbug_level );
+  pdbug::print( 5, "find", sprintf( "find %d factorial" , $value ) );
+  if ($value > 1) {
+      $value *= &factorial ($value - 1);
+  }
+  pdbug::print( 6, "result", sprintf( "result is %d", $value ) );
+  pdbug::leave( 7, $dbug_level );
+  $value;
 }
 
 &main;

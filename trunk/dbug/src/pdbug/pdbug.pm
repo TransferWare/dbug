@@ -52,7 +52,7 @@ bootstrap pdbug $VERSION;
 
 1;
 __END__
-# Below is the stub of documentation for your module. You better edit it!
+# Documentation for pdbug.
 
 =head1 NAME
 
@@ -62,52 +62,60 @@ pdbug - Perl extension for C dbug library.
 
   use pdbug;
 
-  enter ( $i_module, $o_module_info );
+  init( $options, $name );
+  init_ctx( $options, $name, $dbug_ctx );
 
-  leave ( $i_module_info );
+  done();
+  done_ctx( $dbug_ctx );
 
-  push ( $i_options );
+  enter( $file, $function, $line, $dbug_level );
+  enter_ctx( $dbug_ctx, $file, $function, $line, $dbug_level );
 
-  print ( $i_keyword, $i_fmt, $i_arg1, $i_arg2, $i_arg3, $i_arg4, $i_arg5 );
+  leave( $line, $dbug_level ); 
+  leave_ctx( $dbug_ctx, $line, $dbug_level ); 
 
-  pop;
-
-  process ( $i_process );
+  print( $line, $break_point, $str );
+  print_ctx( $dbug_ctx, $line, $break_point, $str );
 
 =head1 DESCRIPTION
 
 The I<pdbug> package implements the functionality of the I<dbug> library
-written by Fred Fish in the programming language C. This I<dbug> library can
-be used to perform regression testing and profiling.
+written in the programming language C. This I<dbug> library can be used to
+perform regression testing and profiling.
 
 =over 4
 
+=item init
+
+Initialise a dbug context either implicit (init) or explicit (init_ctx). Set
+debugging options, i.e. whether tracing is enabled or debugging, etc.
+
+=item done
+
+Destroy a dbug thread.
+
 =item enter
 
-Enter a function. The arguments are the name of the function and a handle
-for debugging information.
+Enter a function. Input parameters are the name of the file, function and a
+line indicator. The level output parameter is used for checking balanced
+enter/leave calls. The enter_ctx has an extra input parameter dbug context
+which is set at init time.
+
+Preconditions: init/init_ctx must be called before using these functions.
 
 =item leave
 
 Leave a function. This must always be called if enter was called before, even
-if an exception has been raised.
+if an exception has been raised. The input/output parameter dbug_level is used
+to check balanced enter/leave calls.
 
-=item push
-
-Set global options, i.e. whether tracing is enabled or debugging, etc. 
+Preconditions: init/init_ctx must be called before using these functions.
 
 =item print
 
-Print a line. Parameters are a keyword and a I<printf> format
-string and up till 5 string arguments. 
+Print a line. Input parameters are a line and a break point and a string.
 
-=item pop
-
-Reset global options.
-
-=item process
-
-Set the name of the process.
+Preconditions: init/init_ctx must be called before using these functions.
 
 =back
 
@@ -121,6 +129,10 @@ Gert-Jan Paulissen, E<lt>G.Paulissen@speed.A2000.nlE<gt>.
 
 =head1 NOTES
 
+This library is thread safe. When an implicit dbug context is used in a
+multi-threading environment (Posix threads), thread specific data is used for
+storing the dbug context.
+
 None of the functions are exported: the names are too common. You have to use pdbug::<function>.
 
 =head1 BUGS
@@ -131,7 +143,7 @@ None of the functions are exported: the names are too common. You have to use pd
 
 =item *
 
-The I<dbug> documentation by Fred Fish.
+The I<dbug> documentation.
 
 =item *
 
