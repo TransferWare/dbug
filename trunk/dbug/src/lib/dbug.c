@@ -3912,19 +3912,195 @@ dbug_dump( const int line,
 }
 
 
-#if DEBUG_DBUG && defined(DBUGTEST)
+#if DEBUG_DBUG != 0 && defined(DBUGTEST)
 
-int main( int argc, char **argv )
+/*#include <dejagnu.h>*/
+
+static dbug_ctx_t dbug_ctx1 = NULL, dbug_ctx2 = NULL;
+
+/*
+ * test1
+ *
+ * Test correct and wrong input option parameters to dbug_init_ctx.
+ *
+ */
+static
+int
+test1( void )
 {
+  int status1, status2;
+
+  status1 = dbug_init_ctx( "d,t,g,D=10,O=dbugtest.log", "process 1", &dbug_ctx1 );
+  status2 = dbug_init_ctx( "z,t,g,D=-1", NULL, &dbug_ctx2 );
+
+  fprintf( stderr, "test1; status1: %d; status2: %d\n", status1, status2 );
+
+  return ( status1 == 0 && status2 == 0 ? 0 : 1 );
+}
+
+
+/*
+ * test2
+ *
+ * Open and close two contexts.
+ *
+ */
+static
+int
+test2( void )
+{
+  int status1, status2;
+
+  (void) test1();
+
+  status1 = dbug_done_ctx( &dbug_ctx1 );
+  status2 = dbug_done_ctx( &dbug_ctx2 );
+
+  fprintf( stderr, "test2; status1: %d; status2: %d\n", status1, status2 );
+
+  return ( status1 == 0 && status2 == 0 ? 0 : 1 );
+}
+
+
+/*
+ * test3
+ *
+ * enter and leave uninitialized contexts. return value must be EINVAL
+ *
+ */
+static
+int
+test3( void )
+{
+  int status1, status2, status3;
+
+  status1 = dbug_enter_ctx( dbug_ctx1, __FILE__, "test3", __LINE__, NULL );
+  fprintf( stderr, "test3; status1: %d\n", status1 );
+  status2 = dbug_leave_ctx( dbug_ctx2, __LINE__, NULL );
+  fprintf( stderr, "test3; status2: %d\n", status2 );
+  status3 = dbug_print_ctx( dbug_ctx1, __LINE__, "info", "string: %s", "Hello World" );
+  fprintf( stderr, "test3; status3: %d\n", status3 );
+
+  if ( !(status1 == EINVAL && status2 == EINVAL && status3 == EINVAL) )
+    return 1;
+
+  status1 = dbug_enter( __FILE__, "test3", __LINE__, NULL );
+  fprintf( stderr, "test3; status1: %d\n", status1 );
+  status2 = dbug_leave( __LINE__, NULL );
+  fprintf( stderr, "test3; status2: %d\n", status2 );
+  status3 = dbug_print( __LINE__, "info", "string: %s", "Hello World" );
+  fprintf( stderr, "test3; status3: %d\n", status3 );
+
+  return status1 == EINVAL && status2 == EINVAL && status3 == EINVAL ? 0 : 1;
+}
+
+
+/*
+ * test4
+ *
+ * Use the same options string for two contexts.
+ * This context string contains a file specification.
+ * Next print some info for both the contexts. 
+ * Switch between printing.
+ *
+ */
+static
+int
+test4( void )
+{
+  int status1, status2, status3;
+  const char *procname = "test4";
+
+  status1 = dbug_init_ctx( "d,t,g,D=10,o=dbugtest.log", "process 1", &dbug_ctx1 );
+  status2 = dbug_init_ctx( NULL, NULL, &dbug_ctx2 );
+  status3 = dbug_push( "d:t:o,dbugtest.log" ); /* old format */
+
+  fprintf( stderr, "%s; status1: %d; status2: %d; status3: %d\n",
+           procname, status1, status2, status3 );
+
+  if ( ! ( status1 == 0 && status2 == 0 && status3 == 0 ) )
+    return 1;
+
+  if ( dbug_enter_ctx( dbug_ctx1, __FILE__, procname, __LINE__, NULL ) != 0 ||
+       dbug_enter_ctx( dbug_ctx2, __FILE__, procname, __LINE__, NULL ) != 0 ||
+       dbug_enter( __FILE__, procname, __LINE__, NULL ) != 0 ||
+       dbug_print_ctx( dbug_ctx1, __LINE__, "info", "string: %s", "Hello World" ) != 0 ||
+       dbug_print_ctx( dbug_ctx2, __LINE__, "info", "string: %s", "Hello World" ) != 0 ||
+       dbug_print( __LINE__, "info", "string: %s", "Hello World" ) != 0 ||
+       dbug_leave_ctx( dbug_ctx2, __LINE__, NULL ) != 0 ||
+       dbug_leave( __LINE__, NULL ) != 0 ||
+       dbug_leave_ctx( dbug_ctx1, __LINE__, NULL ) != 0 ||
+       dbug_done_ctx( &dbug_ctx1 ) != 0 ||
+       dbug_done_ctx( &dbug_ctx2 ) != 0 ||
+       dbug_done( ) != 0 )
+    return 1;
+
+  return 0;
+}
+
+
+static
+int
+test5( void )
+{
+  int status;
+  int nr;
+  const int size = 500;
+  char procname[] = "testXXX";
+
+  /* enter size calls */
+  status = dbug_init_ctx( "d,t,g", "test5", &dbug_ctx1 );
+
+  for ( nr = size; status == 0 && nr > 0; nr-- )
+    {
+      (void) sprintf( procname, "test%03d", nr-1 );
+
+      if ( ( status = dbug_enter_ctx( dbug_ctx1, __FILE__, procname, __LINE__, NULL ) ) != 0 ||
+           ( status = dbug_print_ctx( dbug_ctx1, __LINE__, "info", "string: %s", procname ) ) != 0 )
+        return status;
+    }
+
+  for ( nr = size; status == 0 && nr > 0; nr-- )
+    {
+      if ( ( status = dbug_leave_ctx( dbug_ctx1, __LINE__, NULL ) ) != 0 )
+        return status;
+    }
+
+  status = dbug_done_ctx( &dbug_ctx1 );
+
+  return status;
+}
+
+
+int
+main( int argc, char **argv )
+{
+#if defined(HAVE_U_ALLOC_H) && HAVE_U_ALLOC_H != 0
+  unsigned int chk = AllocStartCheckPoint();
+#endif
   names_t names;
-  name_t *result;
+  name_t *result = NULL;
   call_stack_t stack;
-  call_t call, *top;
+  call_t call, *top = NULL;
   int idx;
   dbug_ctx_t dbug_ctx;
   int idx_names = 3;
+  int status = 0;
 
-  if ( argc < 3 )
+  if ( argc > 1 && strncmp( argv[1], "test", 4 ) == 0 )
+    {
+      if ( strcmp( argv[1], "test1" ) == 0 )
+        status = test1();
+      else if ( strcmp( argv[1], "test2" ) == 0 )
+        status = test2();
+      else if ( strcmp( argv[1], "test3" ) == 0 )
+        status = test3();
+      else if ( strcmp( argv[1], "test4" ) == 0 )
+        status = test4();
+      else if ( strcmp( argv[1], "test5" ) == 0 )
+        status = test5();
+    }
+  else if ( argc < 3 )
     {
       (void) fprintf( stderr, "Usage: dbugtest <DBUG_INIT options> <DBUG_PUSH options> <name1> <name2> .. <nameN>\n" );
       exit (0);
@@ -4028,7 +4204,10 @@ int main( int argc, char **argv )
 
   DBUG_POP();
 
-  return 0;
+#if defined(HAVE_U_ALLOC_H) && HAVE_U_ALLOC_H != 0
+  (void) AllocStopCheckPoint(chk);
+#endif
+  return status;
 }
 
 #endif

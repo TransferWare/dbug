@@ -1,0 +1,69 @@
+#   Copyright (C) 1997 - 2001 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.  
+
+# Please email any bugs, comments, and/or additions to this file to:
+# bug-dejagnu@gnu.org
+
+#
+# dbug_version -- extract and print the version number of dbug
+#
+
+proc dbug_version {} {
+    global DBUG
+    global srcdir
+
+    send_user "[which $DBUG] [exec cat $srcdir/../VERSION]\n"
+    return 0
+}
+
+#
+# dbug_load -- loads the program
+#
+proc dbug_load { arg } {
+    #
+    return 0
+}
+
+#
+# dbug_exit -- quit and cleanup
+#
+proc dbug_exit {} {
+    #
+    return 0
+}
+
+#
+# dbug_start -- start dbug running
+#
+proc dbug_start {} {
+    global DBUG
+    global prompt
+    global spawn_id
+    global verbose
+
+    if { $verbose > 1 } {
+	send_user "starting $DBUG\n"
+    }
+    spawn $DBUG
+    expect {
+	-re "No such file.*" { perror "Can't start $DBUG"; exit 1 }
+	-re "." { if { $verbose > 1 } { send_user "$DBUG spawned with pid $spawn_id\n" } }
+	timeout { perror "Failed to spawn $DBUG (timeout)"; exit 1 }
+    }
+    return 0
+}
+
+dbug_start

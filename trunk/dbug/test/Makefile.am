@@ -17,11 +17,13 @@
 
 MAINTAINERCLEANFILES = Makefile.in
 
-AUTOMAKE_OPTIONS     = $(top_srcdir)/src/lib/ansi2knr
+AUTOMAKE_OPTIONS     = $(top_srcdir)/src/lib/ansi2knr dejagnu
 
 check_PROGRAMS       = dbugtest
+dbugtest_SOURCES     = $(top_srcdir)/src/lib/dbug.c
 dbugtest_LDADD       = $(top_builddir)/src/lib/libdbug.la
-AM_CPPFLAGS          = -I$(top_srcdir)/src/lib
+AM_CPPFLAGS          = -I$(top_srcdir)/src/lib -DDEBUG_DBUG=1 -DDBUGTEST
+RUNTESTDEFAULTFLAGS  = --tool dbug DBUG=$$top_builddir/test/dbugtest --srcdir $$top_srcdir/test
 
 EXTRA_DIST           = Imakefile
 
