@@ -1,3 +1,8 @@
+2003-08-31  Gert-Jan Paulissen  <g.paulissen@chello.nl>
+
+        * dbugrpt.in: Time spent for a function must be at least 0.
+	See also tracker bug [ 719574 ] zero min time shows minus sign
+
 2003-03-19  Gert-Jan Paulissen  <g.paulissen@chello.nl>
 
         * dbugrpt.in: Cleaner interface for package dbug_uid.
