@@ -1,5 +1,5 @@
 #ifndef lint
-static char vcid[] = "$Id$";
+/*@unused@*/ static char vcid[] = "$Id$";
 #endif /* lint */
 
 /******************************************************************************
@@ -79,7 +79,9 @@ static char vcid[] = "$Id$";
 #if HASGETRUSAGE
 #include <sys/param.h>
 #include <sys/time.h>
+#ifndef __LCLINT__
 #include <sys/resource.h>
+#endif /* __LCLINT__ */
 #endif
 
 #if defined(HASPTHREADS) && HASPTHREADS
@@ -90,6 +92,26 @@ static char vcid[] = "$Id$";
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
 #endif
+
+void Gmtime( struct tm *tm )
+{
+  time_t time_tmp; 
+  struct tm *tm_tmp;
+
+#if defined(HASPTHREADS) && HASPTHREADS
+  pthread_mutex_lock( &mutex );
+#endif
+
+  (void) time(&time_tmp);
+  tm_tmp = gmtime( &time_tmp );
+
+  if ( tm_tmp && tm )
+    *tm = *tm_tmp;
+
+#if defined(HASPTHREADS) && HASPTHREADS
+  pthread_mutex_unlock( &mutex );
+#endif
+}
 
 /*
  * Here we need the definitions of the clock routine.  Add your
@@ -147,13 +169,13 @@ unsigned long Clock (void)
 
   if ( !init )
   {
-    ftime( &start );
+    (void) ftime( &start );
     init = 1;
     value = 0;
   }
   else
   {
-    ftime( &tmp );
+    (void) ftime( &tmp );
     value = (tmp.time - start.time)*1000 + (tmp.millitm - start.millitm);
   }
 
@@ -205,7 +227,7 @@ unsigned long Clock (void)
     now = (struct DateStamp *) AllocMem ((long) sizeof (struct DateStamp), 0L);
     if (now != NULL) {
 #if defined(HASPTHREADS) && HASPTHREADS
-        pthread_mutex_unlock( &mutex );
+        pthread_mutex_lock( &mutex );
 #endif
 	if (first_clock == TRUE) {
 	    first_clock = FALSE;
