@@ -161,11 +161,12 @@ typedef int BOOLEAN;
  *	be accessed via the macro package facilities.
  */
 
-LOCAL FILE *_db_fp_ = stderr;		/* Output stream, default stderr */
-LOCAL FILE *_db_pfp_ = (FILE *)0;	/* Profile stream, 'dbugmon.out' */
+/* Stack variables */
+
+#define _db_fp_  (stack->out_file)      /* Output stream, default stderr */
+#define _db_pfp_ (stack->prof_file)	/* Profile stream, 'dbugmon.out' */
+
 LOCAL char *_db_process_ = "dbug";	/* Pointer to process name; argv[0] */
-LOCAL BOOLEAN _db_on_ = FALSE;		/* TRUE if debugging currently on */
-LOCAL BOOLEAN _db_pon_ = FALSE;		/* TRUE if profiling currently on */
 
 /*
  *	Externally supplied functions.
@@ -259,7 +260,21 @@ struct state {
     struct state *next_state;		/* Next state in the list */
 };
 
-LOCAL struct state *stack = NULL;	/* Linked list of stacked states */
+LOCAL struct state stack_head = {
+  0,
+  MAXDEPTH,
+  0,
+  0,
+  stderr,
+  0,
+  NULL,
+  NULL,
+  NULL,
+  NULL,
+  NULL
+};
+
+LOCAL struct state *stack = &stack_head; /* Linked list of stacked states */
 
 /*
  *	Local variables not seen by user.
@@ -366,7 +381,7 @@ LOCAL int Delay ( int seconds );		/* Pause for given number of ticks */
 
 int _db_get_on_ (void)
 {
-	return _db_on_;
+	return DEBUGGING;
 }
 
 
@@ -531,7 +546,6 @@ VOID _db_push_ (char *control)
     for (; scan != NULL; scan = strtok ((char *)NULL, ":")) {
 	switch (*scan++) {
 	    case 'd': 
-		_db_on_ = TRUE;
 		stack -> flags |= DEBUG_ON;
 		if (*scan++ == ',') {
 		    stack -> keywords = ListParse (scan);
@@ -557,7 +571,6 @@ VOID _db_push_ (char *control)
 		stack -> flags |= PID_ON;
 		break;
 	    case 'g': 
-		_db_pon_ = TRUE;
 		OpenProfile(PROF_FILE);
 		stack -> flags |= PROFILE_ON;
 		if (*scan++ == ',') {
@@ -630,10 +643,9 @@ VOID _db_pop_ ( void )
     REGISTER struct state *discard;
 
     discard = stack;
+
     if (discard != NULL && discard -> next_state != NULL) {
 	stack = discard -> next_state;
-	_db_fp_ = stack -> out_file;
-	_db_pfp_ = stack -> prof_file;
 	if (discard -> keywords != NULL) {
 	    FreeList (discard -> keywords);
 	}
@@ -646,9 +658,12 @@ VOID _db_pop_ ( void )
 	if (discard -> p_functions != NULL) {
 	    FreeList (discard -> p_functions);
 	}
+
 	CloseFile (discard -> out_file);
+
 	CloseFile (discard -> prof_file);
-	free ((char *) discard);
+
+	if ( discard != &stack_head ) free ((char *) discard);
     }
 }
 
@@ -999,11 +1014,7 @@ LOCAL VOID PushState (void)
     new -> flags = 0;
     new -> delay = 0;
     new -> maxdepth = MAXDEPTH;
-    if (stack != NULL) {
-	new -> level = stack -> level;
-    } else {
-	new -> level = 0;
-    }
+    new -> level = stack -> level;
     new -> out_file = stderr;
     new -> functions = NULL;
     new -> p_functions = NULL;
@@ -1423,7 +1434,7 @@ LOCAL VOID OpenProfile (char *name)
 
 LOCAL VOID CloseFile (FILE *fp)
 {
-    if (fp != stderr && fp != stdout) {
+    if (fp != stderr && fp != stdout && fp != NULL) {
 	if (fclose (fp) == EOF) {
 	    (VOID) fprintf (stderr, ERR_CLOSE, _db_process_);
 	    perror ("");
