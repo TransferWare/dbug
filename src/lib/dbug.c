@@ -60,21 +60,18 @@
 
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "dbug.h" /* self-test */
 
-#if NO_VARARGS
+#if !(HASVARARGS)
 #include "vargs.h"		/* Use our "fake" varargs */
 #else
 #include <varargs.h>		/* Use system supplied varargs package */
 #endif
 
-#if amiga
+#ifndef HZ
 #define HZ (50)			/* Probably in some header somewhere */
-#endif
-
-#ifdef M_XENIX			/* Some xenix compilers predefine this */
-#ifndef xenix
-#define xenix 1
-#endif
 #endif
 
 /*
@@ -167,37 +164,22 @@ EXPORT BOOLEAN _db_pon_ = FALSE;	/* TRUE if debugging currently on */
 /*
  *	Externally supplied functions.
  */
-
-#if (unix || xenix)		/* Only needed for unix */
-IMPORT VOID perror ();		/* Print system/library error */
-IMPORT int chown ();		/* Change owner of a file */
-IMPORT int getgid ();		/* Get real group id */
-IMPORT int getuid ();		/* Get real user id */
-IMPORT int access ();		/* Test file for access */
+#if HASPERROR
+#include <errno.h>
 #else
-#if !(amiga && LATTICE)
-LOCAL VOID perror ();		/* Fake system/library error print routine */
-#endif
+LOCAL VOID perror (char *s);	/* Fake system/library error print routine */
 #endif
 
-# if BSD4_3 || sun
-IMPORT int getrusage ();
+#if HASCHOWN || HASGETGID || HASGETPID || HASGETUID || HASACCESS || HASSLEEP
+#include <unistd.h>
 #endif
 
-IMPORT int atoi ();		/* Convert ascii to integer */
-IMPORT VOID exit ();		/* Terminate execution */
-IMPORT int fclose ();		/* Close a stream */
-IMPORT FILE *fopen ();		/* Open a stream */
-IMPORT int fprintf ();		/* Formatted print on file */
-IMPORT int vfprintf ();		/* Varargs form of fprintf */
-IMPORT VOID free ();
-IMPORT char *malloc ();		/* Allocate memory */
-IMPORT int strcmp ();		/* Compare strings */
-IMPORT char *strcpy ();		/* Copy strings around */
-IMPORT int strlen ();		/* Find length of string */
+#if HASFTIME
+#include <sys/timeb.h>
+#endif
 
-#ifndef fflush			/* This is sometimes a macro */
-IMPORT int fflush ();		/* Flush output for stream */
+#if HASGETRUSAGE
+#include <sys/resource.h>
 #endif
 
 
@@ -247,7 +229,7 @@ LOCAL char *file = "?file";	/* Name of current user file */
 LOCAL BOOLEAN init_done = FALSE;/* Set to TRUE when initialization done */
 LOCAL char **framep = NULL;	/* Pointer to current frame */
 
-#if (unix || xenix || amiga)
+#if HASSETJMP
 LOCAL int jmplevel;		/* Remember nesting level at setjmp () */
 LOCAL char *jmpfunc;		/* Remember current function for setjmp */
 LOCAL char *jmpfile;		/* Remember current file for setjmp */
@@ -272,8 +254,6 @@ LOCAL VOID FreeList ();		/* Free memory from linked list */
 LOCAL VOID Indent ();		/* Indent line to specified indent */
 
 				/* Supplied in Sys V runtime environ */
-LOCAL char *strtok ();		/* Break string into tokens */
-LOCAL char *strrchr ();		/* Find last occurance of char */
 
 /*
  *	The following local variables are used to hold the state information
@@ -299,32 +279,35 @@ LOCAL char *u_keyword = "?";	/* Keyword for current macro */
 #define ERR_CHOWN "%s: can't change owner/group of \"%s\": "
 
 /*
- *	Macros and defines for testing file accessibility under UNIX.
+ *	Macros and defines for testing file accessibility.
  */
 
-#if (unix || xenix)
-#  define A_EXISTS	00		/* Test for file existance */
-#  define A_EXECUTE	01		/* Test for execute permission */
-#  define A_WRITE	02		/* Test for write access */
-#  define A_READ	03		/* Test for read access */
+#if HASACCESS
+#  define A_EXISTS	F_OK		/* Test for file existance */
+#  define A_EXECUTE	X_OK		/* Test for execute permission */
+#  define A_WRITE	W_OK		/* Test for write access */
+#  define A_READ	R_OK		/* Test for read access */
 #  define EXISTS(pathname) (access (pathname, A_EXISTS) == 0)
 #  define WRITABLE(pathname) (access (pathname, A_WRITE) == 0)
 #else
 #  define EXISTS(pathname) (FALSE)	/* Assume no existance */
+#  define WRITABLE(pathname) (TRUE)
 #endif
 
 /*
  *	Translate some calls among different systems.
  */
 
-#if (unix || xenix)
-# define Delay sleep
-IMPORT unsigned int sleep ();	/* Pause for given number of seconds */
+#if HASDELAY
+IMPORT int Delay ( int seconds );		/* Pause for given number of ticks */
+#else
+# if HASSLEEP
+#  define Delay sleep
+# else
+LOCAL int Delay ( int seconds );		/* Pause for given number of ticks */
+# endif
 #endif
 
-#if amiga
-IMPORT int Delay ();		/* Pause for given number of ticks */
-#endif
 
 
 /*
@@ -1181,12 +1164,8 @@ char *string;
 LOCAL VOID DoPrefix (_line_)
 int _line_;
 {
-#if (unix || xenix)
-    extern int getpid ();
-#endif
-
     lineno++;
-#if (unix || xenix)
+#if HASGETPID
     if (stack -> flags & PID_ON) {
 	(VOID) fprintf (_db_fp_, "%5d: ", getpid ());
     }
@@ -1425,36 +1404,6 @@ int size;
 
 
 /*
- *	This function may be eliminated when strtok is available
- *	in the runtime environment (missing from BSD4.1).
- */
-
-LOCAL char *strtok (s1, s2)
-char *s1, *s2;
-{
-    static char *end = NULL;
-    REGISTER char *rtnval;
-
-    rtnval = NULL;
-    if (s2 != NULL) {
-	if (s1 != NULL) {
-	    end = s1;
-	    rtnval = strtok ((char *) NULL, s2);
-	} else if (end != NULL) {
-	    if (*end != EOS) {
-		rtnval = end;
-		while (*end != *s2 && *end != EOS) {end++;}
-		if (*end != EOS) {
-		    *end++ = EOS;
-		}
-	    }
-	}
-    }
-    return (rtnval);
-}
-
-
-/*
  *  FUNCTION
  *
  *	BaseName    strip leading pathname components from name
@@ -1512,11 +1461,11 @@ LOCAL BOOLEAN Writable (pathname)
 char *pathname;
 {
     REGISTER BOOLEAN granted;
-#if (unix || xenix)
+#if DIRSEP == '/'
     REGISTER char *lastslash;
 #endif
 
-#if (!unix && !xenix)
+#if DIRSEP != '/'
     granted = TRUE;
 #else
     granted = FALSE;
@@ -1540,27 +1489,6 @@ char *pathname;
     }
 #endif
     return (granted);
-}
-
-
-/*
- *	This function may be eliminated when strrchr is available
- *	in the runtime environment (missing from BSD4.1).
- *	Alternately, you can use rindex() on BSD systems.
- */
-
-LOCAL char *strrchr (s, c)
-char *s;
-char c;
-{
-    REGISTER char *scan;
-
-    for (scan = s; *scan != EOS; scan++) {;}
-    while (scan > s && *--scan != c) {;}
-    if (*scan != c) {
-	scan = NULL;
-    }
-    return (scan);
 }
 
 
@@ -1590,7 +1518,7 @@ char c;
 LOCAL VOID ChangeOwner (pathname)
 char *pathname;
 {
-#if (unix || xenix)
+#if HASCHOWN
     if (chown (pathname, getuid (), getgid ()) == -1) {
 	(VOID) fprintf (stderr, ERR_CHOWN, _db_process_, pathname);
 	perror ("");
@@ -1682,11 +1610,12 @@ LOCAL int DelayArg (int value)
 {
     unsigned int delayarg = 0;
     
-#if (unix || xenix)
-    delayarg = value / 10;		/* Delay is in seconds for sleep () */
-#endif
-#if amiga
+#if HASDELAY
     delayarg = (HZ * value) / 10;	/* Delay in ticks for Delay () */
+#else
+# if HASSLEEP
+    delayarg = value / 10;		/* Delay is in seconds for sleep () */
+# endif
 #endif
     return (delayarg);
 }
@@ -1697,8 +1626,8 @@ LOCAL int DelayArg (int value)
  *	With a little work, this can be turned into a timing loop.
  */
 
-#if (!unix && !xenix && !amiga)
-Delay ()
+#if ! HASSLEEP && ! HASDELAY
+Delay ( int seconds )
 {
 }
 #endif
@@ -1729,10 +1658,9 @@ Delay ()
  *
  */
 
-#if !unix && !xenix && !(amiga && LATTICE)
+#if ! HASPERROR
 
-LOCAL VOID perror (s)
-char *s;
+LOCAL VOID perror (char *s)
 {
     if (s && *s != EOS) {
 	(VOID) fprintf (stderr, "%s: ", s);
@@ -1740,24 +1668,53 @@ char *s;
     (VOID) fprintf (stderr, "<unknown system error>\n");
 }
 
-#endif	/* !unix && !xenix && !(amiga && LATTICE) */
+#endif	/* ! HASPERROR */
 
 /*
  * Here we need the definitions of the clock routine.  Add your
  * own for whatever system that you have.
  */
 
-#if (unix || xenix)
+#if HASFTIME
+
+#include <sys/timeb.h>
+
+LOCAL unsigned long Clock ()
+{
+  static struct timeb start;
+  static int init = 0;
+  unsigned long tm = 0;
+  struct timeb tmp;
+
+  if ( !init )
+  {
+    ftime( &start );
+    init = 1;
+  }
+  else
+  {
+    ftime( &tmp );
+    tm = (tmp.time - start.time)*1000 + (tmp.millitm - start.millitm);
+  }
+#if 0
+  fprintf( stderr, "Elapsed time (%ld (s), %ld (ms), %ld (tot))\n", 
+    (long)(tmp.time - start.time), (long)(tmp.millitm - start.millitm), tm );
+#endif
+  return tm;
+}
+
+#else /* HASFTIME */
+
+# if HASGETRUSAGE
 
 # include <sys/param.h>
-# if BSD4_3 || sun
 
 /*
  * Definition of the Clock() routine for 4.3 BSD.
  */
 
-#include <sys/time.h>
-#include <sys/resource.h>
+# include <sys/time.h>
+# include <sys/resource.h>
 
 /*
  * Returns the user time in milliseconds used by this process so
@@ -1772,18 +1729,8 @@ LOCAL unsigned long Clock ()
     return ((ru.ru_utime.tv_sec * 1000) + (ru.ru_utime.tv_usec / 1000));
 }
 
-#else
-
-LOCAL unsigned long Clock ()
-{
-    return (0);
-}
-
-# endif
-
-#else
-
-#if amiga
+# else /* HASGETRUSAGE */
+#  if HASDATESTAMP
 
 struct DateStamp {		/* Yes, this is a hack, but doing it right */
 	long ds_Days;		/* is incredibly ugly without splitting this */
@@ -1817,5 +1764,6 @@ LOCAL unsigned long Clock ()
     return (millisec);
 }
 
-#endif	/* amiga */
-#endif	/* unix */
+#  endif /* HASDATESTAMP */
+# endif	/* HASGETRUSAGE */
+#endif /* HASFTIME */
