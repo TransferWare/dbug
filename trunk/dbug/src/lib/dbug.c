@@ -169,9 +169,6 @@ typedef struct {
 #define FUNCTIONS_ALLOWED 0
 #endif
 
-/* steps in initialising */
-#define DBUG_CTX_INITIALISE_STEPS 8
-
 typedef struct {
   char *name;                   /* name of dbug thread */
   names_t files;                /* List of files once entered */
@@ -198,6 +195,27 @@ typedef struct {
 #define DBUG_MAGIC 0xABCDEF
 
 #define DBUG_CTX_VALID(dbug_ctx) ( (dbug_ctx) != NULL && (dbug_ctx)->magic == DBUG_MAGIC )
+
+  /* Struct for saving print info for the DBUG_PRINT and DBUG_PRINT_CTX macro's */
+typedef struct {
+  dbug_ctx_t dbug_ctx;
+  int line;
+  char *break_point;
+} dbug_print_info_t;
+
+#ifdef _POSIX_THREADS
+
+  /* struct to allow creation/deletion of pthread_key_t */
+typedef struct {
+  pthread_mutex_t mutex; /* to provide access to ref_count */
+  int ref_count; /* when increased to 1 the key must be created
+		    when decreased to 0 the key must be deleted */
+  void (*func)( void * ); /* destructor function for thread-specific data 
+			     not set to NULL when thread terminates */
+  pthread_key_t key;
+} dbug_key_t;
+
+#endif /* #ifdef _POSIX_THREADS */
 
 #include "dbug.h" /* self-test */
 
@@ -266,28 +284,6 @@ typedef struct {
  */
 
 typedef int BOOLEAN;
-
-/*
- * Static variables
- */
-
-static int ctx_nr = 0;
-
-#ifdef _POSIX_THREADS
-static pthread_mutex_t ctx_nr_mutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t key_mutex = PTHREAD_MUTEX_INITIALIZER;
-/* mutex to handle access to _print_* variables (see below) */
-static pthread_mutex_t print_mutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_key_t key_dbug_ctx;
-static int key_init = 0;
-#else
-static dbug_ctx_t g_dbug_ctx = NULL; /* global debug context for dbug routines */
-#endif
-
-/* Variables for saving print info for the DBUG_PRINT and DBUG_PRINT_CTX macro */
-static dbug_ctx_t _print_dbug_ctx = NULL;
-static int _print_line = 0;
-static char * _print_break_point = NULL;
 
 /*
  * declaration of static functions 
@@ -368,6 +364,47 @@ dbug_stack_pop( call_stack_t *stack );
 static
 dbug_errno_t
 dbug_stack_top( call_stack_t *stack, call_t **top );
+
+#ifdef _POSIX_THREADS
+
+static
+void
+dbug_ctx_data_done( void *data );
+
+static
+void
+dbug_print_info_data_done( void *data );
+
+static 
+dbug_errno_t
+dbug_key_init( dbug_key_t *dbug_key );
+
+static 
+dbug_errno_t
+dbug_key_done( dbug_key_t *dbug_key );
+
+#endif
+
+/*
+ * Static variables
+ */
+
+static int ctx_nr = 0;
+
+#ifdef _POSIX_THREADS
+static pthread_mutex_t ctx_nr_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+/* data to handle thread specific data (dbug context) */
+static dbug_key_t dbug_ctx_key = { PTHREAD_MUTEX_INITIALIZER, 0, &dbug_ctx_data_done };
+
+/* data to handle thread specific data (print info) */
+static dbug_key_t dbug_print_info_key = { PTHREAD_MUTEX_INITIALIZER, 0, &dbug_print_info_data_done };
+
+#else
+static dbug_ctx_t g_dbug_ctx = NULL; /* global debug context for dbug routines */
+/* Variable for saving print info for the DBUG_PRINT and DBUG_PRINT_CTX macro */
+static dbug_print_info_t g_dbug_print_info = { NULL, 0, NULL };
+#endif
 
 /*
  * definition of static functions 
@@ -1353,6 +1390,183 @@ dbug_stack_top( call_stack_t *stack, call_t **top )
   return status;
 }
 
+#ifdef _POSIX_THREADS
+
+static
+void
+dbug_ctx_data_done( void *data )
+{
+  dbug_ctx_t dbug_ctx = (dbug_ctx_t)data;
+
+#ifndef NDEBUG
+  const char *procname = "dbug_ctx_data_done";
+
+  printf( "> %s( %s )\n", 
+	  procname, PTR_STR(data) );
+#endif
+
+  /* A call to dbug_init() has been performed but not a call to dbug_done() */
+
+  dbug_done_ctx( &dbug_ctx ); /* cleans up dbug_print_info thread data */
+  dbug_key_done( &dbug_ctx_key );
+
+#ifndef NDEBUG
+  printf( "< %s\n", procname );
+#endif
+}
+
+static
+void
+dbug_print_info_data_done( void *data )
+{
+#ifndef NDEBUG
+  const char *procname = "dbug_print_info_data_done";
+
+  printf( "> %s( %s )\n", 
+	  procname, PTR_STR(data) );
+#endif
+
+  /* A call to dbug_init_ctx() has been performed but not a call to dbug_done_ctx() */
+
+  FREE( data );
+  dbug_key_done( &dbug_print_info_key );
+
+#ifndef NDEBUG
+  printf( "< %s\n", procname );
+#endif
+}
+
+static 
+dbug_errno_t
+dbug_key_init( dbug_key_t *dbug_key )
+{
+  dbug_errno_t status = 0;
+  int step_no;
+
+#ifndef NDEBUG
+  const char *procname = "dbug_key_init";
+
+  printf( "> %s( %s )\n", 
+	  procname, PTR_STR(dbug_key) );
+  printf( "count: %d\n", dbug_key->ref_count );
+#endif
+
+#define DBUG_KEY_INIT_STEPS 4
+
+  for ( step_no = 0; status == 0 && step_no < DBUG_KEY_INIT_STEPS; step_no++ )
+    {
+      switch( step_no )
+        {
+        case 0:
+	  status = pthread_mutex_lock( &dbug_key->mutex );
+	  break;
+
+        case 1:
+	  if ( dbug_key->ref_count == 0 )
+	    status = pthread_key_create( &dbug_key->key, dbug_key->func );
+	  break;
+
+        case 2:
+	  dbug_key->ref_count++;
+	  break;
+
+        case 3:
+	  status = pthread_mutex_unlock( &dbug_key->mutex );
+	  break;
+
+	case DBUG_KEY_INIT_STEPS:
+	  /* Just to check this case does not duplicate,
+	     i.e. the constant has the correct value */
+	  break;
+
+        default:
+	  /* May not come here. Set step_no to maximum+1 so assert will fail */
+	  step_no = DBUG_KEY_INIT_STEPS; 
+	  break;
+        }
+#ifndef NDEBUG
+      printf( "step: %d; status: %d\n", (int)step_no, (int)status );
+#endif
+    }
+
+  assert( status != 0 || step_no == DBUG_KEY_INIT_STEPS );
+
+#undef DBUG_KEY_INIT_STEPS
+
+#ifndef NDEBUG
+  printf( "< %s = %d\n", procname, status );
+#endif
+
+  return status;
+}
+
+static 
+dbug_errno_t
+dbug_key_done( dbug_key_t *dbug_key )
+{
+  dbug_errno_t status = 0;
+  int step_no;
+
+#ifndef NDEBUG
+  const char *procname = "dbug_key_init";
+
+  printf( "> %s( %s )\n", 
+	  procname, PTR_STR(dbug_key) );
+#endif
+
+#define DBUG_KEY_DONE_STEPS 3
+
+  for ( step_no = 0; status == 0 && step_no < DBUG_KEY_DONE_STEPS; step_no++ )
+    {
+      switch( step_no )
+        {
+        case 0:
+	  status = pthread_mutex_lock( &dbug_key->mutex );
+  	  break;
+
+        case 1:
+	  dbug_key->ref_count--;
+	  if ( dbug_key->ref_count == 0 )
+	    status = pthread_key_delete( dbug_key->key );
+	  break;
+
+        case 2:
+	  status = pthread_mutex_unlock( &dbug_key->mutex );
+	  break;
+
+	case DBUG_KEY_DONE_STEPS:
+	  /* Just to check this case does not duplicate,
+	     i.e. the constant has the correct value */
+	  break;
+
+        default:
+	  /* May not come here. Set step_no to maximum+1 so assert will fail */
+	  step_no = DBUG_KEY_DONE_STEPS; 
+	  break;
+
+        default: 
+        }
+
+#ifndef NDEBUG
+      printf( "step: %d; status: %d\n", (int)step_no, (int)status );
+#endif
+    }
+
+  assert( status != 0 || step_no == DBUG_KEY_DONE_STEPS );
+
+#undef DBUG_KEY_DONE_STEPS
+
+#ifndef NDEBUG
+  printf( "count: %d\n", dbug_key->ref_count );
+  printf( "< %s = %d\n", procname, status );
+#endif
+
+  return status;
+}
+
+
+#endif
+
 /* 
  * definition of global functions 
  */
@@ -1435,7 +1649,10 @@ dbug_init_ctx( const char * options, const char *name, dbug_ctx_t* dbug_ctx )
   }
 #endif
 
-  for ( step_no = 0; step_no < DBUG_CTX_INITIALISE_STEPS; step_no++ )
+/* steps in initialising */
+#define DBUG_INIT_CTX_STEPS 10
+
+  for ( step_no = 0; status == 0 && step_no < DBUG_INIT_CTX_STEPS; step_no++ )
     {
       switch( step_no )
 	{
@@ -1525,7 +1742,30 @@ dbug_init_ctx( const char * options, const char *name, dbug_ctx_t* dbug_ctx )
 
 	  break;
 
+#ifndef _POSIX_THREADS
 	case 7:
+	case 8:
+	  break;
+#else
+	case 7:
+	  status = dbug_key_init( &dbug_print_info_key );
+	  break;
+	
+	case 8:
+	  if ( pthread_getspecific( dbug_print_info_key.key ) == NULL ) /* no dbug print info set */
+	    {
+	      dbug_print_info_t *dbug_print_info = 
+		(dbug_print_info_t*)MALLOC( sizeof(*dbug_print_info) );
+
+	      if ( dbug_print_info )
+		status = pthread_setspecific( dbug_print_info_key.key, dbug_print_info );
+	      else
+		status = ENOMEM;
+	    }
+	  break;
+#endif
+
+	case 9:
 	  status = dbug_options_ctx( *dbug_ctx, options );
 	  (*dbug_ctx)->magic = DBUG_MAGIC;
 
@@ -1558,9 +1798,15 @@ dbug_init_ctx( const char * options, const char *name, dbug_ctx_t* dbug_ctx )
 
 	  break;
 
+	case DBUG_INIT_CTX_STEPS:
+	  /* Just to check this case does not duplicate,
+	     i.e. the constant has the correct value */
+	  break;
+
         default:
-          assert( step_no < 0 || step_no >= DBUG_CTX_INITIALISE_STEPS+1 );
-          break;
+	  /* May not come here. Set step_no to maximum+1 so assert will fail */
+	  step_no = DBUG_INIT_CTX_STEPS; 
+	  break;
 	}
 
       if ( status != 0 )
@@ -1571,6 +1817,11 @@ dbug_init_ctx( const char * options, const char *name, dbug_ctx_t* dbug_ctx )
 
 	  switch( step_no-1 ) /* the last correct initialised member */
 	    {
+	      /* in case of problems with creating a thread key do nothing,
+		 because the destructor will handle it */
+	    case 8:
+	    case 7:
+
 	    case 6:
 	      FREE( (*dbug_ctx)->name );
 	      (*dbug_ctx)->name = NULL;
@@ -1608,10 +1859,12 @@ dbug_init_ctx( const char * options, const char *name, dbug_ctx_t* dbug_ctx )
 	    default:
               break;
 	    }
-	      
-	  break; /* initialising is finished since there is a problem */
 	}
     }
+
+  assert( status != 0 || step_no == DBUG_INIT_CTX_STEPS );
+
+#undef DBUG_INIT_CTX_STEPS
 
 #ifndef NDEBUG
   printf( "< %s = %d\n", procname, status );
@@ -1620,8 +1873,22 @@ dbug_init_ctx( const char * options, const char *name, dbug_ctx_t* dbug_ctx )
   return status;
 }
 
+/*
+ *  FUNCTION
+ *
+ *	dbug_init    Initialise a (global or thread specific) debug context
+ *
+ *  SYNOPSIS
+ */
+
 dbug_errno_t
 dbug_init( const char * options, const char *name )
+
+/*  DESCRIPTION
+ *
+ *	When threads are allowed the debug conext is stored as thread-specific data.
+ *
+ */
 {
   dbug_errno_t status = 0;
 #ifndef NDEBUG
@@ -1640,47 +1907,41 @@ dbug_init( const char * options, const char *name )
      flag this initialisation and unlock the mutex,
      initialise a dbug context, assign it to the thread */
 
-  for ( step_no = 0; status == 0 && step_no < 5; step_no++ )
+#define DBUG_INIT_STEPS 2
+
+  for ( step_no = 0; status == 0 && step_no < DBUG_INIT_STEPS; step_no++ )
     {
       switch( step_no )
 	{
 	case 0:
-	  status = pthread_mutex_lock( &key_mutex );
-#ifndef NDEBUG
-	  printf( "pthread_mutex_lock = %d\n", status );
-#endif
+	  status = dbug_key_init( &dbug_ctx_key );
 	  break;
 
 	case 1:
-	  if ( key_init == 0 )
-	    status = pthread_key_create( &key_dbug_ctx, NULL );
-#ifndef NDEBUG
-	  printf( "key_init: %d; pthread_key_create: %d\n", key_init, status );
-#endif
-	  break;
-
-	case 2:
-	  if ( key_init == 0 )
-	    key_init = 1;
-	  break;
-
-	case 3:
-	  status = pthread_mutex_unlock( &key_mutex );
-#ifndef NDEBUG
-	  printf( "pthread_mutex_unlock = %d\n", status );
-#endif
-	  break;
-
-	case 4:
-	  if ( pthread_getspecific( key_dbug_ctx ) == NULL ) /* no dbug context set */
+	  if ( pthread_getspecific( dbug_ctx_key.key ) == NULL ) /* no dbug context set */
 	    if ( (status = dbug_init_ctx( options, name, &dbug_ctx )) == 0 )
-	      status = pthread_setspecific( key_dbug_ctx, dbug_ctx );
+	      status = pthread_setspecific( dbug_ctx_key.key, dbug_ctx );
 #ifndef NDEBUG
 	  printf( "pthread_setspecific = %d\n", status );
 #endif
 	  break;
+
+	case DBUG_INIT_STEPS:
+	  /* Just to check this case does not duplicate,
+	     i.e. the constant has the correct value */
+	  break;
+
+        default:
+	  /* May not come here. Set step_no to maximum+1 so assert will fail */
+	  step_no = DBUG_INIT_STEPS; 
+	  break;
 	}
     }
+
+  assert( status != 0 || step_no == DBUG_INIT_STEPS );
+
+#undef DBUG_INIT_STEPS
+
 #else
   status = dbug_init_ctx( options, name, &g_dbug_ctx ); /* global dbug_ctx */
 #endif /* #ifdef _POSIX_THREADS */
@@ -1822,6 +2083,21 @@ dbug_done_ctx( dbug_ctx_t* dbug_ctx )
       dbug_names_done( &(*dbug_ctx)->functions_allowed );
 #endif
       dbug_stack_done( &(*dbug_ctx)->stack );
+
+#ifdef _POSIX_THREADS
+      {
+	dbug_print_info_t *dbug_print_info = 
+	  pthread_getspecific( dbug_print_info_key.key );
+
+	if ( dbug_print_info != NULL ) /* dbug print info set */
+	  {
+	    FREE( dbug_print_info );
+	    status = pthread_setspecific( dbug_print_info_key.key, NULL );
+	  }
+      }
+
+      dbug_key_done( &dbug_print_info_key );
+#endif
 	
       FREE( *dbug_ctx );
       *dbug_ctx = NULL;
@@ -1849,7 +2125,7 @@ dbug_done( void )
 #ifdef _POSIX_THREADS
   dbug_ctx_t dbug_ctx; /* local dbug_ctx */
 
-  dbug_ctx = pthread_getspecific( key_dbug_ctx );
+  dbug_ctx = pthread_getspecific( dbug_ctx_key.key );
 #ifndef NDEBUG
   printf( "pthread_getspecific = %p\n", (void*)dbug_ctx );
 #endif
@@ -1860,9 +2136,13 @@ dbug_done( void )
 
 #ifdef _POSIX_THREADS
   if ( status == 0 )
-    status = pthread_setspecific( key_dbug_ctx, dbug_ctx );
+    status = pthread_setspecific( dbug_ctx_key.key, dbug_ctx );
 #endif /* #ifdef _POSIX_THREADS */
 
+#ifdef _POSIX_THREADS
+  status = dbug_key_done( &dbug_ctx_key );
+#endif
+	
   return status;
 }
 
@@ -1907,7 +2187,9 @@ dbug_enter_ctx( const dbug_ctx_t dbug_ctx, const char *file, const char *functio
 	  procname, PTR_STR(dbug_ctx), file, function, line, PTR_STR(dbug_level) );
 #endif
 
-  for ( step_no = 0; status == 0 && step_no < 5; step_no++ )
+#define DBUG_ENTER_CTX_STEPS 5
+
+ for ( step_no = 0; status == 0 && step_no < DBUG_ENTER_CTX_STEPS; step_no++ )
     {
       switch( step_no )
 	{
@@ -1997,6 +2279,16 @@ dbug_enter_ctx( const dbug_ctx_t dbug_ctx, const char *file, const char *functio
 	      fflush(dbug_ctx->fp);
 	    }
 	  break;
+
+	case DBUG_ENTER_CTX_STEPS:
+	  /* Just to check this case does not duplicate,
+	     i.e. the constant has the correct value */
+	  break;
+
+        default:
+	  /* May not come here. Set step_no to maximum+1 so assert will fail */
+	  step_no = DBUG_ENTER_CTX_STEPS;
+	  break;
 	}
 
       if ( status != 0 && status != ENOENT )
@@ -2006,6 +2298,10 @@ dbug_enter_ctx( const dbug_ctx_t dbug_ctx, const char *file, const char *functio
 	  fflush( stderr );
 	}
     }
+
+ assert( status != 0 || step_no == DBUG_ENTER_CTX_STEPS );
+
+#undef DBUG_ENTER_CTX_STEPS
 
 #ifndef NDEBUG
   printf( "< %s = %d\n", procname, status );
@@ -2018,25 +2314,31 @@ dbug_errno_t
 dbug_enter( const char *file, const char *function, const int line, int *dbug_level )
 {
   dbug_errno_t status = 0;
-  const char *procname = "dbug_enter";
+#ifdef _POSIX_THREADS
+  dbug_ctx_t dbug_ctx; /* local dbug_ctx */
+#endif
 
 #ifndef NDEBUG
+  const char *procname = "dbug_enter";
+
   printf( "> %s( %s, %s, %d, %s )\n", 
 	  procname, file, function, line, PTR_STR(dbug_level) );
 #endif
 
 #ifdef _POSIX_THREADS
-  dbug_ctx_t dbug_ctx; /* local dbug_ctx */
 
-  dbug_ctx = pthread_getspecific( key_dbug_ctx );
+  dbug_ctx = pthread_getspecific( dbug_ctx_key.key );
 #ifndef NDEBUG
   printf( "pthread_getspecific = %p\n", (void*)dbug_ctx );
 #endif
-  status = dbug_enter_ctx( dbug_ctx, file, function, line, dbug_level );
-#else
-  status = dbug_enter_ctx( g_dbug_ctx, file, function, line, dbug_level );
-#endif
 
+  status = dbug_enter_ctx( dbug_ctx, file, function, line, dbug_level );
+
+#else
+
+  status = dbug_enter_ctx( g_dbug_ctx, file, function, line, dbug_level );
+
+#endif
 
 #ifndef NDEBUG
   printf( "< %s = %d\n", procname, status );
@@ -2086,7 +2388,9 @@ dbug_leave_ctx( const dbug_ctx_t dbug_ctx, const int line, int *dbug_level )
 	  procname, PTR_STR(dbug_ctx), line, PTR_STR(dbug_level) );
 #endif
 
-  for ( step_no = 0; status == 0 && step_no < 6; step_no++ )
+#define DBUG_LEAVE_CTX_STEPS 6
+
+  for ( step_no = 0; status == 0 && step_no < DBUG_LEAVE_CTX_STEPS; step_no++ )
     {
       switch( step_no )
 	{
@@ -2164,6 +2468,16 @@ dbug_leave_ctx( const dbug_ctx_t dbug_ctx, const int line, int *dbug_level )
 	case 5:
 	  status = dbug_stack_pop( &dbug_ctx->stack );
 	  break;
+
+	case DBUG_LEAVE_CTX_STEPS:
+	  /* Just to check this case does not duplicate,
+	     i.e. the constant has the correct value */
+	  break;
+
+        default:
+	  /* May not come here. Set step_no to maximum+1 so assert will fail */
+	  step_no = DBUG_LEAVE_CTX_STEPS; 
+	  break;
 	}
 
       if ( status != 0 && status != ENOENT )
@@ -2174,6 +2488,10 @@ dbug_leave_ctx( const dbug_ctx_t dbug_ctx, const int line, int *dbug_level )
 	}
     }
 
+  assert( status != 0 || step_no == DBUG_LEAVE_CTX_STEPS );
+
+#undef DBUG_LEAVE_CTX_STEPS
+
 #ifndef NDEBUG
   printf( "< %s = %d\n", procname, status );
 #endif
@@ -2181,22 +2499,45 @@ dbug_leave_ctx( const dbug_ctx_t dbug_ctx, const int line, int *dbug_level )
   return status;
 }
 
+
+/*
+ *  FUNCTION
+ *
+ *	dbug_leave    process exit from user function
+ *
+ *  SYNOPSIS
+ */
+
 dbug_errno_t
 dbug_leave( const int line, int *dbug_level )
+
+/*
+ *  DESCRIPTION
+ *
+ *	See dbug_print_ctx.
+ *
+ *  RETURN VALUE
+ *
+ *	See dbug_print_ctx.
+ */
 {
   dbug_errno_t status = 0;
-
-#ifdef _POSIX_THREADS
   dbug_ctx_t dbug_ctx; /* local dbug_ctx */
 
-  dbug_ctx = pthread_getspecific( key_dbug_ctx );
+#ifndef _POSIX_THREADS
+
+  dbug_ctx = g_dbug_ctx;
+
+#else
+
+  dbug_ctx = pthread_getspecific( dbug_ctx_key.key );
 #ifndef NDEBUG
   printf( "pthread_getspecific = %p\n", (void*)dbug_ctx );
 #endif
-  status = dbug_leave_ctx( dbug_ctx, line, dbug_level );
-#else
-  status = dbug_leave_ctx( g_dbug_ctx, line, dbug_level );
+
 #endif
+
+  status = dbug_leave_ctx( dbug_ctx, line, dbug_level );
 
   return status;
 }
@@ -2250,7 +2591,9 @@ va_dcl
 #else
   va_start(args);
 #endif
+
   status = _dbug_print_ctx( dbug_ctx, line, break_point, format, args );
+
   va_end(args);
 
 #ifndef NDEBUG
@@ -2273,12 +2616,10 @@ va_dcl
 #endif
 {
   dbug_errno_t status = 0;
+  dbug_ctx_t dbug_ctx; /* local dbug_ctx */
   va_list args;
 #ifndef NDEBUG
   const char *procname = "dbug_print";
-#endif
-#ifdef _POSIX_THREADS
-  dbug_ctx_t dbug_ctx; /* local dbug_ctx */
 #endif
 
 #ifndef NDEBUG
@@ -2286,8 +2627,10 @@ va_dcl
 	  procname, line, break_point, format );
 #endif
 
-#ifdef _POSIX_THREADS
-  dbug_ctx = pthread_getspecific( key_dbug_ctx );
+#ifndef _POSIX_THREADS
+  dbug_ctx = g_dbug_ctx;
+#else
+  dbug_ctx = pthread_getspecific( dbug_ctx_key.key );
 #ifndef NDEBUG
   printf( "pthread_getspecific = %p\n", (void*)dbug_ctx );
 #endif
@@ -2299,11 +2642,7 @@ va_dcl
   va_start(args);
 #endif
 
-#ifdef _POSIX_THREADS
   status = _dbug_print_ctx( dbug_ctx, line, break_point, format, args );
-#else
-  status = _dbug_print_ctx( g_dbug_ctx, line, break_point, format, args );
-#endif
 
   va_end(args);
 
@@ -2334,6 +2673,7 @@ dbug_print_start_ctx( const dbug_ctx_t dbug_ctx, const int line, const char *bre
  */
 {
   dbug_errno_t status = 0;
+  dbug_print_info_t *dbug_print_info;
 #ifndef NDEBUG
   const char *procname = "dbug_print_start_ctx";
 #endif
@@ -2344,12 +2684,17 @@ dbug_print_start_ctx( const dbug_ctx_t dbug_ctx, const int line, const char *bre
 #endif
 
 #ifdef _POSIX_THREADS
-  pthread_mutex_lock( &print_mutex );
+  dbug_print_info = pthread_getspecific( dbug_print_info_key.key );
+#ifndef NDEBUG
+  printf( "pthread_getspecific = %p\n", (void*)dbug_print_info );
+#endif
+#else
+  dbug_print_info = &g_dbug_print_info;
 #endif
 
-  _print_dbug_ctx = dbug_ctx;
-  _print_line = line;
-  _print_break_point = (char *)break_point;
+  dbug_print_info->dbug_ctx = dbug_ctx;
+  dbug_print_info->line = line;
+  dbug_print_info->break_point = (char *)break_point;
 
 #ifndef NDEBUG
   printf( "< %s = %d\n", procname, status );
@@ -2391,7 +2736,7 @@ dbug_print_start( const int line, const char *break_point )
 #endif
 
 #ifdef _POSIX_THREADS
-  dbug_ctx = pthread_getspecific( key_dbug_ctx );
+  dbug_ctx = pthread_getspecific( dbug_ctx_key.key );
 #ifndef NDEBUG
   printf( "pthread_getspecific = %p\n", (void*)dbug_ctx );
 #endif
@@ -2438,14 +2783,23 @@ va_dcl
  */
 {
   dbug_errno_t status = 0;
+  dbug_print_info_t *dbug_print_info;
   va_list args;
 #ifndef NDEBUG
   const char *procname = "dbug_print_end";
 #endif
 
+#ifdef _POSIX_THREADS
+  dbug_print_info = pthread_getspecific( dbug_print_info_key.key );
+#else
+  dbug_print_info = &g_dbug_print_info;
+#endif
+
 #ifndef NDEBUG
   printf( "> %s( %s, %d, %s, %s )\n", 
-	  procname, PTR_STR(_print_dbug_ctx), _print_line, _print_break_point, format );
+	  procname, PTR_STR(dbug_print_info->dbug_ctx), 
+	  dbug_print_info->line, 
+	  dbug_print_info->break_point, format );
 #endif
 
 #if HASSTDARG
@@ -2454,13 +2808,9 @@ va_dcl
   va_start(args);
 #endif
 
-  status = _dbug_print_ctx( _print_dbug_ctx, _print_line, _print_break_point, format, args );
+  status = _dbug_print_ctx( dbug_print_info->dbug_ctx, dbug_print_info->line, dbug_print_info->break_point, format, args );
 
   va_end(args);
-
-#ifdef _POSIX_THREADS
-  pthread_mutex_unlock( &print_mutex );
-#endif
 
 #ifndef NDEBUG
   printf( "< %s = %d\n", procname, status );
