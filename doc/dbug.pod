@@ -396,9 +396,9 @@ Used to do printing via the "fprintf" library function on the current debug
 stream. The input arguments are a break point, a format string and the
 corresponding argument list. Note that the format and following parameters are
 all one macro argument and B<must> be enclosed in parenthesis. The
-DBUG_PRINT_CTX has one extra input parameter: the debugging context. Before a
-DBUG_PRINT statement can be executed a DBUG_ENTER statement must have been
-executed, i.e. DBUG_PRINT needs a function context.
+DBUG_PRINT_CTX has one extra input parameter: the debugging context. When the
+DBUG_PRINT statement is called within a pair of DBUG_ENTER/DBUG_LEAVE
+statements, the function context is also printed, otherwise that is empty.
 
 EX: DBUG_PRINT ("type", ("type is %x", type)); 
 
@@ -692,7 +692,8 @@ Output of DBUG_PRINT, DBUG_PRINT_CTX, dbug_print and dbug_print_ctx
 
 A line consisting of 'DBUG', the UID of dbug context, date (in GMT YYYYMMDDhhmmss
 format), a sequence number, 'P', file, function, line, level,
-break point and user supplied parameters is printed.
+break point and user supplied parameters is printed. File and function may be
+empty when there is no active function context.
 
 DBUG#<dbug uid>#<date>#<seq>#P#<file>#<function>#<line>#<level>#<break point>#<user supplied parameters>
 
@@ -1000,18 +1001,18 @@ format string.
 Figure 8 shows the output for default tracing and debug.
 
 	>main
-	|   args; argv[2] = 3
+	|   args: argv[2] = 3
 	|   >factorial
-	|   |   find; find 3 factorial
+	|   |   find: find 3 factorial
 	|   |   >factorial
-	|   |   |   find; find 2 factorial
+	|   |   |   find: find 2 factorial
 	|   |   |   >factorial
-	|   |   |   |   find; find 1 factorial
-	|   |   |   |   result; result is 1
+	|   |   |   |   find: find 1 factorial
+	|   |   |   |   result: result is 1
 	|   |   |   <factorial
-	|   |   |   result; result is 2
+	|   |   |   result: result is 2
 	|   |   <factorial
-	|   |   result; result is 6
+	|   |   result: result is 6
 	|   <factorial
 	6
 	<main
@@ -1030,10 +1031,10 @@ To demonstrate selection of specific macros for output, figure 9 shows
 the result when the report program is invoked with the debug
 report option "-d result".
 
-	factorial; result; result is 1
-	factorial; result; result is 2
-	factorial; result; result is 6
-	factorial; result; result is 24
+	factorial: result: result is 1
+	factorial: result: result is 2
+	factorial: result: result is 6
+	factorial: result: result is 24
 	24
 	
 	Figure 9
@@ -1050,12 +1051,12 @@ report options "-t factorial -FL". The 'F' flag enables printing of the source
 file name and the 'L' flag enables printing of the source file line
 number. 
 
-	factorial.c; 7; factorial; find; find 3 factorial
-	factorial.c; 7; factorial; find; find 2 factorial
-	factorial.c; 7; factorial; find; find 1 factorial
-	factorial.c; 11; factorial; result; result is 1
-	factorial.c; 11; factorial; result; result is 2
-	factorial.c; 11; factorial; result; result is 6
+	factorial.c: 7: factorial: find: find 3 factorial
+	factorial.c: 7: factorial: find: find 2 factorial
+	factorial.c: 7: factorial: find: find 1 factorial
+	factorial.c: 11: factorial: result: result is 1
+	factorial.c: 11: factorial: result: result is 2
+	factorial.c: 11: factorial: result: result is 6
 	6
 	
 	Figure 10
