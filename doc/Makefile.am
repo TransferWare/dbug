@@ -22,8 +22,8 @@ AUTOMAKE_OPTIONS     = ../src/lib/ansi2knr
 INCLUDES	     = -I$(top_builddir) -I$(top_srcdir)
 
 noinst_PROGRAMS      = factorial
-                     = main.c factorial.c
-LDADD                = ../src/lib/libulib.la
+factorial_SOURCES    = main.c factorial.c
+LDADD                = ../src/lib/libdbug.la
 AM_CPPFLAGS          = -I../src/lib
 
 EXTRA_DIST           = Imakefile test1.ref test2.ref test3.ref test4.ref test5.ref dbug.pod dbug.html

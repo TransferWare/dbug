@@ -17,25 +17,34 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
-# Strip RCS keyword Name (e.g. '$Name$') into 2_1_0
-Name=`echo '$Name$' | sed -e 's/$Name$//'`
+# Strip RCS keyword Name (e.g. '$Name$' into 2_1_0).
+AC_DEFUN(AC_RCS_NAME, regexp([$Name$], [dbug_\(.*\) ], [\1]))
 
-AC_INIT([dbug],[$Name],[g.paulissen@chello.nl])
+AC_DEFUN(AC_DBUG_MAJOR_
+
+AC_REVISION([$Revision$])
+AC_INIT([dbug],[AC_RCS_NAME()],[g.paulissen@chello.nl])
 AC_CONFIG_AUX_DIR([config])
+AH_BOTTOM(
+[#if defined(STDC_HEADERS) && STDC_HEADERS
+#define HAVE_STDLIB_H 1
+#define HAVE_STRING_H 1
+#endif]
+)
 AC_CONFIG_SRCDIR([src/lib/dbug.c])
-AC_CONFIG_HEADER([config.h])
+AM_CONFIG_HEADER([config.h])
 AM_INIT_AUTOMAKE
 AM_C_PROTOTYPES
 
 # Checks for programs.
-AC_PATH_PROG([PERL],[perl5)
+AC_PATH_PROG([PERL],[perl])
 case x$PERL in
 x)
 	# No Perl avaliable: stop
-	AC_MSG_ERROR([Perl must be available in $PATH.])
+	AC_MSG_ERROR([Perl must be available in \$PATH.])
 	;;
 esac
-AC_ARG_VAR([PERL])
+dnl AC_ARG_VAR(PERL,[The program name of Perl.])
 AC_PROG_CC
 AM_PROG_CC_STDC
 AC_LIBTOOL_WIN32_DLL
@@ -45,7 +54,7 @@ AC_PROG_LIBTOOL
 
 # Checks for header files.
 AC_HEADER_STDC
-AC_CHECK_HEADERS([stdlib.h string.h unistd.h errno.h assert.h])
+AC_CHECK_HEADERS([stdarg.h stdlib.h string.h unistd.h errno.h assert.h stdio.h])
 # Header files needed for timing functions.
 AC_CHECK_HEADERS([time.h sys/timeb.h sys/param.h sys/time.h sys/resource.h])
 
@@ -75,10 +84,9 @@ LTLIBOBJS=`echo "$LIB@&t@OBJS" |
            sed 's,\.[[^.]]* ,.lo ,g;s,\.[[^.]]*$,.lo,'`
 AC_SUBST(LTLIBOBJS)
 
-
 AC_SUBST(ac_aux_dir)
 
-AC_CONFIG_FILES([Makefile config/Makefile doc/Makefile src/Makefile src/lib/Makefile src/prog/Makefile src/prog/dbugtest test/Makefile])
+AC_CONFIG_FILES([Makefile config/Makefile doc/Makefile src/Makefile src/lib/Makefile src/prog/Makefile test/Makefile])
 AC_OUTPUT
 
 echo \
