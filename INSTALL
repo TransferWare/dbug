@@ -64,6 +64,10 @@ this:
 Or on systems that have the `env' program, you can do it like this:
      env CPPFLAGS=-I/usr/local/include LDFLAGS=-s ./configure
 
+For Windows systems using the Visual C++ compiler
+
+    ./configure --prefix=c:/usr/local CC=cl CFLAGS=-GD
+
 Compiling For Multiple Architectures
 ====================================
 
