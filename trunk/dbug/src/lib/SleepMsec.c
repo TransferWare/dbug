@@ -73,23 +73,32 @@ static char vcid[] = "$Header$";
 #include <config.h>
 #endif
 
-#include "SleepMsec.h"
-
 #ifdef _WIN32
-# if HAVE_SLEEP
-#  if HAVE_STDLIB_H
-#   include <stdlib.h>
-#  endif
-#  if HAVE_TIME_H
-#   include <time.h>
-#  endif
-#  ifndef sleep
-#   define sleep _sleep
-#  endif
+# ifndef sleep
+#  define sleep _sleep
 # endif
 #else
 # if HAVE_UNISTD_H
 #  include <unistd.h>
+# endif
+#endif
+
+#if HAVE_SLEEP
+# if HAVE_STDLIB_H
+#  include <stdlib.h>
+# endif
+# if HAVE_TIME_H
+#  include <time.h>
+# endif
+#endif
+
+#include "SleepMsec.h"
+
+#ifndef SLEEP_GRANULARITY
+# ifdef _WIN32
+#  define SLEEP_GRANULARITY 'T'
+# else
+#  define SLEEP_GRANULARITY 'S'
 # endif
 #endif
 
@@ -114,18 +123,19 @@ static char vcid[] = "$Header$";
  *
  */
 
-void SleepMsec(unsigned int value)
+void
+SleepMsec(unsigned int value)
 {
-    unsigned int delayarg = 0;
+  unsigned int delayarg = 0;
     
 #if HAVE_DELAY
-    delayarg = (HZ * value) / 1000;     /* Delay in ticks for Delay () */
+  delayarg = (HZ * value) / 1000;     /* Delay in ticks for Delay () */
 #else
 # if HAVE_SLEEP
 #  if SLEEP_GRANULARITY == 'S'
-    delayarg = value / 1000;            /* Delay is in seconds for sleep () */
+  delayarg = value / 1000;            /* Delay is in seconds for sleep () */
 #  else
-    delayarg = ( CLOCKS_PER_SEC * value ) / 1000;       /* Delay is in ticks for sleep () */
+  delayarg = ( CLOCKS_PER_SEC * value ) / 1000;       /* Delay is in ticks for sleep () */
 #  endif
 # endif
 #endif
@@ -134,16 +144,15 @@ void SleepMsec(unsigned int value)
  *      Translate some calls among different systems.
  */
 
-    /*@-noeffect@*/
+  /*@-noeffect@*/
 
 #if HAVE_DELAY
-    (void) Delay( delayarg );           /* Pause for given number of ticks */
+  (void) Delay( delayarg );           /* Pause for given number of ticks */
 #else
 # if HAVE_SLEEP
-    /*@-unrecog@*/
-    (void) sleep( delayarg );
-    /*@=unrecog@*/
+  /*@-unrecog@*/
+  (void) sleep( delayarg );
+  /*@=unrecog@*/
 # endif
 #endif
-   
 }

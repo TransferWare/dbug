@@ -348,7 +348,13 @@ sub time {
     my $obj = shift;
     my $function = shift;
 
-    @_ ? ${$obj->{TIME}}{ $function } = shift : ${$obj->{TIME}}{ $function };
+    if (@_) {
+        ${$obj->{TIME}}{ $function } = shift;
+    } elsif ( defined(${$obj->{TIME}}{ $function }) ) {
+        ${$obj->{TIME}}{ $function };
+    } else {
+        0;
+    }
 }
 
 sub min_time {
@@ -387,7 +393,13 @@ sub calls {
     my $obj = shift;
     my $function = shift;
 
-    @_ ? ${$obj->{CALLS}}{ $function } = shift : ${$obj->{CALLS}}{ $function };
+    if (@_) {
+        ${$obj->{CALLS}}{ $function } = shift;
+    } elsif ( defined(${$obj->{CALLS}}{ $function }) ) {
+        ${$obj->{CALLS}}{ $function };
+    } else {
+        0;
+    }
 }
 
 sub update {
@@ -506,9 +518,13 @@ sub is_trace_function {
 }
 
 sub call_push {
-    my ($obj, $function, $level, $time) = @_;
+    my ($obj, $function, $level, $enter_time) = @_;
 
-    my $r_dbug_stack = dbug_stack->new($function, $level, $time);
+    my $r_dbug_stack = dbug_stack->new($function, $level, $enter_time);
+
+    print STDOUT
+        "\ndbug_uid::call_push; self: $obj; function: $function; level: $level; time: ",
+        $enter_time, "\n";
 
     $obj->stack_push($r_dbug_stack);
 }
@@ -531,7 +547,6 @@ sub call_push {
 #
 sub call_pop {
     my ($obj, $function, $level, $leave_time) = @_;
-
     my $dbug_stack = $obj->call_top();
     my $time = 0;
 
@@ -539,16 +554,18 @@ sub call_pop {
 
     while ( $dbug_stack->level() > $level ) {
         $obj->stack_pop;
-        $dbug_stack = $obj->call_top();
+        $dbug_stack = $obj->call_top;
     }
 
     if ( $dbug_stack->level() == $level ) {
-        my ( $enter_time, $time_children ) = ( $dbug_stack->time(), $dbug_stack->time_children() );
+        my $enter_time = $dbug_stack->enter_time();
 
-        # set the time to time when leaving minus time when entering minus time used by children
-        $time = $leave_time - $enter_time - $time_children;
+        print STDOUT
+            "\ndbug_uid::call_pop; self: $obj; function: $function; level: $level; time: ",
+            $leave_time - $enter_time, "\n";
 
-        $dbug_stack->time( $time );
+        # set the time to time when leaving minus time when entering
+        $time = $dbug_stack->time( $dbug_stack->time + $leave_time - $enter_time );
 
         # update time and calls for function
 
@@ -558,13 +575,16 @@ sub call_pop {
 
         $dbug_uid_tot->update($function, $time);
 
-        # update the time_children for next in the hierarchy
+        # Update the time for next in the hierarchy.
+        # Since this item is removed (via stack_pop) the time of this call
+        # has to be subtracted from the call before this one.
 
-        if ( defined($dbug_stack = $obj->stack_pop) ) {
+        if ( defined($obj->stack_pop) && defined($dbug_stack = $obj->call_top) ) {
             # GJP 28-02-2003
             # request id 695260
             # Do not forget the previous calls, so update it.
-            $dbug_stack->time_children( $dbug_stack->time_children() + $leave_time - $enter_time );
+#            $dbug_stack->time_children( $dbug_stack->time_children() + $leave_time - $enter_time );
+            $dbug_stack->time( $dbug_stack->time - $time );
         }
 
     } else {
@@ -600,6 +620,9 @@ sub done {
         foreach $function (keys %{$obj->{CALLS}}) {
             $g_tot_calls += $obj->{CALLS}{ $function };
             $g_tot_time += $obj->{TIME}{ $function };
+
+            print STDOUT "\nTime for $function: ", $obj->{TIME}{ $function }, "\n";
+
             if ( length( $function ) > $max_length ) {
                 $max_length = length( $function );
             }
@@ -614,9 +637,9 @@ sub done {
         }
 
         my $total_line1 = 
-( "=" x $max_length ) . " ======= ======= =========== ====== =========== =======";
+            ( "=" x $max_length ) . " ======= ======= =========== ====== =========== =========== =========== =======";
         my $total_line2 = 
-( " " x $max_length ) . " ======= ======= =========== ======                    ";
+            ( " " x $max_length ) . " ======= ======= =========== ======                    ";
 
         $main::report_no++;
 
@@ -625,7 +648,7 @@ sub done {
 
         my $format_top = 
 "format $^ =\n\n" .
-"-------------------------------------------------------------------------------\n" .
+"-------------------------------------------------------------------------------------------------------\n" .
 "Profile of execution for debug context '$dbug_name'\n" .
 "Stack usage: $stack_usage bytes\n" .
 "Execution times are in seconds\n\n" .
@@ -682,10 +705,15 @@ $total_line1 . "\n" .
 
         print $total_line2, "\n";
 
-        ( $g_function, $g_calls, $g_perc_calls, $g_time, $g_perc_time, $g_time_per_call, $g_weight ) = 
-            ( "Totals", $g_tot_calls, "100.00",
-              sprintf( TIME_FMT, $g_tot_time / 1000 ),
-              "100.00", "", "" );
+        $g_function = "Totals";
+        $g_calls = $g_tot_calls;
+        $g_perc_calls = '100.00';
+        $g_time = sprintf( TIME_FMT, $g_tot_time / 1000 );
+        $g_perc_time = '100.00';
+        $g_avg_time_per_call = '';
+        $g_min_time_per_call = '';
+        $g_max_time_per_call = '';
+        $g_weight = '';
 
         write;
 
@@ -755,8 +783,8 @@ sub leave {
 
     if ($obj->is_trace_function($function)) {
         print("<$function");
-        if defined($time) {
-            sprintf( ' elapsed time: ' . TIME_FMT, $time / 1000 );
+        if ( defined($time) ) {
+            printf( ' elapsed time: ' . TIME_FMT, $time / 1000 );
         }
         print("\n");
     }
@@ -782,12 +810,12 @@ use strict;
 use Carp qw(carp);
 
 sub new {
-    my ($pkg, $function, $level, $time) = @_;
+    my ($pkg, $function, $level, $enter_time) = @_;
     my $r_dbug_stack = {
         FUNCTION => $function,
         LEVEL => $level,
-        TIME => $time,
-        TIME_CHILDREN => 0
+        ENTER_TIME => $enter_time,
+        TIME => 0
         };
 
     bless $r_dbug_stack, $pkg;
@@ -807,14 +835,19 @@ sub level {
     @_ ? $obj->{LEVEL} = shift : $obj->{LEVEL};
 }
 
+sub enter_time {
+    my $obj = shift;
+
+    printf STDOUT "\ndbug_stack::enter_time; self: %s; function: %s; level: %d; args: %s\n", $obj, $obj->function, $obj->level, "@_";
+
+    @_ ? $obj->{ENTER_TIME} = shift : $obj->{ENTER_TIME};
+}
+
 sub time {
     my $obj = shift;
+
+    printf STDOUT "\ndbug_stack::time; self: %s; function: %s; level: %d; args: %s\n", $obj, $obj->function, $obj->level, "@_";
 
     @_ ? $obj->{TIME} = shift : $obj->{TIME};
 }
 
-sub time_children {
-    my $obj = shift;
-
-    @_ ? $obj->{TIME_CHILDREN} = shift : $obj->{TIME_CHILDREN};
-}
