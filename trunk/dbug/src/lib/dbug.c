@@ -272,14 +272,22 @@ typedef int BOOLEAN;
  */
 
 static int ctx_nr = 0;
+
 #ifdef _POSIX_THREADS
 static pthread_mutex_t ctx_nr_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t key_mutex = PTHREAD_MUTEX_INITIALIZER;
+/* mutex to handle access to _print_* variables (see below) */
+static pthread_mutex_t print_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_key_t key_dbug_ctx;
 static int key_init = 0;
 #else
-static dbug_ctx_t dbug_ctx = NULL; /* global debug context for dbug routines */
+static dbug_ctx_t g_dbug_ctx = NULL; /* global debug context for dbug routines */
 #endif
+
+/* Variables for saving print info for the DBUG_PRINT and DBUG_PRINT_CTX macro */
+static dbug_ctx_t _print_dbug_ctx = NULL;
+static int _print_line = 0;
+static char * _print_break_point = NULL;
 
 /*
  * declaration of static functions 
@@ -1366,15 +1374,15 @@ dbug_init_ctx( const char * options, const char *name, dbug_ctx_t* dbug_ctx )
  *	Given pointer to a debug control string in "options", 
  *      parses the control string, and sets up a new debug context.
  *
- *	The debug control string is a sequence of semi-colon separated fields
+ *	The debug control string is a sequence of comma separated fields
  *	as follows:
  *
- *		<field_1>;<field_2>;...;<field_N>
+ *		<field_1>,<field_2>,...,<field_N>
  *
- *	Each field consists of a mandatory flag character followed by
- *	a modifier:
+ *	Each field consists of a mandatory flag character optionally followed by
+ *	an equal sign and a modifier:
  *
- *		flag[modifier]
+ *		flag[=modifier]
  *
  *	The currently recognized flag characters are:
  *
@@ -1384,7 +1392,7 @@ dbug_init_ctx( const char * options, const char *name, dbug_ctx_t* dbug_ctx )
  *		D	Delay after each debugger output line.
  *			The argument is the number of milliseconds
  *			to delay, subject to machine capabilities.
- *			I.E.  -#D,2000 is delay two seconds.
+ *			I.E.  -#D=2000 is delay two seconds.
  *
  *		g	Enable profiling.
  *
@@ -1400,7 +1408,7 @@ dbug_init_ctx( const char * options, const char *name, dbug_ctx_t* dbug_ctx )
  *	on a shell command line (the "-#" is typically used to
  *	introduce a control string to an application program) are:
  *
- *		-#d;t
+ *		-#d,t
  *
  */
 
@@ -1674,7 +1682,7 @@ dbug_init( const char * options, const char *name )
 	}
     }
 #else
-  status = dbug_init_ctx( options, name, &dbug_ctx ); /* global dbug_ctx */
+  status = dbug_init_ctx( options, name, &g_dbug_ctx ); /* global dbug_ctx */
 #endif /* #ifdef _POSIX_THREADS */
 
 #ifndef NDEBUG
@@ -1688,7 +1696,69 @@ dbug_init( const char * options, const char *name )
 /*
  *  FUNCTION
  *
- *	dbug_done_ctx    destroy a debug context
+ *	dbug_push    Old version of dbug_init.
+ *
+ *  SYNOPSIS
+ */
+
+dbug_errno_t
+dbug_push( const char * options )
+
+/*
+ *  DESCRIPTION
+ *
+ *	Translates ',' into '=' and ':' into ',' and then calls dbug_init.
+ */
+
+{
+  char *options_tmp;
+  int nr;
+  char ch_from, ch_to;
+  char *str;
+  dbug_errno_t status = 0;
+
+  if ( options == NULL )
+    status = EINVAL;
+  else
+    {
+      options_tmp = MALLOC( strlen(options) + 1 );
+
+      if ( options_tmp )
+	{
+	  strcpy( options_tmp, options );
+
+	  for ( nr = 0; nr < 2; nr++ )
+	    {
+	      switch ( nr )
+		{
+		case 0:
+		  ch_from = ',';
+		  ch_to = MODIFIER_SEPARATOR;
+		  break;
+		case 1:
+		  ch_from = ':';
+		  ch_to = *OPTIONS_SEPARATORS;
+		  break;
+		}
+	      for ( str = strchr( options_tmp, ch_from ); str != NULL; str = strchr( str, ch_from ) )
+		*str = ch_to;
+	    }
+
+	  status = dbug_init( options_tmp, NULL );
+
+	  FREE( options_tmp );
+	}
+      else
+	status = ENOMEM;
+    }
+
+  return status;
+}
+
+/*
+ *  FUNCTION
+ *
+ *	dbug_done    Destroy a debug context.
  *
  *  SYNOPSIS
  */
@@ -1783,9 +1853,10 @@ dbug_done( void )
 #ifndef NDEBUG
   printf( "pthread_getspecific = %p\n", (void*)dbug_ctx );
 #endif
-#endif
-
   status = dbug_done_ctx( &dbug_ctx );
+#else
+  status = dbug_done_ctx( &g_dbug_ctx );
+#endif
 
 #ifdef _POSIX_THREADS
   if ( status == 0 )
@@ -1961,8 +2032,11 @@ dbug_enter( const char *file, const char *function, const int line, int *dbug_le
 #ifndef NDEBUG
   printf( "pthread_getspecific = %p\n", (void*)dbug_ctx );
 #endif
-#endif
   status = dbug_enter_ctx( dbug_ctx, file, function, line, dbug_level );
+#else
+  status = dbug_enter_ctx( g_dbug_ctx, file, function, line, dbug_level );
+#endif
+
 
 #ifndef NDEBUG
   printf( "< %s = %d\n", procname, status );
@@ -2119,8 +2193,10 @@ dbug_leave( const int line, int *dbug_level )
 #ifndef NDEBUG
   printf( "pthread_getspecific = %p\n", (void*)dbug_ctx );
 #endif
-#endif
   status = dbug_leave_ctx( dbug_ctx, line, dbug_level );
+#else
+  status = dbug_leave_ctx( g_dbug_ctx, line, dbug_level );
+#endif
 
   return status;
 }
@@ -2222,8 +2298,169 @@ va_dcl
 #else
   va_start(args);
 #endif
+
+#ifdef _POSIX_THREADS
   status = _dbug_print_ctx( dbug_ctx, line, break_point, format, args );
+#else
+  status = _dbug_print_ctx( g_dbug_ctx, line, break_point, format, args );
+#endif
+
   va_end(args);
+
+#ifndef NDEBUG
+  printf( "< %s = %d\n", procname, status );
+#endif
+
+  return status;
+}
+
+
+/*
+ *  FUNCTION
+ *
+ *	dbug_print_start_ctx    save line and break point for dbug_print_end
+ *
+ *  SYNOPSIS
+ */
+
+dbug_errno_t
+dbug_print_start_ctx( const dbug_ctx_t dbug_ctx, const int line, const char *break_point )
+
+/*
+ *  DESCRIPTION
+ *
+ *	Used for saving info for the subsequent call to dbug_print_end.
+ *
+ */
+{
+  dbug_errno_t status = 0;
+#ifndef NDEBUG
+  const char *procname = "dbug_print_start_ctx";
+#endif
+
+#ifndef NDEBUG
+  printf( "> %s( %s, %d, %s )\n", 
+	  procname, PTR_STR(dbug_ctx), line, break_point );
+#endif
+
+#ifdef _POSIX_THREADS
+  pthread_mutex_lock( &print_mutex );
+#endif
+
+  _print_dbug_ctx = dbug_ctx;
+  _print_line = line;
+  _print_break_point = (char *)break_point;
+
+#ifndef NDEBUG
+  printf( "< %s = %d\n", procname, status );
+#endif
+
+  return status;
+}
+
+
+/*
+ *  FUNCTION
+ *
+ *	dbug_print_start    save line and break point for dbug_print_end
+ *
+ *  SYNOPSIS
+ */
+
+dbug_errno_t
+dbug_print_start( const int line, const char *break_point )
+
+/*
+ *  DESCRIPTION
+ *
+ *	Used for saving info for the subsequent call to dbug_print_end.
+ *
+ */
+{
+  dbug_errno_t status = 0;
+#ifndef NDEBUG
+  const char *procname = "dbug_print_start";
+#endif
+#ifdef _POSIX_THREADS
+  dbug_ctx_t dbug_ctx; /* local dbug_ctx */
+#endif
+
+#ifndef NDEBUG
+  printf( "> %s( %d, %s )\n", 
+	  procname, line, break_point );
+#endif
+
+#ifdef _POSIX_THREADS
+  dbug_ctx = pthread_getspecific( key_dbug_ctx );
+#ifndef NDEBUG
+  printf( "pthread_getspecific = %p\n", (void*)dbug_ctx );
+#endif
+  status = dbug_print_start_ctx( dbug_ctx, line, break_point );
+#else
+  status = dbug_print_start_ctx( g_dbug_ctx, line, break_point );
+#endif
+
+#ifndef NDEBUG
+  printf( "< %s = %d\n", procname, status );
+#endif
+
+  return status;
+}
+
+/*
+ *  FUNCTION
+ *
+ *	dbug_print_end    handle print of debug lines
+ *
+ *  SYNOPSIS
+ */
+
+#if HASSTDARG
+dbug_errno_t
+dbug_print_end( const char *format, ... )
+#else
+dbug_errno_t
+dbug_print_end( format, va_alist )
+const char *format;
+va_dcl
+#endif
+
+/*
+ *  DESCRIPTION
+ *
+ *	When invoked via one of the DBUG_PRINT macros, tests the current break point
+ *	to see if that macro has been selected for processing via the debugger 
+ *      control string, and if so, handles printing of the arguments via the format string.  
+ *
+ *	Note that the format string SHOULD NOT include a terminating
+ *	newline, this is supplied automatically.
+ *
+ */
+{
+  dbug_errno_t status = 0;
+  va_list args;
+#ifndef NDEBUG
+  const char *procname = "dbug_print_end";
+#endif
+
+#ifndef NDEBUG
+  printf( "> %s( %s, %d, %s, %s )\n", 
+	  procname, PTR_STR(_print_dbug_ctx), _print_line, _print_break_point, format );
+#endif
+
+#if HASSTDARG
+  va_start(args, format);
+#else
+  va_start(args);
+#endif
+
+  status = _dbug_print_ctx( _print_dbug_ctx, _print_line, _print_break_point, format, args );
+
+  va_end(args);
+
+#ifdef _POSIX_THREADS
+  pthread_mutex_unlock( &print_mutex );
+#endif
 
 #ifndef NDEBUG
   printf( "< %s = %d\n", procname, status );
@@ -2243,6 +2480,13 @@ int main( int argc, char **argv )
   call_t call, *top;
   int idx;
   dbug_ctx_t dbug_ctx;
+  int idx_names = 3;
+
+  if ( argc < 3 )
+    {
+      fprintf( stderr, "Usage: dbugtest <DBUG_INIT options> <DBUG_PUSH options> <name1> <name2> .. <nameN>\n" );
+      exit (0);
+    }
 
   /* PRINT ALL ERRNO NUMBERS USED IN THIS SOURCE */
 
@@ -2257,27 +2501,27 @@ int main( int argc, char **argv )
 
   dbug_names_init( &names );
 
-  for ( idx = 2; idx < argc; idx++ )
+  for ( idx = idx_names; idx < argc; idx++ )
     dbug_names_ins( &names, argv[idx], &result );
 
   printf( "\n" );
 
-  for ( idx = 2; idx < argc; idx++ )
+  for ( idx = idx_names; idx < argc; idx++ )
     dbug_names_ins( &names, argv[idx], &result );
 
   printf( "\n" );
 
-  for ( idx = 2; idx < argc; idx++ )
+  for ( idx = idx_names; idx < argc; idx++ )
     dbug_names_fnd( &names, argv[idx], &result );
 
   printf( "\n" );
 
-  for ( idx = 2; idx < argc; idx++ )
+  for ( idx = idx_names; idx < argc; idx++ )
     dbug_names_del( &names, argv[idx] );
 
   printf( "\n" );
 
-  for ( idx = 2; idx < argc; idx++ )
+  for ( idx = idx_names; idx < argc; idx++ )
     dbug_names_del( &names, argv[idx] );
 
   printf( "\n" );
@@ -2290,7 +2534,7 @@ int main( int argc, char **argv )
 
   printf( "\n" );
 
-  for ( idx = 2; idx < argc; idx++ )
+  for ( idx = idx_names; idx < argc; idx++ )
     {
       call.function = argv[idx];
       call.file = __FILE__;
@@ -2299,7 +2543,7 @@ int main( int argc, char **argv )
 
   printf( "\n" );
 
-  for ( idx = 1; idx < argc; idx++ )
+  for ( idx = idx_names; idx < argc; idx++ )
     {
       dbug_stack_pop( &stack );
       dbug_stack_top( &stack, &top );
@@ -2320,7 +2564,7 @@ int main( int argc, char **argv )
   {
     DBUG_ENTER_CTX( dbug_ctx, "main" );
 
-    DBUG_PRINT_CTX( (dbug_ctx, __LINE__, "break_point", "function: %s; float: %f", "main", (float)0) );
+    DBUG_PRINT_CTX( dbug_ctx, "break_point", ("function: %s; float: %f", "main", (float)0) );
 
     DBUG_LEAVE_CTX( dbug_ctx );
   }
@@ -2328,19 +2572,19 @@ int main( int argc, char **argv )
   DBUG_DONE_CTX( &dbug_ctx );
 
   printf( "\n" );
-  printf( "Using default dbug context.\n" );
+  printf( "Using old DBUG library.\n" );
 
-  DBUG_INIT( argv[1], argv[0] );
+  DBUG_PUSH( argv[2] );
 
   {
     DBUG_ENTER( "main" );
 
-    DBUG_PRINT( (__LINE__, "break_point", "function: %s; float: %f", "main", (float)0) );
+    DBUG_PRINT( "break_point", ("function: %s; float: %f", "main", (float)0) );
 
     DBUG_LEAVE( );
   }
 
-  DBUG_DONE( );
+  DBUG_POP();
 
   return 0;
 }

@@ -229,7 +229,7 @@ a problem on the new machines). By default this macro is disabled.
 
 EX: #define DBUG_OFF
 
-=item DBUG_INIT and DBUG_INIT_CTX
+=item DBUG_INIT(options, name) and DBUG_INIT_CTX(options, name, dbug_ctx)
 
 Initialises a debugger context using the debug control string passed as the
 macro argument. The name supplied may be NULL. In that case a name for the
@@ -243,7 +243,14 @@ EX: dbug_ctx_t dbug_ctx; DBUG_INIT_CTX ("d,t", NULL, &dbug_ctx);
 
 EX: DBUG_INIT ("", "Process DBUG");
 
-=item DBUG_DONE and DBUG_DONE_CTX
+=item DBUG_PUSH(options)
+
+This macro converts the I<options> parameter from the old format to the new format and
+then calls DBUG_INIT.
+
+EX: DBUG_PUSH ("O,dbug.log:d:t");
+
+=item DBUG_DONE() and DBUG_DONE_CTX(dbug_ctx)
 
 Destroys the debugging context as initialised by DBUG_INIT. The DBUG_DONE
 macro has no arguments. The DBUG_DONE_CTX has the debugging context as parameter.
@@ -252,7 +259,11 @@ EX: DBUG_DONE ();
 
 EX: dbug_ctx_t dbug_ctx; DBUG_DONE_CTX (&dbug_ctx); 
 
-=item DBUG_ENTER and DBUG_ENTER_CTX
+=item DBUG_POP()
+
+Is the same as C<DBUG_DONE>.
+
+=item DBUG_ENTER(function) and DBUG_ENTER_CTX(dbug_ctx, function)
 
 Used to tell the runtime support module the name of the function being
 entered. The DBUG_ENTER must be supplied the name of the function entered. The
@@ -270,7 +281,7 @@ EX: DBUG_ENTER ("main");
 
 EX: dbug_ctx_t dbug_ctx; DBUG_ENTER_CTX (dbug_ctx, "main");
 
-=item DBUG_LEAVE and DBUG_LEAVE_CTX
+=item DBUG_LEAVE() and DBUG_LEAVE_CTX(dbug_ctx)
 
 Used at each exit point of a function containing a DBUG_ENTER macro at
 the entry point. It is an error to have a DBUG_LEAVE macro in a
@@ -281,19 +292,40 @@ EX: DBUG_LEAVE();
 
 EX: dbug_ctx_t dbug_ctx; DBUG_LEAVE_CTX(dbug_ctx);
 
-=item DBUG_PRINT and DBUG_PRINT_CTX
+=item DBUG_PRINT(break_point, arglist) and DBUG_PRINT_CTX(dbug_ctx, break_point, arglist)
 
 Used to do printing via the "fprintf" library function on the current debug
-stream. The input arguments are a line (for instance __LINE__), a break point,
-a format string and the corresponding argument list. Note that all parameters
-are all one macro argument and B<must> be enclosed in parenthesis. The
+stream. The input arguments are a break point, a format string and the
+corresponding argument list. Note that the format and following parameters are
+all one macro argument and B<must> be enclosed in parenthesis. The
 DBUG_PRINT_CTX has one extra input parameter: the debugging context. Before a
 DBUG_PRINT statement can be executed a DBUG_ENTER statement must have been
 executed, i.e. DBUG_PRINT needs a function context.
 
-EX: DBUG_PRINT ((__LINE__, "type", "type is %x", type)); 
+EX: DBUG_PRINT ("type", ("type is %x", type)); 
 
-EX: dbug_ctx_t dbug_ctx; DBUG_PRINT_CTX ((dbug_ctx, __LINE__, "stp", "%x -> %s", stp, stp -> name));
+EX: dbug_ctx_t dbug_ctx; DBUG_PRINT_CTX (dbug_ctx, "stp", ("%x -> %s", stp, stp -> name));
+
+=item DBUG_EXECUTE(break_point, a1)
+
+This macro is preserved for backwards compability. It does nothing. 
+
+=item DBUG_PROCESS(a1)
+
+This macro has been used to supply the process name for the debugging
+context. Use C<DBUG_INIT> to specify the name.
+
+=item DBUG_FILE
+
+Same as stderr. This macro is preserved for backwards compability.
+
+=item DBUG_RETURN(a1)
+
+Performs a C<DBUG_LEAVE> and returns parameter I<a1>. This macro is preserved for backwards compability.
+
+=item DBUG_VOID_RETURN
+
+Performs a C<DBUG_LEAVE> and returns. This macro is preserved for backwards compability.
 
 =back
 
@@ -306,15 +338,40 @@ are found in the user include file B<dbug.h>.
 
 =over 4
 
-=item dbug_init and dbug_init_ctx
+=item dbug_init_ctx and dbug_init
+
+dbug_errno_t
+dbug_init_ctx( const char * options, const char *name, dbug_ctx_t* dbug_ctx );
+
+dbug_errno_t
+dbug_init( const char * options, const char *name );
 
 See C<DBUG_INIT>.
 
-=item dbug_done and dbug_done_ctx
+=item dbug_push
+
+dbug_errno_t
+dbug_push( const char * options );
+
+See C<DBUG_PUSH>.
+
+=item dbug_done_ctx and dbug_done
+
+dbug_errno_t
+dbug_done_ctx( dbug_ctx_t* dbug_ctx );
+
+dbug_errno_t
+dbug_done( void );
 
 See C<DBUG_DONE>.
 
-=item dbug_enter and dbug_enter_ctx
+=item dbug_enter_ctx and dbug_enter
+
+dbug_errno_t
+dbug_enter_ctx( const dbug_ctx_t dbug_ctx, const char *file, const char *function, const int line, int *dbug_level );
+
+dbug_errno_t
+dbug_enter( const char *file, const char *function, const int line, int *dbug_level );
 
 Used to tell the runtime support module the name of the function being
 entered, the name of the file, the line number and a nesting level. The
@@ -325,7 +382,14 @@ EX: dbug_enter( __FILE__, "main", __LINE__, &dbug_level );
 
 EX: dbug_enter_ctx( dbug_ctx, __FILE__, "main", __LINE__, &dbug_level );
 
-=item dbug_leave and dbug_leave_ctx
+=item dbug_leave_ctx and dbug_leave
+
+dbug_errno_t
+dbug_leave_ctx( const dbug_ctx_t dbug_ctx, const int line, int *dbug_level );
+
+extern
+dbug_errno_t
+dbug_leave( const int line, int *dbug_level );
 
 Used at each exit point of a function containing a dbug_enter or
 dbug_enter_ctx function at the entry point. Input parameters are the line
@@ -337,13 +401,39 @@ EX: dbug_leave( __LINE__, &dbug_level );
 
 EX: dbug_leave_ctx( dbug_ctx, __LINE__, &dbug_level );
 
-=item dbug_print and dbug_print_ctx
+=item dbug_print_ctx and dbug_print
+
+dbug_errno_t
+dbug_print_ctx( const dbug_ctx_t dbug_ctx, const int line, const char *break_point, const char *format, ... );
+
+dbug_errno_t
+dbug_print( const int line, const char *break_point, const char *format, ... );
 
 Print a formatted string with variable arguments. See also C<DBUG_PRINT>.
 
 EX: dbug_print( 1, "info", "This is %s and that is %s", "this", "that" );
 
 EX: dbug_print_ctx( dbug_ctx, 1, "info", "This is %s and that is %s", "this", "that" );
+
+=item dbug_print_start_ctx and dbug_print_start
+
+dbug_errno_t
+dbug_print_start_ctx( const dbug_ctx_t dbug_ctx, const int line, const char *break_point );
+
+dbug_errno_t
+dbug_print_start( const int line, const char *break_point );
+
+Used for saving print info which is used in C<dbug_print_end>. Is used in
+C<DBUG_PRINT>. Should not be used directly.
+
+=item dbug_print_end
+
+dbug_errno_t
+dbug_print_end( const char *format, ... );
+
+Print a formatted string with variable arguments. A call to dbug_print_start
+(or dbug_print_start_ctx) must have preceded a call to dbug_print_end. See
+also C<DBUG_PRINT>. Should not be used directly.
 
 =back
 
@@ -403,7 +493,9 @@ This is the output of the I<DBUG> library.
 
 =over 4
 
-=item DBUG_INIT, DBUG_INIT_CTX, dbug_init, dbug_init_ctx
+=item *
+
+Output of DBUG_INIT, DBUG_INIT_CTX, dbug_init and dbug_init_ctx
 
 A line containing the address of dbug context, I, major version, minor version,
 teeny version, name, context number, process id and the flags will be
@@ -414,7 +506,9 @@ This is the line printed:
 
 DBUG#<address of dbug context>#I#<major version>.<minor version>.<teeny version>#<name>#<context number>#<process id>#<flags>
 
-=item DBUG_DONE, DBUG_DONE_CTX, dbug_done, dbug_done_ctx
+=item *
+
+Output of DBUG_DONE, DBUG_DONE_CTX, dbug_done and dbug_done_ctx
 
 A line containing the address of the dbug context, D, the maximum number of
 functions on the stack and the stack usage will be printed.
@@ -423,7 +517,9 @@ This is the line printed:
 
 DBUG#<dbug context>#D#<maximum number of functions on the stack>#<stack usage>
 
-=item DBUG_ENTER, DBUG_ENTER_CTX, dbug_enter, dbug_enter_ctx
+=item *
+
+Output of DBUG_ENTER, DBUG_ENTER_CTX, dbug_enter and dbug_enter_ctx
 
 A line consisting of the address of dbug context, E, file, function, line, level
 and time (-1 if profiling is off else in milliseconds) is printed.
@@ -432,7 +528,9 @@ This is the line printed:
 
 DBUG#<address of dbug context>#E#<file>#<function>#<line>#<level>#<time>
 
-=item DBUG_LEAVE, DBUG_LEAVE_CTX, dbug_leave, dbug_leave_ctx
+=item *
+
+Output of DBUG_LEAVE, DBUG_LEAVE_CTX, dbug_leave and dbug_leave_ctx
 
 A line consisting of the address of dbug context, L, file, function, line, level
 and time (-1 if profiling is off else in milliseconds) is printed.
@@ -441,14 +539,18 @@ This is the line printed:
 
 DBUG#<address of dbug context>#L#<file>#<function>#<line>#<level>#<time>
 
-=item DBUG_PRINT, DBUG_PRINT_CTX, dbug_print, dbug_print_ctx
+=item *
+
+Output of DBUG_PRINT, DBUG_PRINT_CTX, dbug_print and dbug_print_ctx
 
 A line consisting of the address of dbug context, P, file, function, line, level,
 break point and user supplied parameters is printed.
 
 DBUG#<address of dbug context>#P#<file>#<function>#<line>#<level>#<break point>#<user supplied parameters>
 
-=item Errors
+=item *
+
+Output of errors.
 
 Errors are printed to stderr in the following format:
 
@@ -551,7 +653,7 @@ function trace mechanism, this program is implemented recursively.
 	    DBUG_ENTER("main");
 	    for (; ix < argc; ix++) 
 	      {
-		DBUG_PRINT((__LINE__, "args", "argv[%d] = %s", ix, argv[ix]));
+		DBUG_PRINT("args", ("argv[%d] = %s", ix, argv[ix]));
 		result = factorial (atoi (argv[ix]));
 		printf ("%d\n", result);
 		fflush( stdout );
@@ -634,11 +736,11 @@ factorials and error conditions are ignored completely.
 	int factorial(int value)
 	{
 	  DBUG_ENTER("factorial");
-	  DBUG_PRINT((__LINE__, "find", "find %d factorial", value));
+	  DBUG_PRINT("find", ("find %d factorial", value));
 	  if (value > 1) {
 	    value *= factorial (value - 1);
 	  }
-	  DBUG_PRINT((__LINE__, "result", "result is %d", value));
+	  DBUG_PRINT("result", ("result is %d", value));
 	  DBUG_LEAVE();
 	  return (value);
 	}
@@ -871,6 +973,8 @@ time. Functions with higher 'weight' benefit the most from being sped up.
 
 =head1 NOTES
 
+=head2 Tips
+
 One of the most useful capabilities of the I<dbug> package is to
 compare the executions of a given program in two different
 environments. This is typically done by executing the program in the
@@ -885,9 +989,80 @@ A related usage is regression testing where the execution of a current
 version is compared against executions of previous versions. This is
 most useful when there are only minor changes.
 
+=head2 Compability
+
+The orginal I<DBUG> library written by Fred Fish differs from the current
+library. I tried to keep it code compatible, but I have made some minor
+changes. Keep in mind that the original library has been written in the 80's. 
+
+These are the differences:
+
+=over 4
+
+=item ANSI C
+
+I have converted the source to ANSI C since this is the standard now.
+
+=item Posix threads
+
+I have modified the library to make use of Posix threads. All macro's (and
+functions) have now reentrant functions with the extension _ctx. The standard
+functions (without _ctx) are also thread-safe because they use thread-specific
+data (pthread_getspecific).
+
+=item Delay
+
+The delay argument in the debug control string is now specified in milliseconds, instead of tenths of
+seconds.
+
+=item Debug control string
+
+The old format for the debug control string used options separated by colons
+and modifiers separated by comma's. Since the colon might be part of a (DOS) file
+name, I had to change the option separator into the comma. The modifier
+separator has become the equal sign. So -#d:D,2 has become -#d,D=200. I also
+separated content and formatting of the debugging output, hence several
+options are now obsolete in the debug control string and have been moved to the
+options of the debug reporting tool.
+
+=item Debug reporting tool
+
+There is now a Perl debug reporting tool which formats the debugging output in
+a user friendly way.
+
+=item DEBUG_LEAVE
+
+Needs an empty parameter list now.
+
+=item DBUG_2
+
+This macro is obsolete now. Use DBUG_PRINT instead.
+
+=item DBUG_3
+
+This macro is obsolete now. Use DBUG_PRINT instead.
+
+=item DBUG_4
+
+This macro is obsolete now. Use DBUG_PRINT instead.
+
+=item DBUG_5
+
+This macro is obsolete now. Use DBUG_PRINT instead.
+
+=item DBUG_SETJMP
+
+This macro is obsolete now. I think it is better not to use setjmp and longjmp in programs.
+
+=item DBUG_LONGJMP
+
+This macro is obsolete now. I think it is better not to use setjmp and longjmp in programs.
+
+=back
+
 =head1 CAVEATS
 
-The I<dbug> package works best with programs which have "line
+he I<dbug> package works best with programs which have "line
 oriented" output, such as text processors, general purpose utilities,
 etc. It can be interfaced with screen oriented programs such as
 visual editors by redefining the appropriate macros to call special

@@ -1,4 +1,4 @@
-dbugtest d,break_point,sleep:t:g b c a d
+	dbugtest d,t,g,D=1000 d:t:g:D,1000 b c a d
 EINVAL: 22
 ENOENT: 2
 EEXIST: 17
@@ -451,32 +451,12 @@ calls: any; size: 10; count: 0; magic: 0xABCD
 < dbug_stack_print
 top: (nil)
 < dbug_stack_top = 1
-> dbug_stack_pop( any )
-> dbug_stack_print( any )
-calls: any; size: 10; count: 0; magic: 0xABCD
-< dbug_stack_print
-< dbug_stack_pop = 1
-> dbug_stack_top( any )
-> dbug_stack_print( any )
-calls: any; size: 10; count: 0; magic: 0xABCD
-< dbug_stack_print
-top: (nil)
-< dbug_stack_top = 1
 
 > dbug_stack_done( any )
-> dbug_stack_done = 0
+< dbug_stack_done = 0
 
-> dbug_init_ctx( d,break_point,sleep:t:g, dbugtest, any )
-> dbug_names_init( any )
-> dbug_names_print( any )
-names: (nil); size: 0; count: 0; magic: 0xACDC
-< dbug_names_print
-< dbug_names_init
-> dbug_names_init( any )
-> dbug_names_print( any )
-names: (nil); size: 0; count: 0; magic: 0xACDC
-< dbug_names_print
-< dbug_names_init
+Using supplied dbug context.
+> dbug_init_ctx( d,t,g,D=1000, P:\dev\dbug\src\lib\dbugtest.exe, any )
 > dbug_names_init( any )
 > dbug_names_print( any )
 names: (nil); size: 0; count: 0; magic: 0xACDC
@@ -489,40 +469,12 @@ names: (nil); size: 0; count: 0; magic: 0xACDC
 < dbug_names_init
 > dbug_stack_init( any )
 < dbug_stack_init = 0
-> dbug_options_ctx( any, d,break_point,sleep:t:g )
-> dbug_names_ins( any, break_point, any )
-> dbug_names_fnd( any, break_point, any )
-> dbug_names_print( any )
-names: (nil); size: 0; count: 0; magic: 0xACDC
-< dbug_names_print
-result: (nil)
-< dbug_names_fnd = 3
-> dbug_names_print( any )
-names: any; size: 10; count: 1; magic: 0xACDC
-idx: 0; name: break_point; ref_count: 1
-< dbug_names_print
-result: break_point
-< dbug_names_ins = 0
-> dbug_names_ins( any, sleep, any )
-> dbug_names_fnd( any, sleep, any )
-> dbug_names_print( any )
-names: any; size: 10; count: 1; magic: 0xACDC
-idx: 0; name: break_point; ref_count: 1
-< dbug_names_print
-result: (nil)
-< dbug_names_fnd = 3
-> dbug_names_print( any )
-names: any; size: 10; count: 2; magic: 0xACDC
-idx: 0; name: break_point; ref_count: 1
-idx: 1; name: sleep; ref_count: 1
-< dbug_names_print
-result: sleep
-< dbug_names_ins = 0
+> dbug_options_ctx( any, d,t,g,D=1000 )
 < dbug_options_ctx
-DBUG#I#0x804d648#dbugtest#1#741#1.3.0
+DBUG#007707D0#I#1.3.1#P:\dev\dbug\src\lib\dbugtest.exe#1#-426029#7
 < dbug_init_ctx = 0
 > dbug_ctx_print( any )
-name: dbugtest; ctx_nr: 1; pid: 741; flags: 0x111; delay: 0; magic: 0xABCDEF
+name: P:\dev\dbug\src\lib\dbugtest.exe; ctx_nr: 1; pid: -426029; flags: 0x7; delay: 1000; magic: 0xABCDEF
 files:
 > dbug_names_print( any )
 names: (nil); size: 0; count: 0; magic: 0xACDC
@@ -531,22 +483,12 @@ functions:
 > dbug_names_print( any )
 names: (nil); size: 0; count: 0; magic: 0xACDC
 < dbug_names_print
-break_points_allowed:
-> dbug_names_print( any )
-names: any; size: 10; count: 2; magic: 0xACDC
-idx: 0; name: break_point; ref_count: 1
-idx: 1; name: sleep; ref_count: 1
-< dbug_names_print
-functions_allowed:
-> dbug_names_print( any )
-names: (nil); size: 0; count: 0; magic: 0xACDC
-< dbug_names_print
 stack:
 > dbug_stack_print( any )
 calls: (nil); size: 0; count: 0; magic: 0xABCD
 < dbug_stack_print
 < dbug_ctx_print
-> dbug_enter_ctx( any, dbug.c, main, 2015, any )
+> dbug_enter_ctx( any, dbug.c, main, 2565, any )
 > dbug_names_ins( any, dbug.c, any )
 > dbug_names_fnd( any, dbug.c, any )
 > dbug_names_print( any )
@@ -579,8 +521,12 @@ calls: any; size: 10; count: 1; magic: 0xABCD
 idx: 0; function: main; file: dbug.c
 < dbug_stack_print
 < dbug_stack_push = 0
-DBUG#E#0x804d648#dbug.c#main#2015#1#0
+DBUG#007707D0#E#dbug.c#main#2565#1#0
 < dbug_enter_ctx = 0
+> dbug_print_start_ctx( any, 2567, break_point )
+< dbug_print_start_ctx = 0
+> dbug_print_end( any, 2567, break_point, function: %s; float: %f )
+> _dbug_print_ctx( any, 2567, break_point, function: %s; float: %f )
 > dbug_stack_top( any )
 > dbug_stack_print( any )
 calls: any; size: 10; count: 1; magic: 0xABCD
@@ -588,15 +534,10 @@ idx: 0; function: main; file: dbug.c
 < dbug_stack_print
 top: main
 < dbug_stack_top = 0
-> dbug_names_fnd( any, break_point, any )
-> dbug_names_print( any )
-names: any; size: 10; count: 2; magic: 0xACDC
-idx: 0; name: break_point; ref_count: 1
-idx: 1; name: sleep; ref_count: 1
-< dbug_names_print
-result: break_point
-< dbug_names_fnd = 0
-DBUG#P#0x804d648#dbug.c#main#2017#break_point#function: main; float: 0.000000
+DBUG#007707D0#P#dbug.c#main#2567#1#break_point#function: main; float: 0.000000
+< _dbug_print_ctx = 0
+< dbug_print_end = 0
+> dbug_leave_ctx( any, 2569, any )
 > dbug_stack_top( any )
 > dbug_stack_print( any )
 calls: any; size: 10; count: 1; magic: 0xABCD
@@ -604,7 +545,7 @@ idx: 0; function: main; file: dbug.c
 < dbug_stack_print
 top: main
 < dbug_stack_top = 0
-DBUG#L#0x804d648#dbug.c#main#2019#1#0
+DBUG#007707D0#L#dbug.c#main#2569#1#1970
 > dbug_names_del( any, dbug.c )
 > dbug_names_fnd( any, dbug.c, any )
 > dbug_names_print( any )
@@ -636,4 +577,152 @@ idx: 0; name: main; ref_count: 0
 calls: any; size: 10; count: 0; magic: 0xABCD
 < dbug_stack_print
 < dbug_stack_pop = 0
-DBUG#D#0x804d648
+< dbug_leave_ctx = 0
+> dbug_done_ctx( any )
+DBUG#007707D0#D#1#0
+> dbug_names_done( any )
+> dbug_names_print( any )
+names: any; size: 10; count: 1; magic: 0xACDC
+idx: 0; name: dbug.c; ref_count: 0
+< dbug_names_print
+< dbug_names_done = 0
+> dbug_names_done( any )
+> dbug_names_print( any )
+names: any; size: 10; count: 1; magic: 0xACDC
+idx: 0; name: main; ref_count: 0
+< dbug_names_print
+< dbug_names_done = 0
+> dbug_stack_done( any )
+< dbug_stack_done = 0
+< dbug_done_ctx = 0
+
+Using old DBUG library.
+> dbug_init_ctx( d,t,g,D=1000, (nil), any )
+> dbug_names_init( any )
+> dbug_names_print( any )
+names: (nil); size: 0; count: 0; magic: 0xACDC
+< dbug_names_print
+< dbug_names_init
+> dbug_names_init( any )
+> dbug_names_print( any )
+names: (nil); size: 0; count: 0; magic: 0xACDC
+< dbug_names_print
+< dbug_names_init
+> dbug_stack_init( any )
+< dbug_stack_init = 0
+> dbug_options_ctx( any, d,t,g,D=1000 )
+< dbug_options_ctx
+DBUG#00770990#I#1.3.1#dbug thread 2#2#-426029#7
+< dbug_init_ctx = 0
+< dbug_init = 0
+> dbug_enter( dbug.c, main, 2580, any )
+> dbug_enter_ctx( any, dbug.c, main, 2580, any )
+> dbug_names_ins( any, dbug.c, any )
+> dbug_names_fnd( any, dbug.c, any )
+> dbug_names_print( any )
+names: (nil); size: 0; count: 0; magic: 0xACDC
+< dbug_names_print
+result: (nil)
+< dbug_names_fnd = 3
+> dbug_names_print( any )
+names: any; size: 10; count: 1; magic: 0xACDC
+idx: 0; name: dbug.c; ref_count: 1
+< dbug_names_print
+result: dbug.c
+< dbug_names_ins = 0
+> dbug_names_ins( any, main, any )
+> dbug_names_fnd( any, main, any )
+> dbug_names_print( any )
+names: (nil); size: 0; count: 0; magic: 0xACDC
+< dbug_names_print
+result: (nil)
+< dbug_names_fnd = 3
+> dbug_names_print( any )
+names: any; size: 10; count: 1; magic: 0xACDC
+idx: 0; name: main; ref_count: 1
+< dbug_names_print
+result: main
+< dbug_names_ins = 0
+> dbug_stack_push( any, any )
+> dbug_stack_print( any )
+calls: any; size: 10; count: 1; magic: 0xABCD
+idx: 0; function: main; file: dbug.c
+< dbug_stack_print
+< dbug_stack_push = 0
+DBUG#00770990#E#dbug.c#main#2580#1#3020
+< dbug_enter_ctx = 0
+< dbug_enter = 0
+> dbug_print_start( 2582, break_point )
+> dbug_print_start_ctx( any, 2582, break_point )
+< dbug_print_start_ctx = 0
+< dbug_print_start = 0
+> dbug_print_end( any, 2582, break_point, function: %s; float: %f )
+> _dbug_print_ctx( any, 2582, break_point, function: %s; float: %f )
+> dbug_stack_top( any )
+> dbug_stack_print( any )
+calls: any; size: 10; count: 1; magic: 0xABCD
+idx: 0; function: main; file: dbug.c
+< dbug_stack_print
+top: main
+< dbug_stack_top = 0
+DBUG#00770990#P#dbug.c#main#2582#1#break_point#function: main; float: 0.000000
+< _dbug_print_ctx = 0
+< dbug_print_end = 0
+> dbug_leave_ctx( any, 2584, any )
+> dbug_stack_top( any )
+> dbug_stack_print( any )
+calls: any; size: 10; count: 1; magic: 0xABCD
+idx: 0; function: main; file: dbug.c
+< dbug_stack_print
+top: main
+< dbug_stack_top = 0
+DBUG#00770990#L#dbug.c#main#2584#1#4990
+> dbug_names_del( any, dbug.c )
+> dbug_names_fnd( any, dbug.c, any )
+> dbug_names_print( any )
+names: any; size: 10; count: 1; magic: 0xACDC
+idx: 0; name: dbug.c; ref_count: 1
+< dbug_names_print
+result: dbug.c
+< dbug_names_fnd = 0
+> dbug_names_print( any )
+names: any; size: 10; count: 1; magic: 0xACDC
+idx: 0; name: dbug.c; ref_count: 0
+< dbug_names_print
+< dbug_names_del = 0
+> dbug_names_del( any, main )
+> dbug_names_fnd( any, main, any )
+> dbug_names_print( any )
+names: any; size: 10; count: 1; magic: 0xACDC
+idx: 0; name: main; ref_count: 1
+< dbug_names_print
+result: main
+< dbug_names_fnd = 0
+> dbug_names_print( any )
+names: any; size: 10; count: 1; magic: 0xACDC
+idx: 0; name: main; ref_count: 0
+< dbug_names_print
+< dbug_names_del = 0
+> dbug_stack_pop( any )
+> dbug_stack_print( any )
+calls: any; size: 10; count: 0; magic: 0xABCD
+< dbug_stack_print
+< dbug_stack_pop = 0
+< dbug_leave_ctx = 0
+> dbug_done_ctx( any )
+DBUG#00770990#D#1#0
+> dbug_names_done( any )
+> dbug_names_print( any )
+names: any; size: 10; count: 1; magic: 0xACDC
+idx: 0; name: dbug.c; ref_count: 0
+< dbug_names_print
+< dbug_names_done = 0
+> dbug_names_done( any )
+> dbug_names_print( any )
+names: any; size: 10; count: 1; magic: 0xACDC
+idx: 0; name: main; ref_count: 0
+< dbug_names_print
+< dbug_names_done = 0
+> dbug_stack_done( any )
+< dbug_stack_done = 0
+< dbug_done_ctx = 0
