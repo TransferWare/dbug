@@ -66,10 +66,12 @@ static char vcid[] = "$Header$";
  *      e-mail: G.Paulissen@speed.a2000.nl
  */
 
-#include "config.h"
+#ifndef HAVE_CONFIG_H
+#define HAVE_CONFIG_H 1
+#endif
 
-#ifndef HAVE_UNISTD_H
-#define HAVE_UNISTD_H 1
+#if HAVE_CONFIG_H
+#include <config.h>
 #endif
 
 #if HAVE_UNISTD_H
@@ -103,13 +105,24 @@ static char vcid[] = "$Header$";
 #endif /* #ifdef _WIN32 */
 
 #include <stdio.h>
-
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <errno.h>
-#include <assert.h>
 
+#ifndef HAVE_ERRNO_H
+#define HAVE_ERRNO_H 1
+#endif
+
+#if HAVE_ERRNO_H
+#include <errno.h>
+#endif
+
+#ifndef HAVE_ASSERT_H
+#define HAVE_ASSERT_H 1
+#endif
+
+#if HAVE_ASSERT_H
+#include <assert.h>
+#endif
 
 #if HAVE_STDARG_H
 #include <stdarg.h>

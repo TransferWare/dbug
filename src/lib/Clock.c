@@ -45,7 +45,7 @@
  *
  *  NOTES
  *
- *      The "config.h" is needed for definitions of 
+ *      The <config.h> is needed for definitions of 
  *      
  *      - HAVE_CLOCK     Use clock()
  *      - HAVE_FTIME     Use ftime()
@@ -65,23 +65,40 @@
  *      e-mail: g.paulissen@chello.nl
  */
 
-#include "config.h"
+#ifndef HAVE_CONFIG_H
+#define HAVE_CONFIG_H 1
+#endif
+
+#if HAVE_CONFIG_H
+#include <config.h>
+#endif
+
 #include "Clock.h"
 
 #if HAVE_CLOCK
-#include <time.h>
+# if HAVE_TIME_H
+#  include <time.h>
+# endif
 #endif
 
 #if HAVE_FTIME
-#include <sys/timeb.h>
+# if HAVE_SYS_TIMEB_H
+#  include <sys/timeb.h>
+# endif
 #endif
 
 #if HAVE_GETRUSAGE
-#include <sys/param.h>
-#include <sys/time.h>
-#ifndef __LCLINT__
-#include <sys/resource.h>
-#endif /* __LCLINT__ */
+# if HAVE_SYS_PARAM_H
+#  include <sys/param.h>
+# endif
+# if HAVE_SYS_TIME_H
+#  include <sys/time.h>
+# endif
+# ifndef __LCLINT__
+#  if HAVE_SYS_RESOURCE_H
+#   include <sys/resource.h>
+#  endif
+# endif /* __LCLINT__ */
 #endif
 
 #if defined(HASPTHREADS) && HASPTHREADS
