@@ -6,7 +6,7 @@ DBUG itself consists of the library, libdbug.la, and the headers installed
 in `/usr/local/include/ulib'.
 
 Installation is described in INSTALL. Installation using imake is
-described in README.imake.
+described in README.imake. However this is not supported.
 
 The documentation is doc/dbug.html.
 
