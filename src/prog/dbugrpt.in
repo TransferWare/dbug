@@ -604,31 +604,9 @@ sub done {
 
     if ($obj->profiling())
     {
-        my $max_length = 24;
-        ($g_tot_calls, $g_tot_time) = (0, 0);
+        my $max_length;
 
-        foreach $function (keys %{$obj->{CALLS}}) {
-            $g_tot_calls += $obj->{CALLS}{ $function };
-            $g_tot_time += $obj->{TIME}{ $function };
-
-#           print STDOUT "\nTime for $function: ", $obj->{TIME}{ $function }, "\n";
-
-            if ( length( $function ) > $max_length ) {
-                $max_length = length( $function );
-            }
-        }
-
-        if ( defined($obj->start_time()) && defined($obj->end_time()) &&
-             # GJP 23-02-2004 Round the floating point numbers
-             sprintf("%f", $g_tot_time) ne
-             sprintf("%f", $obj->end_time() - $obj->start_time()) ) {
-            croak
-                sprintf( "Timing incorrect: g_tot_time: %f; start time: %f; end time: %f; total time: %f"
-                       , $g_tot_time,
-                       , $obj->start_time(),
-                       , $obj->end_time(),
-                       , $g_tot_time );
-        }
+        ($max_length, $g_tot_calls, $g_tot_time) = $obj->totals;
 
         my $total_line1 = 
             ( "=" x $max_length ) . " ======= ======= =========== ====== =========== =========== =========== =======";
@@ -713,6 +691,34 @@ $total_line1 . "\n" .
 
         print "-" x length( $total_line1 ), "\n";
     }
+}
+
+sub totals {
+    my ($obj) = @_;
+    my ($max_length, $tot_calls, $tot_time) = (24, 0, 0);
+
+    foreach $function (keys %{$obj->{CALLS}}) {
+        $tot_calls += $obj->{CALLS}{ $function };
+        $tot_time += $obj->{TIME}{ $function };
+
+#           print STDOUT "\nTime for $function: ", $obj->{TIME}{ $function }, "\n";
+
+        if ( length( $function ) > $max_length ) {
+            $max_length = length( $function );
+        }
+    }
+
+    if ( defined($obj->start_time()) && defined($obj->end_time()) &&
+         # GJP 23-02-2004 Round the floating point numbers
+         sprintf("%f", $tot_time) ne
+         sprintf("%f", $obj->end_time() - $obj->start_time()) ) {
+        carp
+            sprintf( "Timing incorrect: time in functions: %s; dbug session time: %s\n"
+                     , sprintf("%f", $tot_time / 1000)
+                     , sprintf("%f", ($obj->end_time() - $obj->start_time()))/1000 );
+    }
+
+    ($max_length, $tot_calls, $tot_time);
 }
 
 sub prefix {
