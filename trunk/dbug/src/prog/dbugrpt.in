@@ -264,7 +264,9 @@ sub init {
         LINENO => 0,
         STACK => [],
         TIME => {}, # time spent for each function
-        CALLS => {} # number of calls for each function
+        CALLS => {}, # number of calls for each function
+        MIN_TIME => undef, # minimum time while profiling
+        MAX_TIME => undef  # maximum time while profiling
         };
 
     bless $r_dbug_uid, $pkg;
@@ -323,6 +325,18 @@ sub debugging {
     my $obj = shift;
 
     $obj->{FLAGS} & $DEBUG_ON;
+}
+
+sub min_time {
+    my $obj = shift;
+
+    @_ ? $obj->{MIN_TIME} = shift : $obj->{MIN_TIME};
+}
+
+sub max_time {
+    my $obj = shift;
+
+    @_ ? $obj->{MAX_TIME} = shift : $obj->{MAX_TIME};
 }
 
 #
@@ -417,10 +431,6 @@ sub is_trace_function {
 sub call_push {
     my ($obj, $function, $level, $time) = @_;
 
-    if ( $obj->version ge '3.0.0' ) {
-        $time *= 1000;
-    }
-
     my $r_dbug_stack = dbug_stack->new($function, $level, $time);
 
     push( @{$obj->{STACK}}, $r_dbug_stack );
@@ -428,10 +438,6 @@ sub call_push {
 
 sub call_pop {
     my ($obj, $function, $level, $leave_time) = @_;
-
-    if ( $obj->version ge '3.0.0' ) {
-        $leave_time *= 1000;
-    }
 
     my $dbug_stack = $obj->call_top();
     my $time = 0;
@@ -506,6 +512,14 @@ sub done {
             if ( length( $function ) > $max_length ) {
                 $max_length = length( $function );
             }
+        }
+
+        if ( defined($obj->min_time()) && defined($obj->max_time()) &&
+             $g_tot_time != $obj->max_time() - $obj->min_time() ) {
+            croak
+                "Timing incorrect: min time: ", $obj->min_time(),
+                "; max time: ", $obj->max_time(),
+                "; total time: ", $g_tot_time;
         }
 
         my $total_line1 = 
@@ -614,6 +628,12 @@ sub enter {
     } 
 
     if ($obj->is_profile_function($function)) {
+        if ( $obj->version ge '3.0.0' ) {
+            $time *= 1000;
+        }
+        # set minimum time only first time
+        $obj->min_time($time) unless defined($obj->min_time());
+
         $obj->call_push($function, $level, $time);
     }
 }
@@ -628,6 +648,12 @@ sub leave {
     } 
 
     if ($obj->is_profile_function($function)) {
+        if ( $obj->version ge '3.0.0' ) {
+            $time *= 1000;
+        }           
+        # set maximum time always
+        $obj->max_time($time);
+
         $obj->call_pop($function, $level, $time);
     }
 }
