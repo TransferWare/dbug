@@ -75,6 +75,10 @@
 
 #include "Clock.h"
 
+#if HAVE_STDLIB_H
+# include <stdlib.h>
+#endif
+
 #if HAVE_CLOCK
 # if HAVE_TIME_H
 #  include <time.h>
