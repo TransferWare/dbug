@@ -253,6 +253,9 @@ package dbug_uid;
 use strict;
 use Carp qw(carp croak);
 
+use constant TIME_FMT => '%7.3f';
+use constant PERC_FMT => '%3.2f';
+
 sub init {
     my ($pkg, $version, $name, $dbug_ctx, $pid, $flags) = @_;
     my $r_dbug_uid = {
@@ -263,10 +266,12 @@ sub init {
         FLAGS => $flags,
         LINENO => 0,
         STACK => [],
-        TIME => {}, # time spent for each function
+        TIME => {}, # total time spent for each function
+        MIN_TIME => {}, # minimum time spent for each function
+        MAX_TIME => {}, # maximum time spent for each function
         CALLS => {}, # number of calls for each function
-        MIN_TIME => undef, # minimum time while profiling
-        MAX_TIME => undef  # maximum time while profiling
+        START_TIME => undef, # start profiling time
+        END_TIME => undef  # end profiling time 
         };
 
     bless $r_dbug_uid, $pkg;
@@ -327,17 +332,89 @@ sub debugging {
     $obj->{FLAGS} & $DEBUG_ON;
 }
 
-sub min_time {
+sub start_time {
     my $obj = shift;
 
-    @_ ? $obj->{MIN_TIME} = shift : $obj->{MIN_TIME};
+    @_ ? $obj->{START_TIME} = shift : $obj->{START_TIME};
+}
+
+sub end_time {
+    my $obj = shift;
+
+    @_ ? $obj->{END_TIME} = shift : $obj->{END_TIME};
+}
+
+sub time {
+    my $obj = shift;
+    my $function = shift;
+
+    @_ ? ${$obj->{TIME}}{ $function } = shift : ${$obj->{TIME}}{ $function };
+}
+
+sub min_time {
+    my $obj = shift;
+    my $function = shift;
+
+    if ( @_ ) {
+        my $time = shift;
+
+        if ( !defined(${$obj->{MIN_TIME}}{ $function }) ||
+             ${$obj->{MIN_TIME}}{ $function } > $time ) {
+            ${$obj->{MIN_TIME}}{ $function } = $time;
+        }
+    } else {
+        ${$obj->{MIN_TIME}}{ $function };
+    }
 }
 
 sub max_time {
     my $obj = shift;
+    my $function = shift;
 
-    @_ ? $obj->{MAX_TIME} = shift : $obj->{MAX_TIME};
+    if ( @_ ) {
+        my $time = shift;
+
+        if ( !defined(${$obj->{MAX_TIME}}{ $function }) ||
+             ${$obj->{MAX_TIME}}{ $function } < $time ) {
+            ${$obj->{MAX_TIME}}{ $function } = $time;
+        }
+    } else {
+        ${$obj->{MAX_TIME}}{ $function };
+    }
 }
+
+sub calls {
+    my $obj = shift;
+    my $function = shift;
+
+    @_ ? ${$obj->{CALLS}}{ $function } = shift : ${$obj->{CALLS}}{ $function };
+}
+
+sub update {
+    my $obj = shift;
+    my $function = shift;
+    my $time = shift;
+
+#    ${$obj->{TIME}}{ $function } += $time;
+    $obj->time($function, $obj->time($function) + $time);
+    $obj->min_time($function, $time);
+    $obj->max_time($function, $time);
+#    ${$obj->{CALLS}}{ $function }++;
+    $obj->calls($function, $obj->calls($function) + 1);
+}
+
+sub stack_push {
+    my $obj = shift;
+    
+    return push( @{$obj->{STACK}}, shift );
+}
+
+sub stack_pop {
+    my $obj = shift;
+    
+    return pop( @{$obj->{STACK}} ); # return last element or undef when empty
+}
+
 
 #
 #  FUNCTION
@@ -433,9 +510,25 @@ sub call_push {
 
     my $r_dbug_stack = dbug_stack->new($function, $level, $time);
 
-    push( @{$obj->{STACK}}, $r_dbug_stack );
+    $obj->stack_push($r_dbug_stack);
 }
 
+#
+# call_pop
+#
+# Called when a function pops from the call stack.
+# Incomplete enter/leave combinations are adjusted for.
+# Timing data is updated for this function as well for the children.
+#
+# PRECONDITION: Only call when profiling is on for the object.
+#
+# IN: object     - a dbug_uid instance
+#     function   
+#     level
+#     leave time
+# 
+# RETURN: time spent for this call (between enter and leave minus time of children)
+#
 sub call_pop {
     my ($obj, $function, $level, $leave_time) = @_;
 
@@ -445,7 +538,7 @@ sub call_pop {
     # adjust for incomplete enter/leave combinations
 
     while ( $dbug_stack->level() > $level ) {
-        pop( @{$obj->{STACK}} );
+        $obj->stack_pop;
         $dbug_stack = $obj->call_top();
     }
 
@@ -459,20 +552,15 @@ sub call_pop {
 
         # update time and calls for function
 
-        ${$obj->{TIME}}{ $function } += $time;
-        ${$obj->{CALLS}}{ $function }++;
+        $obj->update($function, $time);
 
         # update time and calls for function for total
 
-        ${$dbug_uid_tot->{TIME}}{ $function } += $time;
-        ${$dbug_uid_tot->{CALLS}}{ $function }++;
-
-        pop( @{$obj->{STACK}} );
+        $dbug_uid_tot->update($function, $time);
 
         # update the time_children for next in the hierarchy
 
-        if ( $#{$obj->{STACK}} >= 0 ) {
-            $dbug_stack = $obj->call_top();
+        if ( defined($dbug_stack = $obj->stack_pop) ) {
             # GJP 28-02-2003
             # request id 695260
             # Do not forget the previous calls, so update it.
@@ -482,6 +570,8 @@ sub call_pop {
     } else {
         carp(sprintf( "Level (%d) does not match level of stack top (%d)\n", $level, $dbug_stack->level() ));
     }
+
+    return $time;
 }
 
 sub call_top {
@@ -494,12 +584,13 @@ sub call_top {
 
 $main::report_no = 0; # force a different report top and body by incorporating the number
 
-my ($g_function, $g_calls, $g_tot_calls, $g_time, $g_time_per_call);
+my ($g_function, $g_calls, $g_tot_calls, $g_time, $g_avg_time_per_call, $g_min_time_per_call, $g_max_time_per_call);
 my ($g_tot_time, $g_perc_calls, $g_perc_time, $g_weight);
 
 sub done {
     my ($obj, $maxcount, $stack_usage) = @_;
     my $dbug_name = $obj->name();
+    my ($min_time, $max_time);
 
     if ($obj->profiling())
     {
@@ -514,11 +605,11 @@ sub done {
             }
         }
 
-        if ( defined($obj->min_time()) && defined($obj->max_time()) &&
-             $g_tot_time != $obj->max_time() - $obj->min_time() ) {
+        if ( defined($obj->start_time()) && defined($obj->end_time()) &&
+             $g_tot_time != $obj->end_time() - $obj->start_time() ) {
             croak
-                "Timing incorrect: min time: ", $obj->min_time(),
-                "; max time: ", $obj->max_time(),
+                "Timing incorrect: start time: ", $obj->start_time(),
+                "; end time: ", $obj->end_time(),
                 "; total time: ", $g_tot_time;
         }
 
@@ -538,9 +629,9 @@ sub done {
 "Profile of execution for debug context '$dbug_name'\n" .
 "Stack usage: $stack_usage bytes\n" .
 "Execution times are in seconds\n\n" .
-( " " x $max_length ) . " Calls           Time\n" .
-( " " x $max_length ) . " -----           ----\n" .
-"function" . (" " x ($max_length - 8)) . " # calls % calls        time % time   time/call  weight\n" .
+( " " x $max_length )                  . " Calls           Time               Time/call\n" .
+( " " x $max_length )                  . " -----           ----               ---------\n" .
+"function" . (" " x ($max_length - 8)) . " # calls % calls        time % time         avg         min         max  weight\n" .
 $total_line1 . "\n" .
 ".\n";
 
@@ -548,8 +639,8 @@ $total_line1 . "\n" .
 
         my $format = 
 "format $~ =\n" .
-"@" . ("<" x ( $max_length - 1 )) . " @>>>>>> @>>>>>> @>>>>>>>>>> @>>>>> @>>>>>>>>>> @>>>>>>\n" .
-"\$g_function,\$g_calls,\$g_perc_calls,\$g_time,\$g_perc_time,\$g_time_per_call,\$g_weight\n" .
+"@" . ("<" x ( $max_length - 1 ))      . " @>>>>>> @>>>>>> @>>>>>>>>>> @>>>>> @>>>>>>>>>> @>>>>>>>>>> @>>>>>>>>>> @>>>>>>\n" .
+"\$g_function,\$g_calls,\$g_perc_calls,\$g_time,\$g_perc_time,\$g_avg_time_per_call,\$g_min_time_per_call,\$g_max_time_per_call,\$g_weight\n" .
 ".\n";
 
         eval $format;
@@ -559,23 +650,28 @@ $total_line1 . "\n" .
         $- = 0; # force a new page
 
         foreach $function (sort(keys %{$obj->{CALLS}})) {
-            ( $g_function, $g_calls, $g_time ) = 
-                ( $function, $obj->{CALLS}{ $function }, $obj->{TIME}{ $function } );
+            $g_function = $function;
+            $g_calls = $obj->calls($function);
+            $g_time = $obj->time($function);
+            $min_time = $obj->min_time($function);
+            $max_time = $obj->max_time($function);
 
             if ($g_tot_time > 0) {
-                $g_perc_time = sprintf( "%3.2f", ($g_time * 100) / $g_tot_time );
+                $g_perc_time = sprintf( PERC_FMT, ($g_time * 100) / $g_tot_time );
             } else {
                 $g_perc_time = 0;
             }
                 
             if ($g_tot_calls > 0) {
-                $g_perc_calls = sprintf( "%3.2f", ($g_calls * 100) / $g_tot_calls );
+                $g_perc_calls = sprintf( PERC_FMT, ($g_calls * 100) / $g_tot_calls );
             } else {
                 $g_perc_calls = 0;
             }
             $g_weight = int($g_perc_time * $g_perc_calls);
-            $g_time = sprintf( "%7.3f", $g_time / 1000 );
-            $g_time_per_call = sprintf( "%7.3f", $g_time / $g_calls );
+            $g_time = sprintf( TIME_FMT, $g_time / 1000 );
+            $g_avg_time_per_call = sprintf( TIME_FMT, $g_time / $g_calls );
+            $g_min_time_per_call = sprintf( TIME_FMT, $min_time / 1000 );
+            $g_max_time_per_call = sprintf( TIME_FMT, $max_time / 1000 );
     
             write;
         }
@@ -588,7 +684,7 @@ $total_line1 . "\n" .
 
         ( $g_function, $g_calls, $g_perc_calls, $g_time, $g_perc_time, $g_time_per_call, $g_weight ) = 
             ( "Totals", $g_tot_calls, "100.00",
-              sprintf( "%7.3f", $g_tot_time / 1000 ),
+              sprintf( TIME_FMT, $g_tot_time / 1000 ),
               "100.00", "", "" );
 
         write;
@@ -631,30 +727,38 @@ sub enter {
         if ( $obj->version ge '3.0.0' ) {
             $time *= 1000;
         }
-        # set minimum time only first time
-        $obj->min_time($time) unless defined($obj->min_time());
+        # set start time only first time
+        $obj->start_time($time) unless defined($obj->start_time());
 
         $obj->call_push($function, $level, $time);
     }
 }
 
 sub leave {
-    my ($obj, $file, $function, $line, $level, $time, $date) = @_;
+    my ($obj, $file, $function, $line, $level, $leave_time, $date) = @_;
+    my $time = undef;
 
     if ($obj->is_trace_function($function)) {
         $obj->prefix($file, $line, $level, $date);
         $obj->indent($level);
-        print ("<$function\n");
     } 
 
     if ($obj->is_profile_function($function)) {
         if ( $obj->version ge '3.0.0' ) {
-            $time *= 1000;
+            $leave_time *= 1000;
         }           
-        # set maximum time always
-        $obj->max_time($time);
+        # set end time always
+        $obj->end_time($leave_time);
 
-        $obj->call_pop($function, $level, $time);
+        $time = $obj->call_pop($function, $level, $leave_time);
+    }
+
+    if ($obj->is_trace_function($function)) {
+        print("<$function");
+        if defined($time) {
+            sprintf( ' elapsed time: ' . TIME_FMT, $time / 1000 );
+        }
+        print("\n");
     }
 }
 

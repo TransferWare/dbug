@@ -1,3 +1,8 @@
+2003-03-19  Gert-Jan Paulissen  <g.paulissen@chello.nl>
+
+        * dbugrpt.in: Cleaner interface for package dbug_uid.
+        * dbugrpt.in: Print minimum/maximum elapsed time for a function.
+
 2003-03-10  Gert-Jan Paulissen  <g.paulissen@chello.nl>
 
         * Makefile.am: dbugrpt.pl removed from EXTRA_DIST, since it is now
