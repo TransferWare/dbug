@@ -19,9 +19,9 @@ MAINTAINERCLEANFILES = Makefile.in
 
 AUTOMAKE_OPTIONS     = $(top_srcdir)/src/lib/ansi2knr
 
-noinst_PROGRAMS      = factorial
+check_PROGRAMS       = factorial
 factorial_SOURCES    = main.c factorial.c
-LDADD                = $(top_builddir)/src/lib/libdbug.la
+factorial_LDADD      = $(top_builddir)/src/lib/libdbug.la
 AM_CPPFLAGS          = -I$(top_srcdir)/src/lib
 
 EXTRA_DIST           = Imakefile test1.ref test2.ref test3.ref test4.ref test5.ref test6.ref dbug.pod dbug.html
@@ -31,7 +31,7 @@ EXTRA_DIST           = Imakefile test1.ref test2.ref test3.ref test4.ref test5.r
 dbug.html: dbug.pod
 	@PERL@ -S pod2html --infile=$? --outfile=$@
 
-all: dbug.html
+CLEANFILES = dbug.html pod2htm*
 
 ## TEST section
 
@@ -39,55 +39,50 @@ FACTORIAL = ./factorial
 
 DBUGRPT = $(top_builddir)/src/prog/dbugrpt
 
-$(DBUGRPT): force
-	cd `dirname $@` && make
-
-force: ;
-
 # Ignore whitespace
 DIFF = diff -w
 GREP = grep
 
-
 doc_srcdir = $(top_srcdir)/doc
 
-test: test1 test2 test3 test4 test5 test6
+TESTS = test1 test2 test3 test4 test5 test6
+
+## Each test depends on this Makefile, because the code is here.
+## Each test must be a program too, because of the test support by automake
+## Therefore let each test be a script with a single true command (:).
+
+$(TESTS): Makefile
+
+CLEANFILES += $(TESTS) $(TESTS:=.log) test6.lis
 
 test1:
 	$(FACTORIAL) 1 2 3 4 5 > $@.log
-
-diff1:	test1
-	$(DIFF) test1.log $(doc_srcdir)/test1.ref
+	$(DIFF) $@.log $(doc_srcdir)/$@.ref
+	@echo : > $@
 
 test2:	$(DBUGRPT)
 	$(FACTORIAL) -#t 3 2 | @PERL@ $(DBUGRPT) > $@.log
-
-diff2:	test2
-	$(DIFF) test2.log $(doc_srcdir)/test2.ref
+	$(DIFF) $@.log $(doc_srcdir)/$@.ref
+	@echo : > $@
 
 test3:  $(DBUGRPT)
 	$(FACTORIAL) -#d,t 3 | @PERL@ $(DBUGRPT) > $@.log
-
-diff3:	test3
-	$(DIFF) test3.log $(doc_srcdir)/test3.ref
+	$(DIFF) $@.log $(doc_srcdir)/$@.ref
+	@echo : > $@
 
 test4:  $(DBUGRPT)
 	$(FACTORIAL) -#d 4 | @PERL@ $(DBUGRPT) -d result > $@.log
-
-diff4:	test4
-	$(DIFF) test4.log $(doc_srcdir)/test4.ref
+	$(DIFF) $@.log $(doc_srcdir)/$@.ref
+	@echo : > $@
 
 test5:  $(DBUGRPT)
 # GJP 19-3-2003 Ignore changes due to differences between source and build locations.
 	$(FACTORIAL) -#d 3 | @PERL@ $(DBUGRPT) -t factorial -FL | sed -e 's!$(top_srcdir)/doc/!!g' > $@.log
-
-diff5:	test5
-	$(DIFF) test5.log $(doc_srcdir)/test5.ref
+	$(DIFF) $@.log $(doc_srcdir)/$@.ref
+	@echo : > $@
 
 test6:  $(DBUGRPT)
 	$(FACTORIAL) -#t,D=1000,g 3 | @PERL@ $(DBUGRPT) > $@.log
-
-diff6:	test6
-	$(GREP) -f $(doc_srcdir)/test6.ref test6.log >test6.lis
-	test "`cat test6.lis | wc -l`" -eq "`cat test6.log | wc -l`"
-
+	$(GREP) -f $(doc_srcdir)/$@.ref $@.log >$@.lis
+	test "`cat $@.lis | wc -l`" -eq "`cat $@.log | wc -l`"
+	@echo : > $@
