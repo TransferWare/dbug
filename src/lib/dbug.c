@@ -92,17 +92,7 @@ static char vcid[] = "$Header$";
 
 #endif /* #ifdef _WIN32 */
 
-#ifndef _POSIX_THREADS
-
-#define FLOCKFILE(f)
-#define FUNLOCKFILE(f)
-
-#else
-
-#define FLOCKFILE(f) flockfile(f)
-#define FUNLOCKFILE(f) funlockfile(f)
-
-#endif
+#include <stdio.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -145,11 +135,95 @@ typedef struct {
   unsigned int ref_count; 
 } name_t;
 
+
+/*
+ * files_t
+ *
+ * A (double linked) list of unique file names. Each node has a FILE pointer
+ * for allowing shared access from several debug contexts to a file. If Posix
+ * threads are available, a mutex is added for locking access to the structure.
+ *
+ * When the dbug_init_ctx specifies a file name to open, the list is searched.
+ * If one is found, its reference count is increased, otherwise a new one is
+ * added at the end of the list.
+ *
+ * When a debug context is destroyed by dbug_done_ctx, the reference count is 
+ * decreased. If it is zero it is removed from the list.
+ *
+ * A global file list points to the start of the list. A global mutex locks
+ * insertions/deletions to the list. Each node has a mutex to protect changes 
+ * to its fields (reference count, file name, file pointer).
+ *
+ * Searching means locking the global mutex and each individual mutex while
+ * comparning the file name. After the search is completed, the global mutex
+ * must be unlocked.
+ *
+ * Inserting means an unsuccesful search for a file name (see above) keep the 
+ * global mutex locked and add a node.
+ *
+ * Removing also must keep the global mutex locked.
+ * 
+ */
+
+#define STDERR_FILE_NAME "stderr"
+#define STDOUT_FILE_NAME "stdout"
+
+typedef struct files_tag {
+  struct files_tag *next, *prev; /* doubly linked */
+  name_t fname;
+  char mode[3+1]; /* file open mode: allows for r+t */
+  FILE *fptr;
+#ifdef _POSIX_THREADS
+  pthread_mutex_t mutex;
+#endif
+} file_t;
+
+typedef file_t *files_t;
+
+extern
+void 
+FLOCKFILE( FILE *f );
+extern
+void 
+FUNLOCKFILE( FILE *f );
+extern
+void 
+DBUGLOCKFILE( file_t *f );
+extern
+void 
+DBUGUNLOCKFILE( file_t *f );
+
+#ifndef _POSIX_THREADS
+
+#define FLOCKFILE(f)
+#define FUNLOCKFILE(f)
+#define DBUGLOCKFILE(f)
+#define DBUGUNLOCKFILE(f)
+
+#else
+
+#define FLOCKFILE(f) flockfile(f)
+#define FUNLOCKFILE(f) funlockfile(f)
+#define DBUGLOCKFILE(f)  \
+  do { (void)pthread_mutex_lock(&(f)->mutex); flockfile((f)->fptr); } while (0)
+#define DBUGUNLOCKFILE(f) \
+  do { funlockfile((f)->fptr); (void)pthread_mutex_unlock(&(f)->mutex); } while (0)
+
+#endif
+
+/* 
+ * names_t
+ *
+ * A (sorted) array of names. Is an array for allowing binary search.
+ *
+ */
+
+/* Expand size for array in names_t. */
 #define NAMES_SIZE_EXPAND 100
 #define NAMES_MAGIC 0xACDC
 #define NAMES_VALID(names) ( (names) != NULL && (names)->magic == NAMES_MAGIC )
 
-/* An array of names */
+
 typedef struct {
   /*@only@*/ name_t *array;
   size_t size; /* number of names allocated */
@@ -203,7 +277,7 @@ typedef struct {
 #endif
   int flags;			/* Current state flags */
   unsigned int delay;		/* Delay after each output line in milliseconds */
-  /*@null@*/ FILE *fp;
+  file_t *file;
   char separator;
 
   struct tm tm;                 /* time to print in YYYYMMDDhhmmss format */
@@ -514,6 +588,24 @@ static
 dbug_errno_t
 dbug_stack_top( call_stack_t *stack, /*@out@*/ call_t **top );
 
+#ifndef NDEBUG
+static
+void
+dbug_files_print( void );
+#endif
+
+static
+dbug_errno_t
+dbug_file_open( const char *name, const char *mode, /*@out@*/ file_t **result );
+
+static
+dbug_errno_t
+dbug_file_fnd( const char *name, /*@out@*/ file_t **result );
+
+static
+dbug_errno_t
+dbug_file_close( file_t **file );
+
 #ifdef _POSIX_THREADS
 
 static
@@ -561,9 +653,11 @@ static unsigned int ctx_tot = 0; /* total contexts created (init() called) */
 
 static /*@null@*/ /*@only@*/ char *first_dbug_options = NULL;
 
+static files_t dbug_files = NULL;
+
 #ifdef _POSIX_THREADS
-/* synchronize access to ctx_cnt/ctx_tot */
-static pthread_mutex_t ctx_adm_mutex = PTHREAD_MUTEX_INITIALIZER; 
+/* synchronize access to ctx_cnt/ctx_tot/dbug_files */
+static pthread_mutex_t dbug_adm_mutex = PTHREAD_MUTEX_INITIALIZER; 
 
 /* data to handle thread specific data (dbug context) */
 static dbug_key_t dbug_ctx_key = { PTHREAD_MUTEX_INITIALIZER, 0, &dbug_ctx_data_done };
@@ -674,10 +768,10 @@ _dbug_print_ctx( const dbug_ctx_t dbug_ctx, const int line, const char *break_po
 	case 0:
 	  if ( is_break_point( dbug_ctx, call, break_point ) )
 	    {
-	      FLOCKFILE( dbug_ctx->fp );
+	      DBUGLOCKFILE( dbug_ctx->file );
 	      Gmtime( &dbug_ctx->tm );
 	      dbug_ctx->seq++;
-	      (void) fprintf( dbug_ctx->fp, DBUG_PRINT_FMT,
+	      (void) fprintf( dbug_ctx->file->fptr, DBUG_PRINT_FMT,
 			      dbug_ctx->separator,
 			      dbug_ctx->uid,
 			      dbug_ctx->separator,
@@ -701,10 +795,10 @@ _dbug_print_ctx( const dbug_ctx_t dbug_ctx, const int line, const char *break_po
 			      dbug_ctx->separator,
 			      break_point,
 			      dbug_ctx->separator );
-	      (void) vfprintf(dbug_ctx->fp, format, args);
-	      (void) fprintf(dbug_ctx->fp, "\n");
-	      (void) fflush(dbug_ctx->fp);
-	      FUNLOCKFILE( dbug_ctx->fp );
+	      (void) vfprintf(dbug_ctx->file->fptr, format, args);
+	      (void) fprintf(dbug_ctx->file->fptr, "\n");
+	      (void) fflush(dbug_ctx->file->fptr);
+	      DBUGUNLOCKFILE( dbug_ctx->file );
 	      SleepMsec(dbug_ctx->delay);
 	    }
 	  break;
@@ -902,14 +996,14 @@ dbug_options_ctx( const dbug_ctx_t dbug_ctx, const char *options )
   strcpy(control, options);
 
   dbug_ctx->delay = 0;
-  dbug_ctx->fp = NULL;
 #if HASGETPID
   dbug_ctx->pid = (unsigned long) getpid();
 #endif
   dbug_ctx->flags = 0;
   dbug_ctx->separator = SEPARATOR;
+  dbug_ctx->file = NULL;
 
-  for (scan = control; ; ) 
+  for (scan = control; status == 0; ) 
     {
       char *sep = strpbrk(scan, OPTIONS_SEPARATORS);
       char open_mode[3+1]; /* allows for a+t */
@@ -981,9 +1075,9 @@ dbug_options_ctx( const dbug_ctx_t dbug_ctx, const char *options )
 #endif
 
 	  if ( *scan != '\0' )
-	    dbug_ctx->fp = fopen( scan, open_mode );
+	    status = dbug_file_open( scan, open_mode, &dbug_ctx->file );
 	  else
-	    dbug_ctx->fp = stderr;
+	    status = dbug_file_open( STDERR_FILE_NAME, open_mode, &dbug_ctx->file );
 	  break;
 
 	case 't': 
@@ -1007,8 +1101,11 @@ dbug_options_ctx( const dbug_ctx_t dbug_ctx, const char *options )
 	scan = sep+1;
     }
 
-  if ( dbug_ctx->fp == NULL )
-    dbug_ctx->fp = stdout;
+  if ( status == 0 && dbug_ctx->file == NULL )
+    status = dbug_file_open( STDOUT_FILE_NAME, "w", &dbug_ctx->file );
+
+  if ( status != 0 && dbug_ctx->file != NULL )
+    dbug_file_close( &dbug_ctx->file );
 
   FREE(control);
 
@@ -1606,6 +1703,353 @@ dbug_stack_top( call_stack_t *stack, call_t **top )
   return status;
 }
 
+#ifndef NDEBUG
+
+/* pre, post: dbug_adm_mutex is locked */
+static
+void
+dbug_files_print( void )
+{
+  size_t idx;
+  const char *procname = "dbug_files_print";
+  const file_t *curr;
+
+  _DBUG_ENTER( procname );
+  _DBUG_PRINT( "input", ( "files: %s", PTR_STR(dbug_files) ) );
+
+  for ( curr = dbug_files, idx = 0; curr != NULL; curr = curr->next, idx++ )
+    {
+      _DBUG_PRINT( "info", 
+		   ( "idx: %d; file name: %s; ref_count: %d", 
+		     idx, curr->fname.name, curr->fname.ref_count ) );
+    }
+
+  _DBUG_LEAVE();
+}
+
+#endif
+
+/*
+ *  FUNCTION
+ *
+ *	dbug_file_open    Open a file if not already open or increase reference count.
+ *
+ *  SYNOPSIS
+ */
+
+static
+dbug_errno_t
+dbug_file_open( const char *name, const char *mode, file_t **result )
+
+/*
+ *  DESCRIPTION
+ *
+ *	Inserts a file name in the global list of files.
+ *      If the file already exists, the reference count is incremented.
+ *      An initial insert will allocate memory to insert file and set reference count to 1.
+ *      The result will point to the found file name (or the newly inserted one).
+ *
+ *  RETURN VALUE
+ *      
+ *      0      - inserted
+ *      EACCES - could not open file or is already open but in a different open mode
+ *      EINVAL - bad argument(s)
+ *      ENOMEM - could not allocate resources
+ */
+{
+  dbug_errno_t status = 0;
+  file_t *new = NULL;
+
+#ifndef NDEBUG
+  const char *procname = "dbug_file_open";
+
+  _DBUG_ENTER( procname );
+  _DBUG_PRINT( "input", ( "files: %s; name: %s; result: %s",
+			  PTR_STR(dbug_files), name, PTR_STR(result) ) );
+#endif
+
+#ifdef _POSIX_THREADS
+  status = pthread_mutex_lock( &dbug_adm_mutex );
+#endif
+
+  if ( dbug_files == NULL )
+    {
+      if ( (new = (file_t*)MALLOC(sizeof(*new))) == NULL )
+	status = ENOMEM;
+    }
+  else
+    switch( status = dbug_file_fnd( name, result ) )
+      {
+      case 0:
+#ifdef _POSIX_THREADS
+	(void) pthread_mutex_lock( &(*result)->mutex );
+#endif
+	if ( strcmp( (*result)->mode, mode ) != 0 )
+	  status = EACCES;
+	else
+	  {
+	    (*result)->fname.ref_count++;
+	  }
+#ifdef _POSIX_THREADS
+	(void) pthread_mutex_unlock( &(*result)->mutex );
+#endif
+	break;
+
+      case ESRCH: /* could not find it */
+
+	/* 
+	 * *result is the last file_t
+	 */
+	if ( (new = (file_t*)MALLOC(sizeof(*new))) == NULL )
+	  status = ENOMEM;
+	break;
+
+      default:
+	break;
+      }
+
+  if ( new != NULL )
+    {
+      if ( (new->fname.name = (char*)MALLOC(strlen(name)+1)) == NULL )
+	{
+	  FREE( new );
+	  status = ENOMEM;
+	}
+      else if ( strcmp( name, STDERR_FILE_NAME ) == 0 )
+	{
+	  new->fptr = stderr;
+	}
+      else if ( strcmp( name, STDOUT_FILE_NAME ) == 0 )
+	{
+	  new->fptr = stdout;
+	}
+      else if ( (new->fptr = fopen( name, mode )) == NULL )
+	{
+	  FREE( new->fname.name );
+	  FREE( new );
+	  status = EACCES;
+	}
+#ifdef _POSIX_THREADS
+      else if ( (status = pthread_mutex_init( &new->mutex, NULL )) != 0 )
+	{
+	  FREE( new->fname.name );
+	  if ( strcmp( name, STDERR_FILE_NAME ) != 0 &&
+	       strcmp( name, STDOUT_FILE_NAME ) != 0 )
+	    (void) fclose( new->fptr );
+	  FREE( new );
+	}
+#endif
+      else
+	{
+	  strcpy( new->fname.name, name );
+	  new->fname.ref_count = 1;
+	  strncpy( new->mode, mode, sizeof(new->mode) );
+	  new->mode[sizeof(new->mode)-1] = '\0';
+
+	  new->next = NULL;
+
+	  if ( dbug_files == NULL )
+	    {
+	      new->prev = NULL;
+	      dbug_files = new;
+	    }
+	  else
+	    {
+	      new->prev = *result;
+#ifdef _POSIX_THREADS
+	      (void) pthread_mutex_lock( &(*result)->mutex );
+#endif
+	      (*result)->next = new;
+#ifdef _POSIX_THREADS
+	      (void) pthread_mutex_unlock( &(*result)->mutex );
+#endif
+	    }
+	  *result = new;
+	}
+    }
+
+#ifdef _POSIX_THREADS
+  if ( status == 0 )
+    status = pthread_mutex_unlock( &dbug_adm_mutex );
+  else
+    (void) pthread_mutex_unlock( &dbug_adm_mutex );
+#endif
+
+#ifndef NDEBUG
+  dbug_files_print();
+  _DBUG_PRINT( "output", ( "status: %d", status ) );
+  _DBUG_LEAVE();
+#endif
+
+  return status;
+}
+
+/*
+ *  FUNCTION
+ *
+ *	dbug_file_fnd    Find a name in a name list.
+ *
+ *  SYNOPSIS
+ */
+
+static
+dbug_errno_t
+dbug_file_fnd( const char *name, file_t **result )
+
+/*
+ *  DESCRIPTION
+ *
+ *	Returns the result of the find action. If the name is found,
+ *      (*result)->fname.name equals name. If the return value is ESRCH (not found),
+ *      then (*result) points to the last node in dbug_files
+ *
+ *  PRECONDITION
+ *
+ *       dbug_adm_mutex is locked
+ *
+ *  POSTCONDITION
+ *
+ *       dbug_adm_mutex is locked
+ *
+ *  RETURN VALUE
+ *      
+ *      0      - found
+ *      ESRCH  - could not find name
+ *      EINVAL - bad argument(s)
+ */
+{
+  file_t *curr;
+  dbug_errno_t status = ESRCH;
+
+#ifndef NDEBUG
+  const char *procname = "dbug_files_fnd";
+  
+  _DBUG_ENTER( procname );
+  _DBUG_PRINT( "input", 
+	       ( "files: %s; name: %s; result: %s", 
+		 PTR_STR(dbug_files), name, PTR_STR(result) ) );
+#endif
+
+  *result = NULL;
+
+  for ( curr = dbug_files; status != 0 && curr != NULL; curr = curr->next )
+    {
+#ifdef _POSIX_THREADS
+      (void) pthread_mutex_lock( &curr->mutex );
+#endif
+
+      *result = curr;
+      if ( strcmp( curr->fname.name, name ) == 0 )
+	  status = 0;
+
+#ifdef _POSIX_THREADS
+      (void) pthread_mutex_unlock( &curr->mutex );
+#endif
+    }
+
+#ifndef NDEBUG
+  _DBUG_PRINT( "output", ( "status: %d", status ) );
+  _DBUG_LEAVE();
+#endif
+
+  return status;
+}
+
+/*
+ *  FUNCTION
+ *
+ *	dbug_file_close    Closes a file.
+ *
+ *  SYNOPSIS
+ */
+
+static
+dbug_errno_t
+dbug_file_close( file_t **file )
+
+/*
+ *  DESCRIPTION
+ *
+ *	The reference count is decremented. If the count reaches zero,
+ *      the file is closed and removed from files list. 
+ *
+ *  RETURN VALUE
+ *      
+ *      0       - deleted (i.e. reference count decremented or entry removed)
+ *      ESRCH   - name does not exist
+ *      EINVAL  - bad argument(s)
+ */
+{
+  dbug_errno_t status = 0;
+
+#ifndef NDEBUG
+  const char *procname = "dbug_file_close";
+
+  _DBUG_ENTER( procname );
+  _DBUG_PRINT( "input", ( "files: %s; name: %s", PTR_STR(dbug_files), name ) );
+#endif
+
+#ifdef _POSIX_THREADS
+  status = pthread_mutex_lock( &dbug_adm_mutex );
+#endif
+
+  if ( file == NULL || *file == NULL )
+    status = EINVAL;
+  else
+    {
+#ifdef _POSIX_THREADS
+      (void) pthread_mutex_lock( &(*file)->mutex );
+#endif
+      
+      /* decrement ref_count if applicable and return */
+
+      if ( (*file)->fname.ref_count > 0 )
+	{
+	  (*file)->fname.ref_count--;
+#ifdef _POSIX_THREADS
+	  (void) pthread_mutex_unlock( &(*file)->mutex );
+#endif
+	}
+      else /* (*file)->ref_count == 0 */
+	{
+	  if ( (*file)->fname.name != NULL )
+	    FREE( (*file)->fname.name );
+	  if ( (*file)->fptr != stderr &&
+	       (*file)->fptr != stdout &&
+	       (*file)->fptr != NULL )
+	    {
+	      (void) fclose( (*file)->fptr );
+	    }
+	  if ( (*file)->prev != NULL )
+	    (*file)->prev->next = (*file)->next;
+	  if ( (*file)->next != NULL )
+	    (*file)->next->prev = (*file)->prev;
+	  if ( (*file) == dbug_files )
+	    dbug_files = (*file)->next;
+#ifdef _POSIX_THREADS
+	  (void) pthread_mutex_destroy( &(*file)->mutex );
+#endif
+	  FREE( *file );
+	  *file = NULL;
+	}
+    }
+
+#ifdef _POSIX_THREADS
+  if ( status == 0 )
+    status = pthread_mutex_unlock( &dbug_adm_mutex );
+  else
+    (void) pthread_mutex_unlock( &dbug_adm_mutex );
+#endif
+
+#ifndef NDEBUG
+  dbug_files_print();
+  _DBUG_PRINT( "output", ( "status: %d", status ) );  
+  _DBUG_LEAVE();
+#endif
+
+  return status;
+}
+
 #ifdef _POSIX_THREADS
 
 static
@@ -1959,7 +2403,7 @@ dbug_init_ctx( const char * options, const char *name, dbug_ctx_t* dbug_ctx )
 
 	case MUTEX_LOCK_STEP:
 #ifdef _POSIX_THREADS
-	  status = pthread_mutex_lock( &ctx_adm_mutex );
+	  status = pthread_mutex_lock( &dbug_adm_mutex );
 
 	  _DBUG_PRINT( "info", ( "pthread_mutex_lock = %d", status ) );
 #endif
@@ -1999,7 +2443,7 @@ dbug_init_ctx( const char * options, const char *name, dbug_ctx_t* dbug_ctx )
 
 	case MUTEX_UNLOCK_STEP:
 #ifdef _POSIX_THREADS
-	  status = pthread_mutex_unlock( &ctx_adm_mutex );
+	  status = pthread_mutex_unlock( &dbug_adm_mutex );
 
 	  _DBUG_PRINT( "info", ( "pthread_mutex_unlock = %d", status ) );
 #endif
@@ -2059,12 +2503,12 @@ dbug_init_ctx( const char * options, const char *name, dbug_ctx_t* dbug_ctx )
 
 	  /* output version info first */
 
-	  if ( (*dbug_ctx)->flags )
+	  if ( (*dbug_ctx)->flags != 0 )
 	    {
-	      FLOCKFILE( (*dbug_ctx)->fp );
+	      DBUGLOCKFILE( (*dbug_ctx)->file );
 	      Gmtime( &(*dbug_ctx)->tm );
  	      (*dbug_ctx)->seq++;
-	      (void) fprintf( (*dbug_ctx)->fp, DBUG_INIT_FMT, 
+	      (void) fprintf( (*dbug_ctx)->file->fptr, DBUG_INIT_FMT, 
 			      (*dbug_ctx)->separator,
 			      (*dbug_ctx)->uid,
 			      (*dbug_ctx)->separator,
@@ -2093,10 +2537,9 @@ dbug_init_ctx( const char * options, const char *name, dbug_ctx_t* dbug_ctx )
 #endif
 			      (*dbug_ctx)->separator,
 			      (*dbug_ctx)->flags );
-	      (void) fflush((*dbug_ctx)->fp);
-	      FUNLOCKFILE( (*dbug_ctx)->fp );
+	      (void) fflush((*dbug_ctx)->file->fptr);
+	      DBUGUNLOCKFILE( (*dbug_ctx)->file );
 	    }
-
 	  break;
 
 	case DBUG_INIT_CTX_STEPS:
@@ -2138,7 +2581,7 @@ dbug_init_ctx( const char * options, const char *name, dbug_ctx_t* dbug_ctx )
 
 	    case MUTEX_UNLOCK_STEP:
 #ifdef _POSIX_THREADS
-	      (void) pthread_mutex_lock( &ctx_adm_mutex );
+	      (void) pthread_mutex_lock( &dbug_adm_mutex );
 #endif
 	      /*@fallthrough@*/
 
@@ -2157,7 +2600,7 @@ dbug_init_ctx( const char * options, const char *name, dbug_ctx_t* dbug_ctx )
 
 	    case MUTEX_LOCK_STEP:
 #ifdef _POSIX_THREADS
-	      (void) pthread_mutex_unlock( &ctx_adm_mutex );
+	      (void) pthread_mutex_unlock( &dbug_adm_mutex );
 #endif
 	      /*@fallthrough@*/
 
@@ -2399,10 +2842,10 @@ dbug_done_ctx( dbug_ctx_t* dbug_ctx )
 
       if ( (*dbug_ctx)->flags )
 	{
-	  FLOCKFILE( (*dbug_ctx)->fp );
+	  DBUGLOCKFILE( (*dbug_ctx)->file );
 	  Gmtime( &(*dbug_ctx)->tm );
 	  (*dbug_ctx)->seq++;
-	  (void) fprintf( (*dbug_ctx)->fp, DBUG_DONE_FMT, 
+	  (void) fprintf( (*dbug_ctx)->file->fptr, DBUG_DONE_FMT, 
 			  (*dbug_ctx)->separator,
 			  (*dbug_ctx)->uid,
 			  (*dbug_ctx)->separator,
@@ -2419,12 +2862,11 @@ dbug_done_ctx( dbug_ctx_t* dbug_ctx )
 			  (long)(*dbug_ctx)->stack.maxcount,
 			  (*dbug_ctx)->separator,
 			  stack_usage );
-	  (void) fflush( (*dbug_ctx)->fp );
-	  FUNLOCKFILE( (*dbug_ctx)->fp );
+	  (void) fflush( (*dbug_ctx)->file->fptr );
+	  DBUGUNLOCKFILE( (*dbug_ctx)->file->fptr );
 	}
 
-      if ( (*dbug_ctx)->fp != stderr && (*dbug_ctx)->fp != stdout )
-	(void) fclose( (*dbug_ctx)->fp );
+      (void) dbug_file_close( &(*dbug_ctx)->file );
 
       if ( (*dbug_ctx)->name != NULL )
 	FREE( (*dbug_ctx)->name );
@@ -2453,7 +2895,7 @@ dbug_done_ctx( dbug_ctx_t* dbug_ctx )
 #endif
 
 #ifdef _POSIX_THREADS
-      (void) pthread_mutex_lock( &ctx_adm_mutex );
+      (void) pthread_mutex_lock( &dbug_adm_mutex );
 #endif
       if ( ctx_cnt > 0 )
 	ctx_cnt--;
@@ -2465,7 +2907,7 @@ dbug_done_ctx( dbug_ctx_t* dbug_ctx )
 	}
 
 #ifdef _POSIX_THREADS
-      (void) pthread_mutex_unlock( &ctx_adm_mutex );
+      (void) pthread_mutex_unlock( &dbug_adm_mutex );
 #endif
 	
       FREE( *dbug_ctx );
@@ -2629,10 +3071,10 @@ dbug_enter_ctx( const dbug_ctx_t dbug_ctx, const char *file, const char *functio
 
 	  if ( print )
 	    {
-	      FLOCKFILE( dbug_ctx->fp );
+	      DBUGLOCKFILE( dbug_ctx->file->fptr );
 	      Gmtime( &dbug_ctx->tm );
 	      dbug_ctx->seq++;
-	      (void) fprintf( dbug_ctx->fp, DBUG_ENTER_FMT, 
+	      (void) fprintf( dbug_ctx->file->fptr, DBUG_ENTER_FMT, 
 			      dbug_ctx->separator,
 			      dbug_ctx->uid,
 			      dbug_ctx->separator,
@@ -2655,8 +3097,8 @@ dbug_enter_ctx( const dbug_ctx_t dbug_ctx, const char *file, const char *functio
 			      (long)dbug_ctx->stack.count,
 			      dbug_ctx->separator,
 			      (long)time );
-	      (void) fflush( dbug_ctx->fp );
-	      FUNLOCKFILE( dbug_ctx->fp );
+	      (void) fflush( dbug_ctx->file->fptr );
+	      DBUGUNLOCKFILE( dbug_ctx->file );
 	    }
 	  break;
 
@@ -2791,10 +3233,10 @@ dbug_leave_ctx( const dbug_ctx_t dbug_ctx, const int line, int *dbug_level )
 
 	  if ( print )
 	    {
-	      FLOCKFILE( dbug_ctx->fp );
+	      DBUGLOCKFILE( dbug_ctx->file );
 	      Gmtime( &dbug_ctx->tm );
 	      dbug_ctx->seq++;
-	      (void) fprintf( dbug_ctx->fp, DBUG_LEAVE_FMT, 
+	      (void) fprintf( dbug_ctx->file->fptr, DBUG_LEAVE_FMT, 
 			      dbug_ctx->separator,
 			      dbug_ctx->uid,
 			      dbug_ctx->separator,
@@ -2817,8 +3259,8 @@ dbug_leave_ctx( const dbug_ctx_t dbug_ctx, const int line, int *dbug_level )
 			      (long)dbug_ctx->stack.count,
 			      dbug_ctx->separator,
 			      (long)time );
-	      (void) fflush(dbug_ctx->fp);
-	      FUNLOCKFILE( dbug_ctx->fp );
+	      (void) fflush(dbug_ctx->file->fptr);
+	      DBUGUNLOCKFILE( dbug_ctx->file );
 	    }
 	  break;
 
