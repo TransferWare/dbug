@@ -18,3 +18,7 @@
 # bug-dejagnu@gnu.org
 
 send_user "Testing: one, two...\n"
+
+dbug_load
+
+send_user "Output: $comp_out\n"

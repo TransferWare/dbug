@@ -34,6 +34,14 @@ proc dbug_version {} {
 #
 proc dbug_load { arg } {
     #
+    global DBUG
+    global verbose
+
+    if { $verbose > 1 } {
+	send_user "starting $DBUG $arg\n"
+    }
+    set comp_output [ exec $DBUG $arg ]
+
     return 0
 }
 
@@ -41,7 +49,6 @@ proc dbug_load { arg } {
 # dbug_exit -- quit and cleanup
 #
 proc dbug_exit {} {
-    #
     return 0
 }
 
@@ -49,21 +56,6 @@ proc dbug_exit {} {
 # dbug_start -- start dbug running
 #
 proc dbug_start {} {
-    global DBUG
-    global prompt
-    global spawn_id
-    global verbose
-
-    if { $verbose > 1 } {
-	send_user "starting $DBUG\n"
-    }
-    spawn $DBUG
-    expect {
-	-re "No such file.*" { perror "Can't start $DBUG"; exit 1 }
-	-re "." { if { $verbose > 1 } { send_user "$DBUG spawned with pid $spawn_id\n" } }
-	timeout { perror "Failed to spawn $DBUG (timeout)"; exit 1 }
-    }
     return 0
 }
 
-dbug_start
