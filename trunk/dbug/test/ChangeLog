@@ -1,0 +1,5 @@
+2003-03-10  Gert-Jan Paulissen  <g.paulissen@chello.nl>
+
+        * Makefile.am: AM_CPPFLAGS used instead of INCLUDES
+	* Makefile.am: Use $(top_builddir)/$(top_srcdir) instead of ..
+
