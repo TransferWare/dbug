@@ -26,7 +26,7 @@ factorial_SOURCES    = main.c factorial.c
 LDADD                = ../src/lib/libdbug.la
 AM_CPPFLAGS          = -I../src/lib
 
-EXTRA_DIST           = Imakefile test1.ref test2.ref test3.ref test4.ref test5.ref dbug.pod dbug.html
+EXTRA_DIST           = Imakefile test1.ref test2.ref test3.ref test4.ref test5.ref test6.ref dbug.pod dbug.html
 
 ## DOCUMENTATION section
 
