@@ -354,8 +354,8 @@ sub min_time {
         my $time = shift;
         my $r_old_time = \${$obj->{MIN_TIME}}{$function};
 
-	# [ 719574 ] zero min time shows minus sign
-	$time = 0 if ( $time < 0 );
+        # [ 719574 ] zero min time shows minus sign
+        $time = 0 if ( $time < 0 );
 
         if ( !defined($$r_old_time) || $$r_old_time > $time ) {
             $$r_old_time = $time;
@@ -372,8 +372,8 @@ sub max_time {
         my $time = shift;
         my $r_old_time = \${$obj->{MAX_TIME}}{$function};
 
-	# [ 719574 ] zero min time shows minus sign
-	$time = 0 if ( $time < 0 );
+        # [ 719574 ] zero min time shows minus sign
+        $time = 0 if ( $time < 0 );
 
         if ( !defined($$r_old_time) || $$r_old_time < $time ) {
             $$r_old_time = $time;
@@ -619,12 +619,15 @@ sub done {
         }
 
         if ( defined($obj->start_time()) && defined($obj->end_time()) &&
-             $g_tot_time != $obj->end_time() - $obj->start_time() ) {
+             # GJP 23-02-2004 Round the floating point numbers
+             sprintf("%f", $g_tot_time) ne
+             sprintf("%f", $obj->end_time() - $obj->start_time()) ) {
             croak
-                "Timing incorrect: g_tot_time: ", $g_tot_time,
-		"; start time: ", $obj->start_time(),
-                "; end time: ", $obj->end_time(),
-                "; total time: ", $g_tot_time;
+                sprintf( "Timing incorrect: g_tot_time: %f; start time: %f; end time: %f; total time: %f"
+                       , $g_tot_time,
+                       , $obj->start_time(),
+                       , $obj->end_time(),
+                       , $g_tot_time );
         }
 
         my $total_line1 = 
