@@ -1,0 +1,18 @@
+-*- Outline -*-
+
+Bugs
+
+* On a Windows platform the DBUG library can be built with Cygwin using the
+  standard OS libraries (i.e. without the Cygwin DLL). There are two approaches:
+  1) Use the MinGW compiler by putting the MinGW bin directory in the PATH
+  before the GNU C compiler directory. The disadvantage is that 
+  $ make all 
+  and
+  $ make check
+  fail.
+  2) Use the GNU C compiler with the -mno-cygwin option. However a shared DBUG
+  library (DLL) results in rebase errors for other programs linked with the
+  DLL.
+
+  The best solution is to build the DBUG library static with the standard GNU
+  compiler and the -mno-cygwin option.

@@ -70,12 +70,9 @@ On Windows systems using the Visual C++ compiler:
     
     ./configure --prefix=c:/usr/local CC=cl CFLAGS=-GD
 
-On Windows systems using the MinGW compiler:
+On Windows systems building DBUG library using the system DLLs (see BUGS):
 
-    $ PATH=/cygdrive/c/MinGW/bin:$PATH
-    $ export PATH
-    $ ./configure --prefix=c:/usr/local --disable-shared
-    $ make PERL=perl ...
+    ./configure --prefix=c:/usr/local --disable-shared CC="gcc -mno-cygwin"
 
 Compiling For Multiple Architectures
 ====================================

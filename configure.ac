@@ -17,11 +17,8 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
-# Strip RCS keyword Name (e.g. '$Name$' into 2_1_0).
-#AC_DEFUN(AC_RCS_NAME, translit(regexp([$Name$], [dbug_\(.*\) ], [\1]), [_], [.]))
-
 AC_REVISION([$Revision$])
-AC_INIT([dbug],[3.2.0],[g.paulissen@chello.nl])
+AC_INIT([dbug],[3.3.0],[g.paulissen@chello.nl])
 
 # version check
 if test -f "$srcdir/VERSION"
