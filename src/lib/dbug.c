@@ -202,6 +202,7 @@ LOCAL VOID perror (char *s);	/* Fake system/library error print routine */
 # endif
 # if HASSLEEP
 #  include <stdlib.h>
+#  include <time.h>
 #  ifndef sleep
 #   define sleep _sleep
 #  endif
@@ -1709,7 +1710,11 @@ LOCAL int DelayArg (int value)
     delayarg = (HZ * value) / 10;	/* Delay in ticks for Delay () */
 #else
 # if HASSLEEP
+#  if SLEEPGRANULARITY == 'S'
     delayarg = value / 10;		/* Delay is in seconds for sleep () */
+#  else
+    delayarg = ( CLOCKS_PER_SEC * value ) / 10;	/* Delay is in ticks for sleep () */
+#  endif
 # endif
 #endif
     return (delayarg);
@@ -1775,16 +1780,6 @@ LOCAL VOID perror (char *s)
 
 #include <time.h>
 
-#ifndef CLK_TCK
-# ifdef CLOCKS_PER_SEC
-#  define CLK_TCK CLOCKS_PER_SEC
-# else
-#  ifdef CLOCKS_PER_SECONDS
-#   define CLK_TCK CLOCKS_PER_SECONDS
-#  endif
-# endif
-#endif
-
 LOCAL unsigned long Clock (void)
 {
   static clock_t start;
@@ -1801,7 +1796,7 @@ LOCAL unsigned long Clock (void)
   {
     tmp = clock();
       /* multiply by 1000 to get ms */
-    return ( (clock_t)1000 * (tmp - start) ) / (CLK_TCK); 
+    return ( (clock_t)1000 * (tmp - start) ) / (CLOCKS_PER_SEC); 
   }
 }
 
