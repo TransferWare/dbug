@@ -77,6 +77,9 @@ pdbug - Perl extension for C dbug library.
   print( $line, $break_point, $str );
   print_ctx( $dbug_ctx, $line, $break_point, $str );
 
+  dump( $line, $break_point, $memory, $len );
+  dump_ctx( $dbug_ctx, $line, $break_point, $memory, $len );
+
 =head1 DESCRIPTION
 
 The I<pdbug> package implements the functionality of the I<dbug> library
@@ -114,6 +117,12 @@ Preconditions: init/init_ctx must be called before using these functions.
 =item print
 
 Print a line. Input parameters are a line and a break point and a string.
+
+Preconditions: init/init_ctx must be called before using these functions.
+
+=item dump
+
+Dumps a memory structure. Input parameters are a line, a break point, the memory to print and the number of bytes to print.
 
 Preconditions: init/init_ctx must be called before using these functions.
 
