@@ -139,3 +139,22 @@ print( line, break_point, str )
 	char* str
 CODE:
 	dbug_print( line, break_point, str );
+
+void 
+dump_ctx( dbug_ctx, line, break_point, memory, len ) 
+	void* dbug_ctx
+	int line
+	char* break_point
+	void* memory
+	int len
+CODE:
+	dbug_dump_ctx( dbug_ctx, line, break_point, memory, len );
+
+void 
+dump( line, break_point, memory, len ) 
+	int line
+	char* break_point
+	void* memory
+	int len
+CODE:
+	dbug_dump( line, break_point, memory, len );
