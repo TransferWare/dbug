@@ -2148,7 +2148,14 @@ dbug_errno_t
 dbug_key_init( dbug_key_t *dbug_key )
 {
   dbug_errno_t status = 0;
-  int step_no;
+  enum {
+    LOCK_STEP,
+    KEY_CREATE_STEP,
+    INCR_STEP,
+    UNLOCK_STEP
+
+#define DBUG_KEY_INIT_STEPS (UNLOCK_STEP+1)
+  } step_no;
 
 #ifndef NDEBUG
   const char *procname = "dbug_key_init";
@@ -2158,26 +2165,24 @@ dbug_key_init( dbug_key_t *dbug_key )
   _DBUG_PRINT( "info", ( "count: %d", dbug_key->ref_count ) );
 #endif
 
-#define DBUG_KEY_INIT_STEPS 4
-
   for ( step_no = 0; status == 0 && step_no < DBUG_KEY_INIT_STEPS; step_no++ )
     {
       switch( step_no )
         {
-        case 0:
+        case LOCK_STEP:
 	  status = pthread_mutex_lock( &dbug_key->mutex );
 	  break;
 
-        case 1:
+        case KEY_CREATE_STEP:
 	  if ( dbug_key->ref_count == 0 )
 	    status = pthread_key_create( &dbug_key->key, dbug_key->func );
 	  break;
 
-        case 2:
+        case INCR_STEP:
 	  dbug_key->ref_count++;
 	  break;
 
-        case 3:
+        case UNLOCK_STEP:
 	  status = pthread_mutex_unlock( &dbug_key->mutex );
 	  break;
 
@@ -2209,7 +2214,13 @@ dbug_errno_t
 dbug_key_done( dbug_key_t *dbug_key )
 {
   dbug_errno_t status = 0;
-  int step_no;
+  enum {
+    LOCK_STEP,
+    DECR_STEP,
+    UNLOCK_STEP
+
+#define DBUG_KEY_DONE_STEPS (UNLOCK_STEP+1)
+  } step_no;
 
 #ifndef NDEBUG
   const char *procname = "dbug_key_init";
@@ -2218,23 +2229,21 @@ dbug_key_done( dbug_key_t *dbug_key )
   _DBUG_PRINT( "input", ( "dbug_key: %s", PTR_STR(dbug_key) ) );
 #endif
 
-#define DBUG_KEY_DONE_STEPS 3
-
   for ( step_no = 0; status == 0 && step_no < DBUG_KEY_DONE_STEPS; step_no++ )
     {
       switch( step_no )
         {
-        case 0:
+        case LOCK_STEP:
 	  status = pthread_mutex_lock( &dbug_key->mutex );
   	  break;
 
-        case 1:
+        case DECR_STEP:
 	  dbug_key->ref_count--;
 	  if ( dbug_key->ref_count == 0 )
 	    status = pthread_key_delete( dbug_key->key );
 	  break;
 
-        case 2:
+        case UNLOCK_STEP:
 	  status = pthread_mutex_unlock( &dbug_key->mutex );
 	  break;
 
@@ -2373,7 +2382,24 @@ dbug_init_ctx( const char * options, const char *name, dbug_ctx_t* dbug_ctx )
 
 {
   dbug_errno_t status = 0;
-  int step_no;
+  enum {
+    DBUG_CTX_MALLOC_STEP,
+    FILES_STEP,
+    FUNCTIONS_STEP,
+    BREAK_POINTS_ALLOWED_STEP,
+    FUNCTIONS_ALLOWED_STEP,
+    STACK_STEP,
+    MUTEX_LOCK_STEP,
+    CTX_NR_STEP,
+    FIRST_DBUG_OPTIONS_STEP,
+    MUTEX_UNLOCK_STEP,
+    NAME_STEP,
+    DBUG_KEY_STEP,
+    DBUG_PRINT_INFO_STEP,
+    DBUG_OPTIONS_STEP
+
+#define DBUG_INIT_CTX_STEPS (DBUG_OPTIONS_STEP+1)
+  } step_no;
   /*@temp@*/ char *dbug_options = (char*)options;
   const char *procname = "dbug_init_ctx";
 
@@ -2396,23 +2422,6 @@ dbug_init_ctx( const char * options, const char *name, dbug_ctx_t* dbug_ctx )
     sprintf( string, "%f", (double)0 );
   }
 #endif
-
-/* steps in initialising */
-#define DBUG_CTX_MALLOC_STEP 0
-#define FILES_STEP 1
-#define FUNCTIONS_STEP 2
-#define BREAK_POINTS_ALLOWED_STEP 3
-#define FUNCTIONS_ALLOWED_STEP 4
-#define STACK_STEP 5
-#define MUTEX_LOCK_STEP 6
-#define CTX_NR_STEP 7
-#define FIRST_DBUG_OPTIONS_STEP 8
-#define MUTEX_UNLOCK_STEP 9
-#define NAME_STEP 10
-#define DBUG_KEY_STEP 11
-#define DBUG_PRINT_INFO_STEP 12
-#define DBUG_OPTIONS_STEP 13
-#define DBUG_INIT_CTX_STEPS (DBUG_OPTIONS_STEP+1)
 
   for ( step_no = 0; status == 0 && step_no < DBUG_INIT_CTX_STEPS; step_no++ )
     {
@@ -2692,20 +2701,6 @@ dbug_init_ctx( const char * options, const char *name, dbug_ctx_t* dbug_ctx )
 
   assert( status != 0 || step_no == DBUG_INIT_CTX_STEPS );
 
-#undef DBUG_CTX_MALLOC_STEP
-#undef FILES_STEP
-#undef FUNCTIONS_STEP
-#undef BREAK_POINTS_ALLOWED_STEP
-#undef FUNCTIONS_ALLOWED_STEP
-#undef STACK_STEP
-#undef MUTEX_LOCK_STEP
-#undef CTX_NR_STEP
-#undef FIRST_DBUG_OPTIONS_STEP
-#undef MUTEX_UNLOCK_STEP
-#undef NAME_STEP
-#undef DBUG_KEY_STEP
-#undef DBUG_PRINT_INFO_STEP
-#undef DBUG_OPTIONS_STEP
 #undef DBUG_INIT_CTX_STEPS
 
   _DBUG_PRINT( "output", ( "status: %d", status ) );
@@ -2737,7 +2732,12 @@ dbug_init( const char * options, const char *name )
 #endif
 #if HASPTHREAD
   dbug_ctx_t dbug_ctx; /* local dbug_ctx */
-  int step_no;
+  enum {
+    DBUG_KEY_INIT_STEP,
+    DBUG_INIT_CTX_STEP
+
+#define DBUG_INIT_STEPS (DBUG_INIT_CTX_STEP+1)
+  } step_no;
 
   _DBUG_ENTER( procname );
   _DBUG_PRINT( "input", 
@@ -2748,17 +2748,15 @@ dbug_init( const char * options, const char *name )
      flag this initialisation and unlock the mutex,
      initialise a dbug context, assign it to the thread */
 
-#define DBUG_INIT_STEPS 2
-
   for ( step_no = 0; status == 0 && step_no < DBUG_INIT_STEPS; step_no++ )
     {
       switch( step_no )
 	{
-	case 0:
+	case DBUG_KEY_INIT_STEP:
 	  status = dbug_key_init( &dbug_ctx_key );
 	  break;
 
-	case 1:
+	case DBUG_INIT_CTX_STEP:
 	  if ( dbug_ctx_get() == NULL ) /* no dbug context set */
 	    if ( (status = dbug_init_ctx( options, name, &dbug_ctx )) == 0 )
 	      status = dbug_ctx_set( dbug_ctx );
@@ -3044,7 +3042,15 @@ dbug_enter_ctx( const dbug_ctx_t dbug_ctx, const char *file, const char *functio
   dbug_errno_t status = 0;
   call_t call;
   name_t *result = NULL;
-  int step_no;
+  enum {
+    CHK_STEP,
+    INS_FILE_STEP,
+    INS_FUNCTION_STEP,
+    PUSH_STEP,
+    PRINT_STEP
+
+#define DBUG_ENTER_CTX_STEPS (PRINT_STEP+1)
+  } step_no;
   BOOLEAN print = FALSE;
   long time;
   const char *procname = "dbug_enter_ctx";
@@ -3054,20 +3060,18 @@ dbug_enter_ctx( const dbug_ctx_t dbug_ctx, const char *file, const char *functio
 	       ( "dbug_ctx: %s; file: %s; function: %s; line: %d; dbug_level: %s", 
 		 PTR_STR(dbug_ctx), file, function, line, PTR_STR(dbug_level) ) );
 
-#define DBUG_ENTER_CTX_STEPS 5
-
  for ( step_no = 0; status == 0 && step_no < DBUG_ENTER_CTX_STEPS; step_no++ )
     {
       switch( step_no )
 	{
-	case 0:
+	case CHK_STEP:
 	  if ( !DBUG_CTX_VALID(dbug_ctx) )
 	    status = EINVAL;
 	  else if ( dbug_ctx->flags == 0 )
 	    status = ENOENT;
 	  break;
 
-	case 1:
+	case INS_FILE_STEP:
 	  switch( status = dbug_names_ins( &dbug_ctx->files, file, &result ) )
 	    {
 	    case EEXIST:
@@ -3083,7 +3087,7 @@ dbug_enter_ctx( const dbug_ctx_t dbug_ctx, const char *file, const char *functio
 	    }
 	  break;
 	  
-	case 2:
+	case INS_FUNCTION_STEP:
 	  switch( status = dbug_names_ins( &dbug_ctx->functions, function, &result ) )
 	    {
 	    case EEXIST:
@@ -3099,21 +3103,21 @@ dbug_enter_ctx( const dbug_ctx_t dbug_ctx, const char *file, const char *functio
 	    }
 	  break;
 
-	case 3:
+	case PUSH_STEP:
 	  status = dbug_stack_push( &dbug_ctx->stack, &call );
 	  if ( status == 0 && dbug_level )
 	    *dbug_level = dbug_ctx->stack.count;
 	  break;
 
-	case 4:
-	  if (dbug_trace(dbug_ctx, function))
+	case PRINT_STEP:
+	  if ( dbug_trace(dbug_ctx, function) != 0 )
 	    {
 	      SleepMsec(dbug_ctx -> delay);
 	      time = -1;
 	      print = TRUE;
 	    }
 
-	  if (dbug_profile(dbug_ctx, function)) 
+	  if ( dbug_profile(dbug_ctx, function) != 0 ) 
 	    {
 	      if ( dbug_level && dbug_ctx->stack.sp_min == NULL )
 		dbug_ctx->stack.sp_min = dbug_ctx->stack.sp_max = dbug_level;
@@ -3126,8 +3130,7 @@ dbug_enter_ctx( const dbug_ctx_t dbug_ctx, const char *file, const char *functio
 	      print = TRUE;
 	    }
 
-
-	  if ( print )
+	  if ( print != 0 )
 	    {
 	      DBUGLOCKFILE( dbug_ctx->file );
 	      Gmtime( &dbug_ctx->tm );
@@ -3228,7 +3231,16 @@ dbug_leave_ctx( const dbug_ctx_t dbug_ctx, const int line, int *dbug_level )
 {
   dbug_errno_t status = 0;
   call_t *call;
-  int step_no;
+  enum {
+    CHK_STEP,
+    GET_TOP_STEP,
+    PRINT_STEP,
+    DEL_FILE_STEP,
+    DEL_FUNCTION_STEP,
+    POP_STEP
+
+#define DBUG_LEAVE_CTX_STEPS (POP_STEP+1)
+  } step_no;
   BOOLEAN print = FALSE;
   long time;
   const char *procname = "dbug_leave_ctx";
@@ -3238,21 +3250,19 @@ dbug_leave_ctx( const dbug_ctx_t dbug_ctx, const int line, int *dbug_level )
 	       ( "dbug_ctx: %s; line: %d; dbug_level: %s", 
 		 PTR_STR(dbug_ctx), line, PTR_STR(dbug_level) ) );
 
-#define DBUG_LEAVE_CTX_STEPS 6
-
   for ( step_no = 0; status == 0 && step_no < DBUG_LEAVE_CTX_STEPS; step_no++ )
     {
       switch( step_no )
 	{
-	case 0:
+	case CHK_STEP:
 	  if ( !DBUG_CTX_VALID(dbug_ctx) )
 	    status = EINVAL;
 	  else if ( dbug_ctx->flags == 0 )
 	    status = ENOENT;
 	  break;
 
-	case 1:
-	  if ( dbug_level && (size_t)*dbug_level != dbug_ctx->stack.count )
+	case GET_TOP_STEP:
+	  if ( dbug_level != 0 && (size_t)*dbug_level != dbug_ctx->stack.count )
 	    {
 	      FLOCKFILE( stderr );
 	      (void) fprintf( stderr, "DBUG%c%p%cERROR: %s: dbug level (%ld) != stack count (%ld)\n", 
@@ -3275,21 +3285,21 @@ dbug_leave_ctx( const dbug_ctx_t dbug_ctx, const int line, int *dbug_level )
 	    status = dbug_stack_top( &dbug_ctx->stack, &call );
 	  break;
 
-	case 2:
-	  if (dbug_trace(dbug_ctx, call->function))
+	case PRINT_STEP:
+	  if ( dbug_trace(dbug_ctx, call->function) != 0 )
 	    {
 	      SleepMsec(dbug_ctx->delay);
 	      time = -1;
 	      print = TRUE;
 	    }
 
-	  if (dbug_profile(dbug_ctx, call->function)) 
+	  if ( dbug_profile(dbug_ctx, call->function) != 0 ) 
 	    {
 	      time = Clock();
 	      print = TRUE;
 	    }
 
-	  if ( print )
+	  if ( print != 0 )
 	    {
 	      DBUGLOCKFILE( dbug_ctx->file );
 	      Gmtime( &dbug_ctx->tm );
@@ -3322,15 +3332,15 @@ dbug_leave_ctx( const dbug_ctx_t dbug_ctx, const int line, int *dbug_level )
 	    }
 	  break;
 
-	case 3:
+	case DEL_FILE_STEP:
 	  status = dbug_names_del( &dbug_ctx->files, call->file );
 	  break;
 	  
-	case 4:
+	case DEL_FUNCTION_STEP:
 	  status = dbug_names_del( &dbug_ctx->functions, call->function );
 	  break;
 
-	case 5:
+	case POP_STEP:
 	  status = dbug_stack_pop( &dbug_ctx->stack );
 	  break;
 
