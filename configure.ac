@@ -1,3 +1,4 @@
+# -*-fundamental-*-
 # Process this file with autoconf to produce a configure script.
 
 # Copyright (C) 2002 G.J. Paulissen
@@ -16,7 +17,10 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
-AC_INIT([dbug],[0.9],[g.paulissen@chello.nl])
+# Strip RCS keyword Name (e.g. '$Name$') into 2_1_0
+Name=`echo '$Name$' | sed -e 's/$Name$//'`
+
+AC_INIT([dbug],[$Name],[g.paulissen@chello.nl])
 AC_CONFIG_AUX_DIR([config])
 AC_CONFIG_SRCDIR([src/lib/dbug.c])
 AC_CONFIG_HEADER([config.h])
@@ -24,6 +28,14 @@ AM_INIT_AUTOMAKE
 AM_C_PROTOTYPES
 
 # Checks for programs.
+AC_PATH_PROG([PERL],[perl5)
+case x$PERL in
+x)
+	# No Perl avaliable: stop
+	AC_MSG_ERROR([Perl must be available in $PATH.])
+	;;
+esac
+AC_ARG_VAR([PERL])
 AC_PROG_CC
 AM_PROG_CC_STDC
 AC_LIBTOOL_WIN32_DLL
@@ -66,7 +78,7 @@ AC_SUBST(LTLIBOBJS)
 
 AC_SUBST(ac_aux_dir)
 
-AC_CONFIG_FILES([Makefile config/Makefile doc/Makefile src/Makefile src/lib/Makefile test/Makefile])
+AC_CONFIG_FILES([Makefile config/Makefile doc/Makefile src/Makefile src/lib/Makefile src/prog/Makefile src/prog/dbugtest test/Makefile])
 AC_OUTPUT
 
 echo \

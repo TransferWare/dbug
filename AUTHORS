@@ -1,0 +1,11 @@
+Authors of dbug:
+
+Fred Fish               
+- base code (copyright abandoned in 1987)
+
+Binayak Banerjee
+- profiling enhancements
+
+Gert-Jan Paulissen	<g.paulissen@chello.nl>
+- thread support
+- GNU standards

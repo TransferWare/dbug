@@ -108,16 +108,8 @@ static char vcid[] = "$Header$";
 #include <stdlib.h>
 #include <string.h>
 
-#ifndef HAVE_ERRNO_H
-#define HAVE_ERRNO_H 1
-#endif
-
 #if HAVE_ERRNO_H
 #include <errno.h>
-#endif
-
-#ifndef HAVE_ASSERT_H
-#define HAVE_ASSERT_H 1
 #endif
 
 #if HAVE_ASSERT_H
