@@ -1,3 +1,7 @@
+#ifndef lint
+static char vcid[] = "$Header$";
+#endif /* lint */
+
 /******************************************************************************
  *									      *
  *	                           N O T I C E				      *
@@ -27,15 +31,10 @@
  ******************************************************************************
  */
 
-
 /*
  *  FILE
  *
  *	dbug.c   runtime support routines for dbug package
- *
- *  SCCS
- *
- *	@(#)dbug.c	1.19 9/5/87
  *
  *  DESCRIPTION
  *
@@ -56,29 +55,957 @@
  *
  *	Binayak Banerjee	(profiling enhancements)
  *	seismo!bpa!sjuvax!bbanerje
+ *
+ *      Gert-Jan Paulissen      (thread support)
+ *      e-mail: G.Paulissen@speed.a2000.nl
  */
 
-
+#include "config.h"
+
+#ifndef HASUNISTD
+#define HASUNISTD 1
+#endif
+
+#if HASUNISTD
+#include <unistd.h>
+#endif
+
+#ifdef _POSIX_THREADS
+#include <pthread.h>
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "config.h"
+#include <errno.h>
+#include <assert.h>
+#include <stdarg.h>
+
+#include "Clock.h"
+#include "SleepMsec.h"
+
+#define DBUG_IMPL 1
+
+#define PTR_STR(ptr) (ptr?"any":"(nil)")
+
+/* 
+   name_t
+
+   Structure containing a name.
+   Can be used in a pool of names, 
+   but also as a reference to one of those names.
+   Is used to reduce number of memory allocations.
+*/
+
+typedef struct {
+  char *name;
+  int ref_count; /* how many references to name. 
+		    < 0 means reference to another name */
+} name_t;
+
+#define NAMES_SIZE_EXPAND 10
+#define NAMES_MAGIC 0xACDC
+
+/* An array of names */
+typedef struct {
+  name_t *array;
+  size_t size; /* number of names allocated */
+  size_t length; /* number of names valid */
+  int magic;
+} names_t;
+
+/* Information about a function call */
+typedef struct {
+  name_t where, module;
+  int line;
+} call_t;
+
+#define STACK_SIZE_EXPAND 10
+#define STACK_MAGIC 0xABCD
+
+typedef struct {
+  call_t *array;
+  size_t size; /* number of calls allocated */
+  size_t length; /* number of calls valid */
+  char *sp_min, *sp_max; /* minimum and maximum stack pointer */
+  int magic;
+} stack_t;
+
+
+/* number of member to initialise */
+#define DBUG_CTX_NO_MEMBERS 6
+
+typedef struct {
+  char *name; /* name of dbug thread */
+  names_t pool; /* pool of names */
+  names_t break_points;
+  names_t functions;
+  stack_t stack; /* stack of function calls */
+  int magic;
+} * dbug_ctx_t; /* dbug context */
+
+#define DBUG_MAGIC 0xABCDEF
+
 #include "dbug.h" /* self-test */
 
-
-#if HASSTDARG
-#include <stdarg.h>
-#else
-# if HASVARARGS
-# include <varargs.h>		/* Use system supplied varargs package */
-# else
-# include "vargs.h"		/* Use our "fake" varargs */
-# endif
+#ifndef MALLOC
+#define MALLOC malloc
 #endif
 
-#ifndef HZ
-#define HZ (50)			/* Probably in some header somewhere */
+#ifndef FREE
+#define FREE free
 #endif
+
+#ifndef REALLOC
+#define REALLOC realloc
+#endif
+
+/*
+ * declaration of static functions 
+ */
+
+static
+dbug_errno_t
+dbug_options_ctx( const dbug_ctx_t dbug_ctx, const char *options );
+
+#ifndef NDEBUG
+static
+void
+dbug_names_print( names_t *names );
+#endif
+
+static
+dbug_errno_t
+dbug_names_init( names_t *names );
+
+static
+dbug_errno_t
+dbug_names_done( names_t *names );
+
+static
+dbug_errno_t
+dbug_names_ins( names_t *names, const char *name, int is_reference );
+
+static
+dbug_errno_t
+dbug_names_fnd( names_t *names, const char *name, name_t **result );
+
+static
+dbug_errno_t
+dbug_names_del( names_t *names, const char *name );
+
+#ifndef NDEBUG
+static
+void
+dbug_stack_print( stack_t *stack );
+#endif
+
+static
+dbug_errno_t
+dbug_stack_init( stack_t *stack );
+
+static
+dbug_errno_t
+dbug_stack_done( stack_t *stack );
+
+static
+dbug_errno_t
+dbug_stack_push( stack_t *stack, call_t *call );
+
+static
+dbug_errno_t
+dbug_stack_pop( stack_t *stack );
+
+static
+dbug_errno_t
+dbug_stack_top( stack_t *stack, call_t **top );
+
+/*
+ * definition of static functions 
+ */
+
+static
+dbug_errno_t
+dbug_options_ctx( const dbug_ctx_t dbug_ctx, const char *options )
+{
+#ifndef NDEBUG
+  printf( "> dbug_options_ctx( %s, %s )\n", PTR_STR(dbug_ctx), options );
+#endif
+
+#ifndef NDEBUG
+  printf( "< dbug_options_ctx\n" );
+#endif
+
+  return 0;
+}
+
+#ifndef NDEBUG
+static
+void
+dbug_names_print( names_t *names )
+{
+  size_t idx;
+
+  printf( "> dbug_names_print( %s )\n", PTR_STR(names) );
+  printf( "names: %s; size: %ld; length: %ld; magic: 0x%X\n", 
+	  PTR_STR(names->array), (long)names->size, (long)names->length, names->magic );
+  for ( idx = 0; idx < names->length; idx++ )
+    {
+      printf( "idx: %d; name: %s; ref_count: %d\n", 
+	      idx, names->array[idx].name, names->array[idx].ref_count );
+    }
+  printf( "< dbug_names_print\n" );
+}
+#endif
+
+static
+dbug_errno_t
+dbug_names_init( names_t *names )
+{
+#ifndef NDEBUG
+  printf( "> dbug_names_init( %s )\n", PTR_STR(names) );
+#endif
+
+  names->array = NULL;
+  names->size = names->length = 0;
+  names->magic = NAMES_MAGIC;
+
+#ifndef NDEBUG
+  printf( "< dbug_names_init\n" );
+#endif
+
+  return 0;
+}
+
+static
+dbug_errno_t
+dbug_names_done( names_t *names )
+{
+  size_t idx;
+  dbug_errno_t status = 0;
+
+#ifndef NDEBUG
+  printf( "> dbug_names_done( %s )\n", PTR_STR(names) );
+
+  dbug_names_print( names );
+#endif
+
+  if ( names == NULL || names->magic != NAMES_MAGIC )
+    status = EINVAL;
+  else
+    {
+
+      for ( idx = 0; idx < names->length; idx++ )
+	{
+	  if ( names->array[idx].ref_count >= 0 && names->array[idx].name )
+	    {
+	      FREE( names->array[idx].name );
+	      names->array[idx].name = NULL;
+	    }
+	}
+
+      if ( names->array != NULL )
+	{
+	  FREE( names->array );
+	  names->array = NULL;
+	}
+
+      names->size = names->length = 0;
+      names->magic = 0;
+    }
+
+#ifndef NDEBUG
+  printf( "< dbug_names_done = %d\n", status );
+#endif
+
+  return status;
+}
+
+static
+dbug_errno_t
+dbug_names_ins( names_t *names, const char *name, int is_reference )
+{
+  name_t *result;
+  int ins_idx; /* index to insert into */
+  int idx; /* help variable */
+  dbug_errno_t status = 0;
+
+#ifndef NDEBUG
+  printf( "> dbug_names_ins( %s, %s, %d )\n", PTR_STR(names), name, is_reference );
+#endif
+
+  /* expand if necessary */
+
+  if ( status == 0 )
+    switch( status = dbug_names_fnd( names, name, &result ) )
+      {
+      case 0:
+	if ( result->ref_count >= 0 )
+	  result->ref_count++;
+
+	status = EEXIST;
+	break;
+
+      case ESRCH: /* could not find it */
+
+	/* 
+	 * result is the name_t with its name > name 
+	 * if result is NULL there is no name_t with its name > name 
+	 */
+
+	if ( result == NULL ) /* new name will be at index length */
+	  {
+	    ins_idx = names->length;
+	  }
+	else
+	  ins_idx = result - names->array;
+
+        /*
+         * Expand if necessary
+         */
+
+        if ( names->size == names->length )
+          {
+            size_t size = sizeof(name_t) * ( names->size + NAMES_SIZE_EXPAND );
+            name_t *ptr = names->array;
+      
+            ptr = (name_t*)REALLOC( ptr, size );
+
+#ifndef NDEBUG
+            printf( "ptr before: %s; size: %d; ptr after: %s\n", 
+                    PTR_STR(names->array), size, PTR_STR(ptr) );
+#endif
+            if ( ptr == NULL )
+              {
+                status = ENOMEM;
+                break;
+              }
+            else
+              {
+            	names->array = ptr;
+            	names->size += NAMES_SIZE_EXPAND;
+              }
+          }
+
+	/* shift elements up from ins_idx to the end */
+
+	for ( idx = names->length + 1; idx > ins_idx; idx-- )
+	  names->array[idx] = names->array[idx-1];
+
+	names->array[ins_idx].name = (char*)name;
+	names->array[ins_idx].ref_count = ( is_reference ? -1 : 0 );
+	names->length++;
+	status = 0;
+	break;
+
+      default:
+	break;
+      }
+
+#ifndef NDEBUG
+  dbug_names_print( names );
+  printf( "< dbug_names_ins = %d\n", status );
+#endif
+
+  return status;
+}
+
+static
+dbug_errno_t
+dbug_names_fnd( names_t *names, const char *name, name_t **result )
+{
+  size_t idx;
+  int cmp;
+  dbug_errno_t status = ESRCH;
+
+#ifndef NDEBUG
+  printf( "> dbug_names_fnd( %s, %s, %s )\n", PTR_STR(names), name, PTR_STR(result) );
+#endif
+
+  *result = NULL;
+
+  if ( names == NULL || names->magic != NAMES_MAGIC )
+    status = EINVAL;
+  else
+    {
+      for ( idx = 0; idx < names->length; idx++ )
+	{
+	  if ( (cmp = strcmp(names->array[idx].name, name)) >= 0 )
+	    {
+	      if ( cmp == 0 )
+		status = 0;
+              *result = &names->array[idx];
+	      break;
+	    }
+	}
+    }
+
+#ifndef NDEBUG
+  dbug_names_print( names );
+  printf( "result: %s\n", 
+	  ( status == 0 || (status == ESRCH && *result) ? (*result)->name : "(nil)" ) );
+  printf( "< dbug_names_fnd = %d\n", status );
+#endif
+
+  return status;
+}
+
+static
+dbug_errno_t
+dbug_names_del( names_t *names, const char *name )
+{
+  name_t *result;
+  size_t del_idx; /* index to delete */
+  size_t idx; /* help variable */
+  dbug_errno_t status = 0;
+
+#ifndef NDEBUG
+  printf( "> dbug_names_del( %s, %s )\n", PTR_STR(names), name );
+#endif
+
+  switch( status = dbug_names_fnd( names, name, &result ) )
+    {
+    case 0:
+      /* 
+       * *result is the name_t with its name == name 
+       */
+
+      /* decrement ref_count if applicable and return */
+
+      if ( result->ref_count > 1 )
+	{
+	  result->ref_count--;
+	  break;
+	}
+      else if ( result->ref_count == 1 )
+	{
+	  result->ref_count--;
+	  FREE( result->name );
+	}
+      else
+	{
+	  assert( result->ref_count < 0 );
+	}
+
+      del_idx = ( result - names->array );
+
+      /* shift elements down from del_idx to the end */
+
+      for ( idx = del_idx; idx < names->length - 1; idx++ )
+	  names->array[idx] = names->array[idx+1];
+
+      names->length--;
+      break;
+
+    default:
+      break;
+    }
+
+#ifndef NDEBUG
+  dbug_names_print( names );
+  printf( "< dbug_names_del = %d\n", status );
+#endif
+
+  return status;
+}
+
+#ifndef NDEBUG
+static
+void
+dbug_stack_print( stack_t *stack )
+{
+  size_t idx;
+
+  printf( "> dbug_stack_print( %s )\n", PTR_STR(stack) );
+  printf( "calls: %s; size: %ld; length: %ld; magic: 0x%X\n", 
+	  PTR_STR(stack->array), (long)stack->size, (long)stack->length, stack->magic );
+  for ( idx = 0; idx < stack->length; idx++ )
+    {
+      printf( "idx: %d; where: %s; module: %s; line: %d\n", 
+	      idx, 
+              stack->array[idx].where.name, 
+              stack->array[idx].module.name,
+	      stack->array[idx].line );
+    }
+  printf( "< dbug_stack_print\n" );
+}
+#endif
+
+static
+dbug_errno_t
+dbug_stack_init( stack_t *stack )
+{
+  dbug_errno_t status = 0;
+
+#ifndef NDEBUG
+  printf( "> dbug_stack_init( %s )\n", PTR_STR(stack) );
+#endif
+
+  if ( stack == NULL )
+    status = EINVAL;
+  else
+    {
+      stack->array = NULL;
+      stack->size = stack->length = 0;
+      stack->sp_min = stack->sp_min = NULL;
+      stack->magic = STACK_MAGIC;
+    }
+
+#ifndef NDEBUG
+  printf( "< dbug_stack_init = %d\n", status );
+#endif
+
+  return status;
+}
+
+static
+dbug_errno_t
+dbug_stack_done( stack_t *stack )
+{
+  dbug_errno_t status = 0;
+
+#ifndef NDEBUG
+  printf( "> dbug_stack_done( %s )\n", PTR_STR(stack) );
+#endif
+
+  if ( stack == NULL || stack->magic != STACK_MAGIC )
+    status = EINVAL;
+  else
+    {
+
+      if ( stack->array != NULL )
+	{
+	  FREE( stack->array );
+	  stack->array = NULL;
+	}
+
+      stack->size = stack->length = 0;
+      stack->magic = 0;
+    }
+
+#ifndef NDEBUG
+  printf( "> dbug_stack_done = %d\n", status );
+#endif
+
+  return status;
+}
+
+static
+dbug_errno_t
+dbug_stack_push( stack_t *stack, call_t *call )
+{
+  dbug_errno_t status = 0;
+  size_t idx = 0;
+
+#ifndef NDEBUG
+  printf( "> dbug_stack_push( %s, %s )\n", PTR_STR(stack), PTR_STR(call) );
+#endif
+
+  if ( stack == NULL || stack->magic != STACK_MAGIC )
+    status = EINVAL;
+
+  /* do we have to expand ? */
+
+  else if ( stack->size == stack->length )
+    {
+      size_t size = sizeof(call_t) * ( stack->size + STACK_SIZE_EXPAND );
+      call_t *ptr = stack->array;
+
+      ptr = (call_t*)REALLOC( ptr, size );
+
+#ifndef NDEBUG
+      printf( "ptr before: %s; size: %d; ptr after: %s\n", 
+              PTR_STR(stack->array), size, PTR_STR(ptr) );
+#endif
+
+      if ( ptr == NULL )
+	status = ENOMEM;
+      else
+	{
+	  stack->array = ptr;
+	  stack->size += STACK_SIZE_EXPAND;
+	}
+    }
+
+  if ( status == 0 )
+    {
+      stack->array[stack->length] = *call;
+      stack->length++;
+    }
+
+#ifndef NDEBUG
+  dbug_stack_print( stack );
+  printf( "> dbug_stack_push = %d\n", status );
+#endif
+
+  return status;
+}
+
+static
+dbug_errno_t
+dbug_stack_pop( stack_t *stack )
+{
+  dbug_errno_t status = 0;
+
+#ifndef NDEBUG
+  printf( "> dbug_stack_pop( %s )\n", PTR_STR(stack) );
+#endif
+
+  if ( stack == NULL || stack->magic != STACK_MAGIC )
+    status = EINVAL;
+  else if ( stack->length > 0 )
+    stack->length--;
+  else
+    status = EPERM;
+
+#ifndef NDEBUG
+  dbug_stack_print( stack );
+  printf( "> dbug_stack_pop = %d\n", status );
+#endif
+
+  return status;
+}
+
+static
+dbug_errno_t
+dbug_stack_top( stack_t *stack, call_t **top )
+{
+  dbug_errno_t status = 0;
+
+#ifndef NDEBUG
+  printf( "> dbug_stack_top( %s )\n", PTR_STR(stack) );
+#endif
+
+  if ( stack == NULL || stack->magic != STACK_MAGIC )
+    status = EINVAL;
+  else if ( stack->length > 0 )
+    *top = &stack->array[stack->length-1];
+  else
+    status = EPERM;
+
+#ifndef NDEBUG
+  dbug_stack_print( stack );
+  printf( "top: %s\n", ( status == 0 ? (*top)->where.name : "(nil)" ) );
+  printf( "> dbug_stack_top = %d\n", status );
+#endif
+
+  return status;
+}
+
+/*
+ * Static variables
+ */
+
+static int ctx_nr = 0;
+#ifdef _POSIX_THREADS
+static pthread_mutex_t ctx_nr_mutex = PTHREAD_MUTEX_INITIALIZER;
+#endif
+
+/* 
+ * definition of global functions 
+ */
+
+dbug_errno_t
+dbug_init_ctx( const char * options, const char *name, dbug_ctx_t* dbug_ctx )
+{
+  dbug_errno_t status = 0;
+  int member_no;
+
+  for ( member_no = 0; member_no < DBUG_CTX_NO_MEMBERS+1; member_no++ )
+    {
+      switch( member_no )
+	{
+	case 0:
+	  *dbug_ctx = MALLOC( sizeof(*dbug_ctx) );
+	  if ( *dbug_ctx == NULL )
+	    {
+	      status = ENOMEM;
+	    }
+	  break;
+
+	case 1:
+	  if ( name )
+	    {
+	      (*dbug_ctx)->name = MALLOC( strlen(name) + 1 );
+	      if ( (*dbug_ctx)->name == NULL )
+		{
+		  status = ENOMEM;
+		}
+	      else
+		strcpy( (*dbug_ctx)->name, name );
+	    }
+	  else
+	    {
+	      char dbug_name[100+1];
+
+#ifdef _POSIX_THREADS
+	      status = pthread_mutex_lock( &ctx_nr_mutex );
+	      if ( status != 0 )
+		break;
+#endif
+	      ctx_nr++;
+
+	      sprintf( dbug_name, "dbug thread %d", ctx_nr );
+
+#ifdef _POSIX_THREADS
+	      status = pthread_mutex_unlock( &ctx_nr_mutex );
+	      if ( status != 0 )
+		break;
+#endif
+
+	      (*dbug_ctx)->name = (char*)MALLOC( strlen(dbug_name) + 1 );
+	      if ( (*dbug_ctx)->name == NULL )
+		{
+		  status = ENOMEM;
+		}
+	      else
+		strcpy( (*dbug_ctx)->name, dbug_name );
+	    }
+	  break;
+
+	case 2:
+	  status = dbug_names_init( &(*dbug_ctx)->pool );
+	  break;
+
+	case 3:
+	  status = dbug_names_init( &(*dbug_ctx)->break_points );
+	  break;
+
+	case 4:
+	  status = dbug_names_init( &(*dbug_ctx)->functions );
+	  break;
+
+	case 5:
+	  status = dbug_stack_init( &(*dbug_ctx)->stack );
+	  break;
+
+	case 6:
+	  status = dbug_options_ctx( *dbug_ctx, options );
+	  (*dbug_ctx)->magic = DBUG_MAGIC;
+	  break;
+
+        default:
+          assert( member_no < 0 || member_no >= DBUG_CTX_NO_MEMBERS+1 );
+          break;
+	}
+
+      if ( status != 0 )
+	{
+	  switch( member_no-1 ) /* the last correct initialised member */
+	    {
+	    case 5:
+	      dbug_stack_done( &(*dbug_ctx)->stack );
+
+	    case 4:
+	      dbug_names_done( &(*dbug_ctx)->functions );
+
+	    case 3:
+	      dbug_names_done( &(*dbug_ctx)->break_points );
+
+	    case 2:
+	      dbug_names_done( &(*dbug_ctx)->pool );
+
+	    case 1:
+	      FREE( (*dbug_ctx)->name );
+	      (*dbug_ctx)->name = NULL;
+
+            case 0:
+	      FREE( *dbug_ctx );
+	      *dbug_ctx = NULL;
+
+	    default:
+              break;
+	    }
+	      
+	  break; /* initialising is finished since there is a problem */
+	}
+    }
+
+
+  return status;
+}
+
+dbug_errno_t
+dbug_done_ctx( dbug_ctx_t* dbug_ctx )
+{
+  if ( dbug_ctx == NULL || *dbug_ctx == NULL || (*dbug_ctx)->magic != DBUG_MAGIC )
+    {
+      return EINVAL;
+    }
+
+  if ( (*dbug_ctx)->name != NULL )
+    FREE( (*dbug_ctx)->name );
+
+  dbug_stack_done( &(*dbug_ctx)->stack );
+  dbug_names_done( &(*dbug_ctx)->functions );
+  dbug_names_done( &(*dbug_ctx)->break_points );
+  dbug_names_done( &(*dbug_ctx)->pool );
+
+  FREE( *dbug_ctx );
+  *dbug_ctx = NULL;
+}
+
+#ifndef NDEBUG
+
+int main( int argc, char **argv )
+{
+  names_t names;
+  name_t *result;
+  stack_t stack;
+  call_t call, *top;
+  int idx;
+
+  dbug_names_init( &names );
+
+  for ( idx = 1; idx < argc; idx++ )
+    dbug_names_ins( &names, argv[idx], idx%2 );
+
+  printf( "\n" );
+
+  for ( idx = 1; idx < argc; idx++ )
+    dbug_names_ins( &names, argv[idx], idx%2 );
+
+  printf( "\n" );
+
+  for ( idx = 1; idx < argc; idx++ )
+    dbug_names_fnd( &names, argv[idx], &result );
+
+  printf( "\n" );
+
+  for ( idx = 1; idx < argc; idx++ )
+    dbug_names_del( &names, argv[idx] );
+
+  printf( "\n" );
+
+  for ( idx = 1; idx < argc; idx++ )
+    dbug_names_del( &names, argv[idx] );
+
+  printf( "\n" );
+
+  dbug_names_done( &names );
+
+  printf( "\n" );
+
+  dbug_stack_init( &stack );
+
+  printf( "\n" );
+
+  for ( idx = 1; idx < argc; idx++ )
+    {
+      call.where.name = argv[idx];
+      call.module.name = __FILE__;
+      call.line = __LINE__;
+      dbug_stack_push( &stack, &call );
+    }
+
+  printf( "\n" );
+
+  for ( idx = 1; idx < argc; idx++ )
+    {
+      dbug_stack_pop( &stack );
+      dbug_stack_top( &stack, &top );
+    }
+
+  printf( "\n" );
+
+  dbug_stack_done( &stack );
+
+  printf( "\n" );
+
+  /* PRINT ALL ERRNO NUMBERS USED IN THIS SOURCE */
+
+#define PRINT_ERRNO(errno) printf( "%s: %d\n", #errno, errno )
+
+  PRINT_ERRNO(EINVAL);
+  PRINT_ERRNO(EEXIST);
+  PRINT_ERRNO(ESRCH);
+  PRINT_ERRNO(ENOMEM);
+  PRINT_ERRNO(EPERM);
+
+  return 0;
+}
+
+#endif
+
+#if 0
+
+dbug_errno_t
+dbug_enter_ctx( const dbug_ctx_t dbug_ctx, const char *where, const char *module, const int line, const char *sp )
+{
+  dbug_errno_t status;
+
+  if ( dbug_ctx == NULL || dbug_ctx->magic != DBUG_MAGIC )
+    {
+      return EINVAL;
+    }
+  
+  switch( status = dbug_call_push( &dbug_ctx->first_call, where, module, line ) )
+    {
+    case 0:
+      break;
+    default:
+      return status;
+    }
+
+  return 0;
+}
+
+dbug_errno_t
+dbug_leave_ctx( const dbug_ctx_t dbug_ctx )
+{
+  dbug_errno_t status;
+  call_t *last;
+
+  if ( dbug_ctx == NULL || dbug_ctx->magic != DBUG_MAGIC )
+    {
+      return EINVAL;
+    }
+  
+  switch( status = dbug_call_pop( &dbug_ctx->first_call, &last ) )
+    {
+    case 0:
+      break;
+    default:
+      return status;
+    }
+
+  return 0;
+}
+
+dbug_errno_t
+dbug_print_ctx( const dbug_ctx_t dbug_ctx, const char *keyword, const char *format, ... )
+{
+  dbug_errno_t status;
+
+  dbug_print1_ctx( dbug_ctx, format );
+
+  va_start( ap, format );
+  dbug_print3_ctx( dbug_ctx, keyword, format, ap );
+  va_end( ap );
+
+  return 0;
+}
+
+dbug_errno_t
+dbug_print1_ctx( const dbug_ctx_t dbug_ctx, const char *keyword )
+{
+  /* save dbug_ctx and keyword */
+}
+
+dbug_errno_t
+dbug_print2_ctx( const char *format, ... )
+{
+  va_list ap;
+
+  va_start( ap, format );
+  dbug_print3_ctx( dbug_ctx, dbug_ctx->keyword, format, ap );
+  va_end( ap );
+}
+
+static
+dbug_errno_t
+dbug_print3_ctx( const dbug_ctx_t dbug_ctx, const char *keyword, const char *format, va_list ap );
+
 
 /*
  *	Manifest constants that should not require any changes.
@@ -184,12 +1111,12 @@ LOCAL VOID perror (char *s);	/* Fake system/library error print routine */
 #  ifndef getpid
 #   define getpid _getpid
 #  endif
-# endif
+# endif /* HASGETPID */
 # if HASACCESS
 #  include <io.h>
 #  ifndef access
 #   define access _access
-#  endif
+#  endif /* access */
 #  /* _access of Visual C++ has the following modes: 
 #     * 0 for existence
 #     * 2 for write permission
@@ -200,30 +1127,16 @@ LOCAL VOID perror (char *s);	/* Fake system/library error print routine */
 #  define X_OK	4	/* Test for execute permission */
 #  define W_OK	2	/* Test for write access */
 #  define R_OK	4	/* Test for read access */
-# endif
-# if HASSLEEP
-#  include <stdlib.h>
-#  include <time.h>
-#  ifndef sleep
-#   define sleep _sleep
-#  endif
-# endif
+# endif /* HASACCESS */
 
 #else /* #ifdef _WIN32 */
+
 /* ! _WIN32 */
-# if HASCHOWN || HASGETGID || HASGETPID || HASGETUID || HASACCESS || HASSLEEP
+# if HASCHOWN || HASGETGID || HASGETPID || HASGETUID || HASACCESS 
 # include <unistd.h>
 # endif
 
 #endif /* #ifdef _WIN32 */
-
-#if HASFTIME
-#include <sys/timeb.h>
-#endif
-
-#if HASGETRUSAGE
-#include <sys/resource.h>
-#endif
 
 
 /*
@@ -249,7 +1162,7 @@ struct link {
 struct state {
     int flags;				/* Current state flags */
     int maxdepth;			/* Current maximum trace depth */
-    unsigned int delay;			/* Delay after each output line */
+    unsigned int delay;			/* Delay after each output line in milliseconds */
     int level;				/* Current function nesting level */
     FILE *out_file;			/* Current output stream */
     FILE *prof_file;			/* Current profiling stream */
@@ -301,9 +1214,7 @@ LOCAL VOID PushState (void);	/* Push current debug state */
 LOCAL VOID ChangeOwner (char *);	/* Change file owner and group */
 LOCAL BOOLEAN DoTrace (void);	/* Test for tracing enabled */
 LOCAL BOOLEAN DoProfile ( void );
-LOCAL int DelayArg (int value);
 LOCAL BOOLEAN Writable (char *);	/* Test to see if file is writable */
-LOCAL unsigned long Clock (void);	/* Return current user time (ms) */
 LOCAL long *DbugMalloc (int);	/* Allocate memory for runtime support */
 LOCAL char *BaseName (char *);	/* Remove leading pathname components */
 LOCAL VOID DoPrefix (int);		/* Print debugger line prefix */
@@ -350,21 +1261,6 @@ LOCAL char *u_keyword = "?";	/* Keyword for current macro */
 #  define EXISTS(pathname) (FALSE)	/* Assume no existance */
 #  define WRITABLE(pathname) (TRUE)
 #endif
-
-/*
- *	Translate some calls among different systems.
- */
-
-#if HASDELAY
-IMPORT int Delay ( int seconds );		/* Pause for given number of ticks */
-#else
-# if HASSLEEP
-#  define Delay sleep
-# else
-LOCAL int Delay ( int seconds );		/* Pause for given number of ticks */
-# endif
-#endif
-
 
 
 /*
@@ -555,7 +1451,9 @@ VOID _db_push_ (char *control)
 		stack -> delay = 0;
 		if (*scan++ == ',') {
 		    temp = ListParse (scan);
-		    stack -> delay = DelayArg (atoi (temp -> string));
+		      /* Delay argument is specified in tenths of seconds and 
+			 SleepMsec() uses milliseconds, hence multiply by 100 */
+		    stack -> delay = atoi (temp -> string) * 100; 
 		    FreeList (temp);
 		}
 		break;
@@ -749,7 +1647,7 @@ char ***_sframep_
 	Indent (stack -> level);
 	(VOID) fprintf (_db_fp_, ">%s\n", func);
 	(VOID) fflush (_db_fp_);
-	(VOID) Delay (stack -> delay);
+	(VOID) SleepMsec (stack -> delay);
     }
 }
 
@@ -798,7 +1696,7 @@ int *_slevel_ )
 	}
     }
     (VOID) fflush (_db_fp_);
-    (VOID) Delay (stack -> delay);
+    (VOID) SleepMsec (stack -> delay);
     stack -> level = *_slevel_ - 1;
     func = *_sfunc_;
     file = *_sfile_;
@@ -908,7 +1806,7 @@ va_dcl
 	(VOID) vfprintf (_db_fp_, format, args);
 	(VOID) fprintf (_db_fp_, "\n");
 	(VOID) fflush (_db_fp_);
-	(VOID) Delay (stack -> delay);
+	(VOID) SleepMsec (stack -> delay);
     }
     va_end (args);
 }
@@ -1350,7 +2248,7 @@ LOCAL VOID OpenFile (char *name)
 		(VOID) fprintf (_db_fp_, ERR_OPEN, _db_process_, name);
 		perror ("");
 		(VOID) fflush (_db_fp_);
-		(VOID) Delay (stack -> delay);
+		(VOID) SleepMsec (stack -> delay);
 	    } else {
 		if (EXISTS (name)) {
 		    newfile = FALSE;
@@ -1362,7 +2260,7 @@ LOCAL VOID OpenFile (char *name)
  		    (VOID) fprintf (_db_fp_, ERR_OPEN, _db_process_, name);
 		    perror ("");
 		    (VOID) fflush (_db_fp_);
-		    (VOID) Delay (stack -> delay);
+		    (VOID) SleepMsec (stack -> delay);
 		} else {
 		    _db_fp_ = fp;
 		    stack -> out_file = fp;
@@ -1412,7 +2310,7 @@ LOCAL VOID OpenProfile (char *name)
 	    (VOID) fprintf (_db_fp_, ERR_OPEN, _db_process_, name);
 	    perror ("");
 	    (VOID) fflush (_db_fp_);
-	    (VOID) Delay (stack -> delay);
+	    (VOID) SleepMsec (stack -> delay);
 	} else {
 	    if (EXISTS (name)) {
 		newfile = FALSE;
@@ -1424,7 +2322,7 @@ LOCAL VOID OpenProfile (char *name)
 		(VOID) fprintf (_db_fp_, ERR_OPEN, _db_process_, name);
 		perror ("");
 		(VOID) fflush (_db_fp_);
-		(VOID) Delay (stack -> delay);
+		(VOID) SleepMsec (stack -> delay);
 	    } else {
 		_db_pfp_ = fp;
 		stack -> prof_file = fp;
@@ -1461,7 +2359,7 @@ LOCAL VOID CloseFile (FILE *fp)
 	    (VOID) fprintf (stderr, ERR_CLOSE, _db_process_);
 	    perror ("");
 	    (VOID) fflush (stderr);
-	    (VOID) Delay (stack -> delay);
+	    (VOID) SleepMsec (stack -> delay);
 	}
     }
 }
@@ -1490,7 +2388,7 @@ LOCAL VOID DbugExit (char *why)
 {
     (VOID) fprintf (stderr, ERR_ABORT, _db_process_, why);
     (VOID) fflush (stderr);
-    (VOID) Delay (stack -> delay);
+    (VOID) SleepMsec (stack -> delay);
     exit (1);
 }
 
@@ -1645,7 +2543,7 @@ LOCAL VOID ChangeOwner (char *pathname)
 	(VOID) fprintf (stderr, ERR_CHOWN, _db_process_, pathname);
 	perror ("");
 	(VOID) fflush (stderr);
-	(VOID) Delay (stack -> delay);
+	(VOID) SleepMsec (stack -> delay);
     }
 #else
     /* suppress warning about unreference formal parameter */
@@ -1715,61 +2613,6 @@ VOID _db_longjmp_ ( void )
 /*
  *  FUNCTION
  *
- *	DelayArg   convert D flag argument to appropriate value
- *
- *  SYNOPSIS
- *
- *	LOCAL int DelayArg (value)
- *	int value;
- *
- *  DESCRIPTION
- *
- *	Converts delay argument, given in tenths of a second, to the
- *	appropriate numerical argument used by the system to delay
- *	that that many tenths of a second.  For example, on the
- *	amiga, there is a system call "Delay()" which takes an
- *	argument in ticks (50 per second).  On unix, the sleep
- *	command takes seconds.  Thus a value of "10", for one
- *	second of delay, gets converted to 50 on the amiga, and 1
- *	on unix.  Other systems will need to use a timing loop.
- *
- */
-
-LOCAL int DelayArg (int value)
-{
-    unsigned int delayarg = 0;
-    
-#if HASDELAY
-    delayarg = (HZ * value) / 10;	/* Delay in ticks for Delay () */
-#else
-# if HASSLEEP
-#  if SLEEPGRANULARITY == 'S'
-    delayarg = value / 10;		/* Delay is in seconds for sleep () */
-#  else
-    delayarg = ( CLOCKS_PER_SEC * value ) / 10;	/* Delay is in ticks for sleep () */
-#  endif
-# endif
-#endif
-    return (delayarg);
-}
-
-
-/*
- *	A dummy delay stub for systems that do not support delays.
- *	With a little work, this can be turned into a timing loop.
- */
-
-#if ! HASSLEEP && ! HASDELAY
-int Delay ( int seconds )
-{
-  return 0;
-}
-#endif
-
-
-/*
- *  FUNCTION
- *
  *	perror    perror simulation for systems that don't have it
  *
  *  SYNOPSIS
@@ -1804,133 +2647,4 @@ LOCAL VOID perror (char *s)
 
 #endif	/* ! HASPERROR */
 
-/*
- * Here we need the definitions of the clock routine.  Add your
- * own for whatever system that you have.
- */
-
-#if HASCLOCK
-
-#include <time.h>
-
-LOCAL unsigned long Clock (void)
-{
-  static clock_t start;
-  static int init = 0;
-  clock_t tmp;
-
-  if ( !init )
-  {
-    start = clock();
-    init = 1;
-    return 0;
-  }
-  else
-  {
-    tmp = clock();
-      /* multiply by 1000 to get ms */
-    return ( (clock_t)1000 * (tmp - start) ) / (CLOCKS_PER_SEC); 
-  }
-}
-
-#else /* HASCLOCK */
-
-# if HASFTIME
-
-# include <sys/timeb.h>
-
-LOCAL unsigned long Clock (void)
-{
-  static struct timeb start;
-  static int init = 0;
-  unsigned long tm = 0;
-  struct timeb tmp;
-
-  if ( !init )
-  {
-    ftime( &start );
-    init = 1;
-    return 0;
-  }
-  else
-  {
-    ftime( &tmp );
-    tm = (tmp.time - start.time)*1000 + (tmp.millitm - start.millitm);
-#if 0
-    fprintf( stderr, "Elapsed time (%ld (s), %ld (ms), %ld (tot))\n", 
-      (long)(tmp.time - start.time), (long)(tmp.millitm - start.millitm), tm );
-#endif
-    return tm;
-  }
-}
-
-# else /* HASFTIME */
-
-#  if HASGETRUSAGE
-
-#  include <sys/param.h>
-
-/*
- * Definition of the Clock() routine for 4.3 BSD.
- */
-
-#  include <sys/time.h>
-#  include <sys/resource.h>
-
-/*
- * Returns the user time in milliseconds used by this process so
- * far.
- */
-
-LOCAL unsigned long Clock (void)
-{
-    struct rusage ru;
-
-    (VOID) getrusage (RUSAGE_SELF, &ru);
-    return ((ru.ru_utime.tv_sec * 1000) + (ru.ru_utime.tv_usec / 1000));
-}
-
-#  else /* HASGETRUSAGE */
-#   if HASDATESTAMP
-
-struct DateStamp {		/* Yes, this is a hack, but doing it right */
-	long ds_Days;		/* is incredibly ugly without splitting this */
-	long ds_Minute;		/* off into a separate file */
-	long ds_Tick;
-};
-
-static int first_clock = TRUE;
-static struct DateStamp begin;
-static struct DateStamp elapsed;
-
-LOCAL unsigned long Clock (void)
-{
-    register struct DateStamp *now;
-    register unsigned long millisec = 0;
-    IMPORT VOID *AllocMem (long);
-
-    now = (struct DateStamp *) AllocMem ((long) sizeof (struct DateStamp), 0L);
-    if (now != NULL) {
-	if (first_clock == TRUE) {
-	    first_clock = FALSE;
-	    (VOID) DateStamp (now);
-	    begin = *now;
-	}
-	(VOID) DateStamp (now);
-	millisec = 24 * 3600 * (1000 / HZ) * (now -> ds_Days - begin.ds_Days);
-	millisec += 60 * (1000 / HZ) * (now -> ds_Minute - begin.ds_Minute);
-	millisec += (1000 / HZ) * (now -> ds_Tick - begin.ds_Tick);
-	(VOID) FreeMem (now, (long) sizeof (struct DateStamp));
-    }
-    return (millisec);
-}
-
-#   else
-LOCAL unsigned long Clock (void)
-{
-  return 0;
-}
-#   endif /* HASDATESTAMP */
-#  endif	/* HASGETRUSAGE */
-# endif /* HASFTIME */
-#endif /* HASCLOCK */
+#endif /* #if 0 */

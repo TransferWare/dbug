@@ -1,3 +1,7 @@
+/* $Header$ */
+#ifndef DBUG_H
+#define DBUG_H
+
 /******************************************************************************
  *									      *
  *	                           N O T I C E				      *
@@ -27,7 +31,6 @@
  ******************************************************************************
  */
 
-
 /*
  *  FILE
  *
@@ -35,11 +38,11 @@
  *
  *  SYNOPSIS
  *
- *	#include <local/dbug.h>
+ *	#include <dbug.h>
  *
- *  SCCS ID
+ *  RCS ID
  *
- *	@(#)dbug.h	1.12 4/2/89
+ *	@(#)$Header$
  *
  *  DESCRIPTION
  *
@@ -56,25 +59,50 @@
  *	decided in favor of efficiency since space is seldom a
  *	problem on the new machines).
  *
- *	All externally visible symbol names follow the pattern
- *	"_db_xxx..xx_" to minimize the possibility of a dbug package
- *	symbol colliding with a user defined symbol.
- *	
- *	The DBUG_<N> style macros are obsolete and should not be used
- *	in new code.  Macros to map them to instances of DBUG_PRINT
- *	are provided for compatibility with older code.  They may go
- *	away completely in subsequent releases.
- *
  *  AUTHOR
  *
  *	Fred Fish
- *	(Currently employed by Motorola Computer Division, Tempe, Az.)
- *	hao!noao!mcdsun!fnf
- *	(602) 438-3614
  *
  */
 
-
+
+/* Force C linking */
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+typedef int dbug_errno_t;
+
+#ifndef DBUG_IMPL
+#define DBUG_IMPL 0
+#endif
+
+#if !DBUG_IMPL
+typedef void * dbug_ctx_t; /* dbug context */
+#endif
+
+extern
+dbug_errno_t
+dbug_init_ctx( const char * options, const char *name, dbug_ctx_t* dbug_ctx );
+
+extern
+dbug_errno_t
+dbug_done_ctx( dbug_ctx_t* dbug_ctx );
+
+extern
+dbug_errno_t
+dbug_enter_ctx( const dbug_ctx_t dbug_ctx, const char *where, const char *module, const int line, const char *sp );
+
+extern
+dbug_errno_t
+dbug_leave_ctx( const dbug_ctx_t dbug_ctx );
+
+extern
+dbug_errno_t
+dbug_print_ctx( const dbug_ctx_t dbug_ctx, const char *keyword, const char *format, ... );
+
+#if 0
+
 /*
  *	Internally used dbug variables which must be global.
  */
@@ -198,3 +226,10 @@ extern void dbug_print5(
 extern void dbug_pop( void );
 extern void dbug_process( char * i_process );
 
+#endif /* #if 0 */
+
+#ifdef __cplusplus
+};
+#endif
+
+#endif
