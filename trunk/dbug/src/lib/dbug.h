@@ -171,3 +171,75 @@ char *keyword
 #    define DBUG_SETJMP(a1) (_db_setjmp_ (), setjmp (a1))
 #    define DBUG_LONGJMP(a1,a2) (_db_longjmp_ (), longjmp (a1, a2))
 # endif
+
+/*
+|| Configuration issues.
+*/
+
+#ifndef HASVARARGS
+#define HASVARARGS 1
+#endif
+
+/* perror: <errno.h> */
+#ifndef HASPERROR
+#define HASPERROR 1
+#endif
+
+/* chown: <unistd.h> */
+#ifndef HASCHOWN
+#define HASCHOWN 1
+#endif
+
+/* getgid: <unistd.h> */
+#ifndef HASGETGID
+#define HASGETGID 1
+#endif
+
+/* getpid: <unistd.h> */
+#ifndef HASGETPID
+#define HASGETPID 1
+#endif
+
+/* chown: <unistd.h> */
+#ifndef HASGETUID
+#define HASGETUID 1
+#endif
+
+/* access: <unistd.h> */
+#ifndef HASACCESS
+#define HASACCESS 1
+#endif
+
+/* ftime: <sys/timeb.h> */
+#ifndef HASFTIME
+#define HASFTIME 1
+#endif
+
+/* getrusage: <sys/resource.h> */
+#ifndef HASGETRUSAGE
+#define HASGETRUSAGE 1
+#endif
+
+#ifndef HASDATESTAMP
+#define HASDATESTAMP 0 /* amiga */
+#endif
+
+/* sleep: <unistd.h> */
+#ifndef HASSLEEP
+#define HASSLEEP 1
+#endif
+
+#ifndef HASDELAY
+#define HASDELAY 0 /* amiga */
+#endif
+
+#ifndef HASSETJMP
+#define HASSETJMP 1
+#endif
+
+#ifndef DIRSEP
+#define DIRSEP '/'
+#endif
+
+
+
