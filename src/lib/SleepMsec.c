@@ -92,7 +92,7 @@ static char vcid[] = "$Header$";
  *  SYNOPSIS
  *
  *	int SleepMsec(value)
- *	int value;
+ *	unsigned int value;
  *
  *  DESCRIPTION
  *
@@ -100,7 +100,7 @@ static char vcid[] = "$Header$";
  *
  */
 
-void SleepMsec(int value)
+void SleepMsec(unsigned int value)
 {
     unsigned int delayarg = 0;
     
@@ -120,11 +120,13 @@ void SleepMsec(int value)
  *	Translate some calls among different systems.
  */
 
+    /*@-noeffect@*/
+
 #if HASDELAY
-    Delay( delayarg );		/* Pause for given number of ticks */
+    (void) Delay( delayarg );		/* Pause for given number of ticks */
 #else
 # if HASSLEEP
-    sleep( delayarg );
+    (void) sleep( delayarg );
 # endif
 #endif
    

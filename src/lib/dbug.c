@@ -92,6 +92,18 @@ static char vcid[] = "$Header$";
 
 #endif /* #ifdef _WIN32 */
 
+#ifndef _POSIX_THREADS
+
+#define FLOCKFILE(f)
+#define FUNLOCKFILE(f)
+
+#else
+
+#define FLOCKFILE(f) flockfile(f)
+#define FUNLOCKFILE(f) funlockfile(f)
+
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -103,6 +115,7 @@ static char vcid[] = "$Header$";
 #include <stdarg.h>
 #else
 # if HASVARARGS
+# /*@-usevarargs@*/
 # include <varargs.h>		/* Use system supplied varargs package */
 # else
 # include "vargs.h"		/* Use our "fake" varargs */
@@ -124,7 +137,7 @@ static char vcid[] = "$Header$";
 */
 
 typedef struct {
-  char *name;
+  /*@only@*/ char *name;
 
   /* ref_count: how many references to name. 
      0 means once allocated but not used anywhere, i.e. may be freed
@@ -132,13 +145,13 @@ typedef struct {
   unsigned int ref_count; 
 } name_t;
 
-#define NAMES_SIZE_EXPAND 10
+#define NAMES_SIZE_EXPAND 100
 #define NAMES_MAGIC 0xACDC
 #define NAMES_VALID(names) ( (names) != NULL && (names)->magic == NAMES_MAGIC )
 
 /* An array of names */
 typedef struct {
-  name_t *array;
+  /*@only@*/ name_t *array;
   size_t size; /* number of names allocated */
   size_t count; /* number of names valid */
   int magic;
@@ -154,7 +167,7 @@ typedef struct {
 #define STACK_VALID(stack) ( (stack) != NULL && (stack)->magic == STACK_MAGIC )
 
 typedef struct {
-  call_t *array;
+  /*@only@*/ call_t *array;
   size_t size; /* number of calls allocated */
   size_t count, maxcount; /* number of calls valid */
   int *sp_min, *sp_max; /* minimum and maximum stack pointer */
@@ -170,7 +183,7 @@ typedef struct {
 #endif
 
 typedef struct {
-  char *name;                   /* name of dbug thread */
+  /*@only@*/ char *name;                   /* name of dbug thread */
   names_t files;                /* List of files once entered */
   names_t functions;            /* List of functions once entered */
 #if BREAK_POINTS_ALLOWED
@@ -182,12 +195,16 @@ typedef struct {
   call_stack_t stack;           /* stack of function calls */
   int ctx_nr;                   /* internal number */
 #if HASGETPID
-  int pid;                      /* process id */
+  unsigned long pid;            /* process id */
 #endif
   int flags;			/* Current state flags */
   unsigned int delay;		/* Delay after each output line in milliseconds */
-  FILE *fp;
+  /*@null@*/ FILE *fp;
   char separator;
+
+  struct tm tm;                 /* time to print in YYYYMMDDhhmmss format */
+
+  unsigned short seq;           /* sequence number which helps sorting output */
 
   int magic;                    /* Magic number */
 } * dbug_ctx_t; /* dbug context */
@@ -198,9 +215,9 @@ typedef struct {
 
   /* Struct for saving print info for the DBUG_PRINT and DBUG_PRINT_CTX macro's */
 typedef struct {
-  dbug_ctx_t dbug_ctx;
+  /*@null@*/ dbug_ctx_t dbug_ctx;
   int line;
-  char *break_point;
+  /*@null@*/ char *break_point;
 } dbug_print_info_t;
 
 #ifdef _POSIX_THREADS
@@ -218,6 +235,23 @@ typedef struct {
 #endif /* #ifdef _POSIX_THREADS */
 
 #include "dbug.h" /* self-test */
+
+#ifndef NDEBUG
+
+#define _DBUG_ENTER( procname ) \
+  { FLOCKFILE(stdout); (void)fprintf( stdout, "> %s\n", procname ); FUNLOCKFILE(stdout); }
+#define _DBUG_LEAVE() \
+  { FLOCKFILE(stdout); (void) fprintf( stdout, "< %s\n", procname ); FUNLOCKFILE(stdout); }
+#define _DBUG_PRINT( break_point, args ) \
+  { FLOCKFILE(stdout); (void) printf args ; (void) fprintf( stdout, "\n" ); FUNLOCKFILE(stdout); }
+
+#else
+
+#define _DBUG_ENTER( procname )
+#define _DBUG_LEAVE() 
+#define _DBUG_PRINT( break_point, args )
+
+#endif
 
 /*
  *	Manifest constants that should not require any changes.
@@ -252,20 +286,128 @@ typedef struct {
 
 #define MODIFIER_SEPARATOR '='
 
-/* print: address of dbug context, I, major version, minor version, teeny version, name, context number, process id, flags */
-#define DBUG_INIT_FMT  "DBUG%c%p%cI%c%d.%d.%d%c%s%c%d%c%ld%c%d\n"
+#define SEP_FMT "%c"
+#define PTR_FMT "%p"
+/* GMT in YYYYMMDDhhmmss format */
+#define DATE_FMT "%04d%02d%02d%02d%02d%02d"
+#define SEQ_FMT "%05hu"
+#define TIME_FMT "%ld"
+#define FILE_FMT "%s"
+#define FUNCTION_FMT "%s"
+#define LINE_FMT "%ld"
+#define LEVEL_FMT "%ld"
 
-/* print: address of dbug context, D, maximum number of functions on the stack, stack usage */
-#define DBUG_DONE_FMT  "DBUG%c%p%cD%c%ld%c%ld\n"
+/* print:
+   - DBUG
+   - address of dbug context
+   - date
+   - seq
+   - I
+   - major version, minor version, teeny version
+   - name
+   - context number
+   - process id
+   - flags 
+*/
+#define DBUG_INIT_FMT  \
+  "DBUG" SEP_FMT \
+  PTR_FMT SEP_FMT \
+  DATE_FMT SEP_FMT \
+  SEQ_FMT SEP_FMT \
+  "I" SEP_FMT \
+  "%d.%d.%d" SEP_FMT \
+  "%s" SEP_FMT \
+  "%d" SEP_FMT \
+  "%lu" SEP_FMT \
+  "%d" "\n"
 
-/* print: address of dbug context, E, file, function, line, level, time */
-#define DBUG_ENTER_FMT "DBUG%c%p%cE%c%s%c%s%c%ld%c%ld%c%ld\n"
+/* print:
+   - address of dbug context
+   - date
+   - seq
+   - D
+   - maximum number of functions on the stack
+   - stack usage
+*/
+#define DBUG_DONE_FMT \
+  "DBUG" SEP_FMT \
+  PTR_FMT SEP_FMT \
+  DATE_FMT SEP_FMT \
+  SEQ_FMT SEP_FMT \
+  "D" SEP_FMT \
+  "%ld" SEP_FMT \
+  "%ld" "\n"
 
-/* print: address of dbug context, L, file, function, line, level, time */
-#define DBUG_LEAVE_FMT "DBUG%c%p%cL%c%s%c%s%c%ld%c%ld%c%ld\n"
+/* print:
+   - address of dbug context
+   - date
+   - seq
+   - E
+   - file
+   - function
+   - line
+   - level
+   - time
+*/
+#define DBUG_ENTER_FMT \
+  "DBUG" SEP_FMT \
+  PTR_FMT SEP_FMT \
+  DATE_FMT SEP_FMT \
+  SEQ_FMT SEP_FMT \
+  "E" SEP_FMT \
+  FILE_FMT SEP_FMT \
+  FUNCTION_FMT SEP_FMT \
+  LINE_FMT SEP_FMT \
+  LEVEL_FMT SEP_FMT \
+  TIME_FMT "\n"
 
-/* print: address of dbug context, P, file, function, line, level, break point, followed by user supplied parameters */
-#define DBUG_PRINT_FMT "DBUG%c%p%cP%c%s%c%s%c%ld%c%ld%c%s%c"
+/* print:
+   - address of dbug context
+   - date
+   - seq
+   - L
+   - file
+   - function
+   - line
+   - level
+   - time
+*/
+#define DBUG_LEAVE_FMT \
+  "DBUG" SEP_FMT \
+  PTR_FMT SEP_FMT \
+  DATE_FMT SEP_FMT \
+  SEQ_FMT SEP_FMT \
+  "L" SEP_FMT \
+  FILE_FMT SEP_FMT \
+  FUNCTION_FMT SEP_FMT \
+  LINE_FMT SEP_FMT \
+  LEVEL_FMT SEP_FMT \
+  TIME_FMT "\n"
+
+/* print:
+   address of dbug context
+   - date
+   - seq
+   - P
+   - file
+   - function
+   - line
+   - level
+   - break point
+   - followed by user supplied parameters
+*/
+
+#define DBUG_PRINT_FMT \
+  "DBUG" SEP_FMT \
+  PTR_FMT SEP_FMT \
+  DATE_FMT SEP_FMT \
+  SEQ_FMT SEP_FMT \
+  "P" SEP_FMT \
+  FILE_FMT SEP_FMT \
+  FUNCTION_FMT SEP_FMT \
+  LINE_FMT SEP_FMT \
+  LEVEL_FMT SEP_FMT \
+  "%s" SEP_FMT
 
 #ifndef MALLOC
 #define MALLOC malloc
@@ -275,14 +417,11 @@ typedef struct {
 #define FREE free
 #endif
 
-#ifndef REALLOC
-#define REALLOC realloc
-#endif
-
 /*
  * typedefs
  */
 
+/*@-likelybool@*/
 typedef int BOOLEAN;
 
 /*
@@ -329,11 +468,11 @@ dbug_names_done( names_t *names );
 
 static
 dbug_errno_t
-dbug_names_ins( names_t *names, const char *name, name_t **result );
+dbug_names_ins( names_t *names, const char *name, /*@out@*/ name_t **result );
 
 static
 dbug_errno_t
-dbug_names_fnd( names_t *names, const char *name, name_t **result );
+dbug_names_fnd( names_t *names, const char *name, /*@out@*/ name_t **result );
 
 static
 dbug_errno_t
@@ -355,7 +494,7 @@ dbug_stack_done( call_stack_t *stack );
 
 static
 dbug_errno_t
-dbug_stack_push( call_stack_t *stack, call_t *call );
+dbug_stack_push( call_stack_t *stack, /*@in@*/ call_t *call );
 
 static
 dbug_errno_t
@@ -363,7 +502,7 @@ dbug_stack_pop( call_stack_t *stack );
 
 static
 dbug_errno_t
-dbug_stack_top( call_stack_t *stack, call_t **top );
+dbug_stack_top( call_stack_t *stack, /*@out@*/ call_t **top );
 
 #ifdef _POSIX_THREADS
 
@@ -385,11 +524,31 @@ dbug_key_done( dbug_key_t *dbug_key );
 
 #endif
 
+/*@null@*/
+static
+dbug_ctx_t
+dbug_ctx_get( void );
+
+static
+dbug_errno_t
+dbug_ctx_set( const dbug_ctx_t dbug_ctx );
+
+/*@null@*/
+static 
+dbug_print_info_t*
+dbug_print_info_get( void );
+
+static 
+dbug_errno_t
+dbug_print_info_set( const dbug_print_info_t *dbug_print_info );
+
 /*
  * Static variables
  */
 
 static int ctx_nr = 0;
+
+static /*@null@*/ char *first_dbug_options = NULL;
 
 #ifdef _POSIX_THREADS
 static pthread_mutex_t ctx_nr_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -401,7 +560,7 @@ static dbug_key_t dbug_ctx_key = { PTHREAD_MUTEX_INITIALIZER, 0, &dbug_ctx_data_
 static dbug_key_t dbug_print_info_key = { PTHREAD_MUTEX_INITIALIZER, 0, &dbug_print_info_data_done };
 
 #else
-static dbug_ctx_t g_dbug_ctx = NULL; /* global debug context for dbug routines */
+static /*@null@*/ dbug_ctx_t g_dbug_ctx = NULL; /* global debug context for dbug routines */
 /* Variable for saving print info for the DBUG_PRINT and DBUG_PRINT_CTX macro */
 static dbug_print_info_t g_dbug_print_info = { NULL, 0, NULL };
 #endif
@@ -418,7 +577,7 @@ static dbug_print_info_t g_dbug_print_info = { NULL, 0, NULL };
  *  SYNOPSIS
  */
 
-static BOOLEAN is_break_point(const dbug_ctx_t dbug_ctx, const call_t *call, const char *break_point)
+static BOOLEAN is_break_point(const dbug_ctx_t dbug_ctx, /*@unused@*/ const call_t *call, /*@unused@*/ const char *break_point)
 
 /*
  *  DESCRIPTION
@@ -488,10 +647,9 @@ _dbug_print_ctx( const dbug_ctx_t dbug_ctx, const int line, const char *break_po
   dbug_errno_t status = 0;
   const char *procname = "_dbug_print_ctx";
 
-#ifndef NDEBUG
-  printf( "> %s( %s, %d, %s, %s )\n", 
-	  procname, PTR_STR(dbug_ctx), line, break_point, format );
-#endif
+  _DBUG_ENTER( procname );
+  _DBUG_PRINT( "input", ( "dbug_ctx: %s; line: %d; break_point: %s; format: %s", 
+			  PTR_STR(dbug_ctx), line, break_point, format ) );
 
   if ( !DBUG_CTX_VALID(dbug_ctx) )
     status = EINVAL;
@@ -504,24 +662,37 @@ _dbug_print_ctx( const dbug_ctx_t dbug_ctx, const int line, const char *break_po
 	case 0:
 	  if ( is_break_point( dbug_ctx, call, break_point ) )
 	    {
-	      fprintf( dbug_ctx->fp, DBUG_PRINT_FMT,
-		       dbug_ctx->separator,
-		       (void*)dbug_ctx,
-		       dbug_ctx->separator,
-		       dbug_ctx->separator,
-		       call->file,
-		       dbug_ctx->separator,
-		       call->function,
-		       dbug_ctx->separator,
-		       (long)line,
-		       dbug_ctx->separator,
-		       (long)dbug_ctx->stack.count,
-		       dbug_ctx->separator,
-		       break_point,
-		       dbug_ctx->separator );
-	      vfprintf(dbug_ctx->fp, format, args);
-	      fprintf(dbug_ctx->fp, "\n");
-	      fflush(dbug_ctx->fp);
+	      FLOCKFILE( dbug_ctx->fp );
+	      Gmtime( &dbug_ctx->tm );
+	      dbug_ctx->seq++;
+	      (void) fprintf( dbug_ctx->fp, DBUG_PRINT_FMT,
+			      dbug_ctx->separator,
+			      (void*)dbug_ctx,
+			      dbug_ctx->separator,
+			      dbug_ctx->tm.tm_year + 1900,
+			      dbug_ctx->tm.tm_mon + 1,
+			      dbug_ctx->tm.tm_mday,
+			      dbug_ctx->tm.tm_hour,
+			      dbug_ctx->tm.tm_min,
+			      dbug_ctx->tm.tm_sec,
+			      dbug_ctx->separator,
+			      dbug_ctx->seq,
+			      dbug_ctx->separator,
+			      dbug_ctx->separator,
+			      call->file,
+			      dbug_ctx->separator,
+			      call->function,
+			      dbug_ctx->separator,
+			      (long)line,
+			      dbug_ctx->separator,
+			      (long)dbug_ctx->stack.count,
+			      dbug_ctx->separator,
+			      break_point,
+			      dbug_ctx->separator );
+	      (void) vfprintf(dbug_ctx->fp, format, args);
+	      (void) fprintf(dbug_ctx->fp, "\n");
+	      (void) fflush(dbug_ctx->fp);
+	      FUNLOCKFILE( dbug_ctx->fp );
 	      SleepMsec(dbug_ctx->delay);
 	    }
 	  break;
@@ -530,14 +701,17 @@ _dbug_print_ctx( const dbug_ctx_t dbug_ctx, const int line, const char *break_po
 
   if ( status != 0 && status != ENOENT )
     {
-      fprintf( stderr, "DBUG%c%p%cERROR: %s: status: %d\n", 
-	       SEPARATOR, (void*)dbug_ctx, SEPARATOR, procname, status );
-      fflush( stderr );
+      FLOCKFILE( stderr );
+      /*@-nullpass@*/
+      (void) fprintf( stderr, "DBUG%c%p%cERROR: %s: status: %d\n", 
+		      SEPARATOR, (void*)dbug_ctx, SEPARATOR, procname, status );
+      /*@=nullpass@*/
+      (void) fflush( stderr );
+      FUNLOCKFILE( stderr );
     }
 
-#ifndef NDEBUG
-  printf( "< %s = %d\n", procname, status );
-#endif
+  _DBUG_PRINT( "output", ( "status: %d", status ) );
+  _DBUG_LEAVE();
 
   return status;
 }
@@ -548,36 +722,39 @@ void
 dbug_ctx_print( const dbug_ctx_t dbug_ctx )
 {
   const char *procname = "dbug_ctx_print";
+  unsigned long pid = 0;
 
-  printf( "> %s( %s )\n", 
-	  procname, PTR_STR(dbug_ctx) );
-  printf( "name: %s; ctx_nr: %d; pid: %d; flags: 0x%X; delay: %u; magic: 0x%X\n",
-	  dbug_ctx->name,
-	  dbug_ctx->ctx_nr,
+  _DBUG_ENTER( procname );
+  _DBUG_PRINT( "input", ( "%s", PTR_STR(dbug_ctx) ) );
+
 #if HASGETPID
-	  dbug_ctx->pid,
-#else
-	  0,
+  pid = dbug_ctx->pid;
 #endif
-	  dbug_ctx->flags,
-	  dbug_ctx->delay,
-	  dbug_ctx->magic );
-  printf( "files:\n" );
+
+  _DBUG_PRINT( "info", 
+	       ( "name: %s; ctx_nr: %d; pid: %lu; flags: 0x%X; delay: %u; magic: 0x%X",
+		 dbug_ctx->name,
+		 dbug_ctx->ctx_nr,
+		 pid,
+		 dbug_ctx->flags,
+		 dbug_ctx->delay,
+		 dbug_ctx->magic ) );
+
   dbug_names_print( &dbug_ctx->files );
-  printf( "functions:\n" );
+
   dbug_names_print( &dbug_ctx->functions );
+
 #if BREAK_POINTS_ALLOWED
-  printf( "break_points_allowed:\n" );
   dbug_names_print( &dbug_ctx->break_points_allowed );
 #endif
+
 #if FUNCTIONS_ALLOWED
-  printf( "functions_allowed:\n" );
   dbug_names_print( &dbug_ctx->functions_allowed );
 #endif
-  printf( "stack:\n" );
+
   dbug_stack_print( &dbug_ctx->stack );
 
-  printf( "< %s\n", procname );
+  _DBUG_LEAVE();
 }
 #endif
 
@@ -634,7 +811,7 @@ dbug_parse_list (names_t *names, char *ctlp)
 
 static
 BOOLEAN
-dbug_profile ( const dbug_ctx_t dbug_ctx, const char *function )
+dbug_profile ( const dbug_ctx_t dbug_ctx, /*@unused@*/ const char *function )
 
 /*
  *  DESCRIPTION
@@ -669,7 +846,7 @@ dbug_profile ( const dbug_ctx_t dbug_ctx, const char *function )
  *  SYNOPSIS
  */
 
-static BOOLEAN dbug_trace (const dbug_ctx_t dbug_ctx, const char *function)
+static BOOLEAN dbug_trace (const dbug_ctx_t dbug_ctx, /*@unused@*/ const char *function)
 
 /*
  *  DESCRIPTION
@@ -703,10 +880,8 @@ dbug_options_ctx( const dbug_ctx_t dbug_ctx, const char *options )
   dbug_errno_t status = 0;
   const char *procname = "dbug_options_ctx";
 
-#ifndef NDEBUG
-  printf( "> %s( %s, %s )\n", 
-	  procname, PTR_STR(dbug_ctx), options );
-#endif
+  _DBUG_ENTER( procname );
+  _DBUG_PRINT( "input", ( "dbug_ctx: %s; options: %s", PTR_STR(dbug_ctx), options ) );
 
   control = (char*)MALLOC(strlen(options)+1);
   if ( control == NULL )
@@ -717,7 +892,7 @@ dbug_options_ctx( const dbug_ctx_t dbug_ctx, const char *options )
   dbug_ctx->delay = 0;
   dbug_ctx->fp = NULL;
 #if HASGETPID
-  dbug_ctx->pid = getpid();
+  dbug_ctx->pid = (unsigned long) getpid();
 #endif
   dbug_ctx->flags = 0;
   dbug_ctx->separator = SEPARATOR;
@@ -725,11 +900,13 @@ dbug_options_ctx( const dbug_ctx_t dbug_ctx, const char *options )
   for (scan = control; ; ) 
     {
       char *sep = strpbrk(scan, OPTIONS_SEPARATORS);
-      char open_mode[] = "a"; /* append */
+      char open_mode[3+1]; /* allows for a+t */
+
+      strcpy( open_mode, "a" ); /* append */
 
       /* make scan a zero terminated string containing flag (and modifiers) */
       if ( sep != NULL )
-	*sep = 0;
+	*sep = '\0';
 
       switch (*scan)
 	{
@@ -757,7 +934,7 @@ dbug_options_ctx( const dbug_ctx_t dbug_ctx, const char *options )
 	  while ( 0 );
 #endif
 
-	  dbug_ctx->delay = atoi(scan); 
+	  dbug_ctx->delay = (unsigned int) atoi(scan); 
 	  break;
 
 #if FUNCTIONS_ALLOWED
@@ -769,8 +946,8 @@ dbug_options_ctx( const dbug_ctx_t dbug_ctx, const char *options )
 	  while ( *scan == MODIFIER_SEPARATOR );
 
 	  status = dbug_parse_list( &dbug_ctx->functions_allowed, scan );
-#endif
 	  break;
+#endif
 
 	case 'g': 
 	  dbug_ctx->flags |= PROFILE_ON;
@@ -778,7 +955,7 @@ dbug_options_ctx( const dbug_ctx_t dbug_ctx, const char *options )
 
 	case 'o': /* open for writing */
 	  strcpy( open_mode, "w" );
-	  /* no break */
+	  /*@fallthrough@*/
 
 	case 'O': /* open for appending */
 	  do
@@ -805,9 +982,11 @@ dbug_options_ctx( const dbug_ctx_t dbug_ctx, const char *options )
 	  break; /* no more options */
 
 	default:
-	  fprintf( stderr, "DBUG%c%p%cERROR: %s: unrecognized option: %s\n", 
+	  FLOCKFILE( stderr );
+	  (void) fprintf( stderr, "DBUG%c%p%cERROR: %s: unrecognized option: %s\n", 
 		   SEPARATOR, (void*)dbug_ctx, SEPARATOR, procname, scan );
-	  fflush( stderr );
+	  (void) fflush( stderr );
+	  FUNLOCKFILE( stderr );
 	}
 
       if ( sep == NULL ) /* no more flags so stop */
@@ -821,9 +1000,8 @@ dbug_options_ctx( const dbug_ctx_t dbug_ctx, const char *options )
 
   FREE(control);
 
-#ifndef NDEBUG
-  printf( "< %s\n", procname );
-#endif
+  _DBUG_PRINT( "output", ( "status: %d", status ) );
+  _DBUG_LEAVE();
 
   return status;
 }
@@ -836,16 +1014,20 @@ dbug_names_print( names_t *names )
   size_t idx;
   const char *procname = "dbug_names_print";
 
-  printf( "> %s( %s )\n", 
-	  procname, PTR_STR(names) );
-  printf( "names: %s; size: %ld; count: %ld; magic: 0x%X\n", 
-	  PTR_STR(names->array), (long)names->size, (long)names->count, names->magic );
+  _DBUG_ENTER( procname );
+  _DBUG_PRINT( "input", ( "names: %s", PTR_STR(names) ) );
+  _DBUG_PRINT( "info", ( "names: %s; size: %ld; count: %ld; magic: 0x%X", 
+			 PTR_STR(names->array), (long)names->size, 
+			 (long)names->count, names->magic ) );
+
   for ( idx = 0; idx < names->count; idx++ )
     {
-      printf( "idx: %d; name: %s; ref_count: %d\n", 
-	      idx, names->array[idx].name, names->array[idx].ref_count );
+      _DBUG_PRINT( "info", 
+		   ( "idx: %d; name: %s; ref_count: %d", 
+		     idx, names->array[idx].name, names->array[idx].ref_count ) );
     }
-  printf( "< %s\n", procname );
+
+  _DBUG_LEAVE();
 }
 #endif
 
@@ -855,10 +1037,10 @@ dbug_names_init( names_t *names )
 {
 #ifndef NDEBUG
   const char *procname = "dbug_names_init";
-
-  printf( "> %s( %s )\n", 
-	  procname, PTR_STR(names) );
 #endif
+
+  _DBUG_ENTER( procname );
+  _DBUG_PRINT( "input", ( "names: %s", PTR_STR(names) ) );
 
   names->array = NULL;
   names->size = names->count = 0L;
@@ -866,7 +1048,7 @@ dbug_names_init( names_t *names )
 
 #ifndef NDEBUG
   dbug_names_print( names );
-  printf( "< %s\n", procname );
+  _DBUG_LEAVE();
 #endif
 
   return 0;
@@ -882,8 +1064,8 @@ dbug_names_done( names_t *names )
 #ifndef NDEBUG
   const char *procname = "dbug_names_done";
 
-  printf( "> %s( %s )\n", 
-	  procname, PTR_STR(names) );
+  _DBUG_ENTER( procname );
+  _DBUG_PRINT( "input", ( "names: %s", PTR_STR(names) ) );
 
   dbug_names_print( names );
 #endif
@@ -911,9 +1093,8 @@ dbug_names_done( names_t *names )
       names->magic = 0;
     }
 
-#ifndef NDEBUG
-  printf( "< %s = %d\n", procname, status );
-#endif
+  _DBUG_PRINT( "output", ( "status: %d", status ) );  
+  _DBUG_LEAVE();
 
   return status;
 }
@@ -945,15 +1126,16 @@ dbug_names_ins( names_t *names, const char *name, name_t **result )
  *      ENOMEM - could not allocate resources
  */
 {
-  int ins_idx; /* index to insert into */
-  int idx; /* help variable */
+  size_t ins_idx; /* index to insert into */
+  size_t idx; /* help variable */
   dbug_errno_t status = 0;
 
 #ifndef NDEBUG
   const char *procname = "dbug_names_ins";
 
-  printf( "> %s( %s, %s, %s )\n", 
-	  procname, PTR_STR(names), name, PTR_STR(result) );
+  _DBUG_ENTER( procname );
+  _DBUG_PRINT( "input", ( "names: %s; name: %s; result: %s",
+			  PTR_STR(names), name, PTR_STR(result) ) );
 #endif
 
   if ( !NAMES_VALID(names) )
@@ -979,7 +1161,7 @@ dbug_names_ins( names_t *names, const char *name, name_t **result )
 	    ins_idx = names->count;
 	  }
 	else
-	  ins_idx = (*result) - names->array;
+	  ins_idx = (size_t) ( (*result) - names->array );
 
         /*
          * Expand if necessary
@@ -988,9 +1170,12 @@ dbug_names_ins( names_t *names, const char *name, name_t **result )
         if ( names->size == names->count )
           {
             size_t size = sizeof(name_t) * ( names->size + NAMES_SIZE_EXPAND );
-            name_t *ptr = names->array;
+            name_t *ptr = (name_t *) MALLOC( size );
       
-            ptr = (name_t*)REALLOC( ptr, size );
+#ifndef NDEBUG
+	    _DBUG_PRINT( "info", ( "Expanding names: names->size: %d",
+				   names->size ) );
+#endif
 
             if ( ptr == NULL )
               {
@@ -999,6 +1184,8 @@ dbug_names_ins( names_t *names, const char *name, name_t **result )
               }
             else
               {
+		memcpy( ptr, names->array, sizeof(name_t) * names->size );
+		FREE( names->array );
             	names->array = ptr;
             	names->size += NAMES_SIZE_EXPAND;
               }
@@ -1015,6 +1202,7 @@ dbug_names_ins( names_t *names, const char *name, name_t **result )
 	    status = ENOMEM;
 	    break;
 	  }
+
 	strcpy(names->array[ins_idx].name, name);
 	names->array[ins_idx].ref_count = 1;
 	names->count++;
@@ -1028,9 +1216,11 @@ dbug_names_ins( names_t *names, const char *name, name_t **result )
 
 #ifndef NDEBUG
   dbug_names_print( names );
-  printf( "result: %s\n", 
-	  ( status == 0 || (status == EEXIST && *result) ? (*result)->name : "(nil)" ) );
-  printf( "< %s = %d\n", procname, status );
+  _DBUG_PRINT( "info", 
+	       ( "result: %s", 
+		 ( status == 0 || (status == EEXIST && *result) ? (*result)->name : "(nil)" ) ) );
+  _DBUG_PRINT( "output", ( "status: %d", status ) );
+  _DBUG_LEAVE();
 #endif
 
   return status;
@@ -1068,9 +1258,11 @@ dbug_names_fnd( names_t *names, const char *name, name_t **result )
 
 #ifndef NDEBUG
   const char *procname = "dbug_names_fnd";
-
-  printf( "> %s( %s, %s, %s )\n", 
-	  procname, PTR_STR(names), name, PTR_STR(result) );
+  
+  _DBUG_ENTER( procname );
+  _DBUG_PRINT( "input", 
+	       ( "names: %s; name: %s; result: %s", 
+		 PTR_STR(names), name, PTR_STR(result) ) );
 #endif
 
   *result = NULL;
@@ -1105,9 +1297,11 @@ dbug_names_fnd( names_t *names, const char *name, name_t **result )
 
 #ifndef NDEBUG
   dbug_names_print( names );
-  printf( "result: %s\n", 
-	  ( status == 0 || (status == ESRCH && *result) ? (*result)->name : "(nil)" ) );
-  printf( "< %s = %d\n", procname, status );
+  _DBUG_PRINT( "info", 
+	       ( "result: %s", 
+		 ( status == 0 || (status == ESRCH && *result) ? (*result)->name : "(nil)" ) ) );
+  _DBUG_PRINT( "output", ( "status: %d", status ) );
+  _DBUG_LEAVE();
 #endif
 
   return status;
@@ -1147,8 +1341,8 @@ dbug_names_del( names_t *names, const char *name )
 #ifndef NDEBUG
   const char *procname = "dbug_names_del";
 
-  printf( "> %s( %s, %s )\n", 
-	  procname, PTR_STR(names), name );
+  _DBUG_ENTER( procname );
+  _DBUG_PRINT( "input", ( "names: %s; name: %s", PTR_STR(names), name ) );
 #endif
 
   if ( !NAMES_VALID(names) )
@@ -1171,7 +1365,7 @@ dbug_names_del( names_t *names, const char *name )
 	  {
 	    FREE( result->name );
 
-	    del_idx = ( result - names->array );
+	    del_idx = (size_t) ( result - names->array );
 
 	    /* shift elements down from del_idx to the end */
 	  
@@ -1189,7 +1383,8 @@ dbug_names_del( names_t *names, const char *name )
 
 #ifndef NDEBUG
   dbug_names_print( names );
-  printf( "< %s = %d\n", procname, status );
+  _DBUG_PRINT( "output", ( "status: %d", status ) );  
+  _DBUG_LEAVE();
 #endif
 
   return status;
@@ -1203,18 +1398,20 @@ dbug_stack_print( call_stack_t *stack )
   size_t idx;
   const char *procname = "dbug_stack_print";
 
-  printf( "> %s( %s )\n", 
-	  procname, PTR_STR(stack) );
-  printf( "calls: %s; size: %ld; count: %ld; magic: 0x%X\n", 
-	  PTR_STR(stack->array), (long)stack->size, (long)stack->count, stack->magic );
+  _DBUG_ENTER( procname );
+  _DBUG_PRINT( "input", ( "stack: %s", PTR_STR(stack) ) );
+  _DBUG_PRINT( "info", ( "calls: %s; size: %ld; count: %ld; magic: 0x%X", 
+			 PTR_STR(stack->array), (long)stack->size, 
+			 (long)stack->count, stack->magic ) );
   for ( idx = 0; idx < stack->count; idx++ )
     {
-      printf( "idx: %d; function: %s; file: %s\n", 
-	      idx, 
-              stack->array[idx].function, 
-              stack->array[idx].file );
+      _DBUG_PRINT( "info", ( "idx: %d; function: %s; file: %s", 
+			     idx, 
+			     stack->array[idx].function, 
+			     stack->array[idx].file ) );
     }
-  printf( "< %s\n", procname );
+
+  _DBUG_LEAVE();
 }
 #endif
 
@@ -1227,8 +1424,8 @@ dbug_stack_init( call_stack_t *stack )
 #ifndef NDEBUG
   const char *procname = "dbug_stack_init";
 
-  printf( "> %s( %s )\n", 
-	  procname, PTR_STR(stack) );
+  _DBUG_ENTER( procname );
+  _DBUG_PRINT( "input", ( "stack: %s", PTR_STR(stack) ) );
 #endif
 
   if ( stack == NULL )
@@ -1236,14 +1433,16 @@ dbug_stack_init( call_stack_t *stack )
   else
     {
       stack->array = NULL;
-      stack->size = stack->count = stack->maxcount = 0;
-      stack->sp_min = stack->sp_min = NULL;
+      stack->size = 0;
+      stack->count = 0;
+      stack->maxcount = 0;
+      stack->sp_min = NULL;
+      stack->sp_min = NULL;
       stack->magic = STACK_MAGIC;
     }
 
-#ifndef NDEBUG
-  printf( "< %s = %d\n", procname, status );
-#endif
+  _DBUG_PRINT( "output", ( "status: %d", status ) );
+  _DBUG_LEAVE();
 
   return status;
 }
@@ -1257,8 +1456,8 @@ dbug_stack_done( call_stack_t *stack )
 #ifndef NDEBUG
   const char *procname = "dbug_stack_done";
 
-  printf( "> %s( %s )\n", 
-	  procname, PTR_STR(stack) );
+  _DBUG_ENTER( procname );
+  _DBUG_PRINT( "input", ( "stack: %s", PTR_STR(stack) ) );
 #endif
 
   if ( !STACK_VALID(stack) )
@@ -1276,9 +1475,8 @@ dbug_stack_done( call_stack_t *stack )
       stack->magic = 0;
     }
 
-#ifndef NDEBUG
-  printf( "< %s = %d\n", procname, status );
-#endif
+  _DBUG_PRINT( "output", ( "status: %d", status ) );
+  _DBUG_LEAVE();
 
   return status;
 }
@@ -1292,8 +1490,8 @@ dbug_stack_push( call_stack_t *stack, call_t *call )
 #ifndef NDEBUG
   const char *procname = "dbug_stack_push";
 
-  printf( "> %s( %s, %s )\n", 
-	  procname, PTR_STR(stack), PTR_STR(call) );
+  _DBUG_ENTER( procname );
+  _DBUG_PRINT( "input", ( "stack: %s; call: %s", PTR_STR(stack), PTR_STR(call) ) );
 #endif
 
   if ( !STACK_VALID(stack) )
@@ -1304,14 +1502,14 @@ dbug_stack_push( call_stack_t *stack, call_t *call )
   else if ( stack->size == stack->count )
     {
       size_t size = sizeof(call_t) * ( stack->size + STACK_SIZE_EXPAND );
-      call_t *ptr = stack->array;
-
-      ptr = (call_t*)REALLOC( ptr, size );
+      call_t *ptr = (call_t*)MALLOC( size );
 
       if ( ptr == NULL )
 	status = ENOMEM;
       else
 	{
+	  memcpy( ptr, stack->array, sizeof(call_t) * stack->size );
+	  FREE( stack->array );
 	  stack->array = ptr;
 	  stack->size += STACK_SIZE_EXPAND;
 	}
@@ -1327,7 +1525,8 @@ dbug_stack_push( call_stack_t *stack, call_t *call )
 
 #ifndef NDEBUG
   dbug_stack_print( stack );
-  printf( "< %s = %d\n", procname, status );
+  _DBUG_PRINT( "output", ( "status: %d", status ) );  
+  _DBUG_LEAVE();
 #endif
 
   return status;
@@ -1342,8 +1541,8 @@ dbug_stack_pop( call_stack_t *stack )
 #ifndef NDEBUG
   const char *procname = "dbug_stack_pop";
 
-  printf( "> %s( %s )\n", 
-	  procname, PTR_STR(stack) );
+  _DBUG_ENTER( procname );
+  _DBUG_PRINT( "input", ( "stack: %s", PTR_STR(stack) ) );
 #endif
 
   if ( !STACK_VALID(stack) )
@@ -1355,7 +1554,8 @@ dbug_stack_pop( call_stack_t *stack )
 
 #ifndef NDEBUG
   dbug_stack_print( stack );
-  printf( "< %s = %d\n", procname, status );
+  _DBUG_PRINT( "output", ( "status: %d", status ) );  
+  _DBUG_LEAVE();
 #endif
 
   return status;
@@ -1370,8 +1570,8 @@ dbug_stack_top( call_stack_t *stack, call_t **top )
 #ifndef NDEBUG
   const char *procname = "dbug_stack_top";
 
-  printf( "> %s( %s )\n", 
-	  procname, PTR_STR(stack) );
+  _DBUG_ENTER( procname );
+  _DBUG_PRINT( "input", ( "stack: %s", PTR_STR(stack) ) );
 #endif
 
   if ( !STACK_VALID(stack) )
@@ -1383,8 +1583,9 @@ dbug_stack_top( call_stack_t *stack, call_t **top )
 
 #ifndef NDEBUG
   dbug_stack_print( stack );
-  printf( "top: %s\n", ( status == 0 ? (*top)->function : "(nil)" ) );
-  printf( "< %s = %d\n", procname, status );
+  _DBUG_PRINT( "info", ( "top: %s", ( status == 0 ? (*top)->function : "(nil)" ) ) );
+  _DBUG_PRINT( "output", ( "status: %d", status ) );  
+  _DBUG_LEAVE();
 #endif
 
   return status;
@@ -1401,8 +1602,8 @@ dbug_ctx_data_done( void *data )
 #ifndef NDEBUG
   const char *procname = "dbug_ctx_data_done";
 
-  printf( "> %s( %s )\n", 
-	  procname, PTR_STR(data) );
+  _DBUG_ENTER( procname );
+  _DBUG_PRINT( "input", ( "data: %s", PTR_STR(data) ) );
 #endif
 
   /* A call to dbug_init() has been performed but not a call to dbug_done() */
@@ -1410,9 +1611,7 @@ dbug_ctx_data_done( void *data )
   dbug_done_ctx( &dbug_ctx ); /* cleans up dbug_print_info thread data */
   dbug_key_done( &dbug_ctx_key );
 
-#ifndef NDEBUG
-  printf( "< %s\n", procname );
-#endif
+  _DBUG_LEAVE();
 }
 
 static
@@ -1422,8 +1621,8 @@ dbug_print_info_data_done( void *data )
 #ifndef NDEBUG
   const char *procname = "dbug_print_info_data_done";
 
-  printf( "> %s( %s )\n", 
-	  procname, PTR_STR(data) );
+  _DBUG_ENTER( procname );
+  _DBUG_PRINT( "input", ( "data: %s", PTR_STR(data) ) );
 #endif
 
   /* A call to dbug_init_ctx() has been performed but not a call to dbug_done_ctx() */
@@ -1431,9 +1630,7 @@ dbug_print_info_data_done( void *data )
   FREE( data );
   dbug_key_done( &dbug_print_info_key );
 
-#ifndef NDEBUG
-  printf( "< %s\n", procname );
-#endif
+  _DBUG_LEAVE();
 }
 
 static 
@@ -1446,9 +1643,9 @@ dbug_key_init( dbug_key_t *dbug_key )
 #ifndef NDEBUG
   const char *procname = "dbug_key_init";
 
-  printf( "> %s( %s )\n", 
-	  procname, PTR_STR(dbug_key) );
-  printf( "count: %d\n", dbug_key->ref_count );
+  _DBUG_ENTER( procname );
+  _DBUG_PRINT( "input", ( "dbug_key: %s", PTR_STR(dbug_key) ) );
+  _DBUG_PRINT( "info", ( "count: %d", dbug_key->ref_count ) );
 #endif
 
 #define DBUG_KEY_INIT_STEPS 4
@@ -1484,18 +1681,15 @@ dbug_key_init( dbug_key_t *dbug_key )
 	  step_no = DBUG_KEY_INIT_STEPS; 
 	  break;
         }
-#ifndef NDEBUG
-      printf( "step: %d; status: %d\n", (int)step_no, (int)status );
-#endif
+      _DBUG_PRINT( "info", ( "step: %d; status: %d", (int)step_no, (int)status ) );
     }
 
   assert( status != 0 || step_no == DBUG_KEY_INIT_STEPS );
 
 #undef DBUG_KEY_INIT_STEPS
 
-#ifndef NDEBUG
-  printf( "< %s = %d\n", procname, status );
-#endif
+  _DBUG_PRINT( "output", ( "status: %d", status ) );
+  _DBUG_LEAVE();
 
   return status;
 }
@@ -1510,8 +1704,8 @@ dbug_key_done( dbug_key_t *dbug_key )
 #ifndef NDEBUG
   const char *procname = "dbug_key_init";
 
-  printf( "> %s( %s )\n", 
-	  procname, PTR_STR(dbug_key) );
+  _DBUG_ENTER( procname );
+  _DBUG_PRINT( "input", ( "dbug_key: %s", PTR_STR(dbug_key) ) );
 #endif
 
 #define DBUG_KEY_DONE_STEPS 3
@@ -1543,29 +1737,70 @@ dbug_key_done( dbug_key_t *dbug_key )
 	  /* May not come here. Set step_no to maximum+1 so assert will fail */
 	  step_no = DBUG_KEY_DONE_STEPS; 
 	  break;
-
-        default: 
         }
-
-#ifndef NDEBUG
-      printf( "step: %d; status: %d\n", (int)step_no, (int)status );
-#endif
+      _DBUG_PRINT( "info", ( "step: %d; status: %d", (int)step_no, (int)status ) );
     }
 
   assert( status != 0 || step_no == DBUG_KEY_DONE_STEPS );
 
 #undef DBUG_KEY_DONE_STEPS
 
-#ifndef NDEBUG
-  printf( "count: %d\n", dbug_key->ref_count );
-  printf( "< %s = %d\n", procname, status );
-#endif
+  _DBUG_PRINT( "info", ( "count: %d", dbug_key->ref_count ) );
+  _DBUG_PRINT( "output", ( "status: %d", status ) );
+  _DBUG_LEAVE();
 
   return status;
 }
 
 
 #endif
+
+static 
+dbug_ctx_t
+dbug_ctx_get( void )
+{
+#ifdef _POSIX_THREADS
+  return (dbug_ctx_t) pthread_getspecific( dbug_ctx_key.key );
+#else
+  return g_dbug_ctx;
+#endif
+}
+
+static 
+dbug_errno_t
+dbug_ctx_set( const dbug_ctx_t dbug_ctx )
+{
+#ifdef _POSIX_THREADS
+  return pthread_setspecific( dbug_ctx_key.key, dbug_ctx );
+#else
+  g_dbug_ctx = dbug_ctx;
+  return 0;
+#endif
+}
+
+static 
+dbug_print_info_t*
+dbug_print_info_get( void )
+{
+#ifdef _POSIX_THREADS
+  return (dbug_print_info_t*) pthread_getspecific( dbug_print_info_key.key );
+#else
+  return &g_dbug_print_info;
+#endif
+}
+
+static 
+dbug_errno_t
+dbug_print_info_set( const dbug_print_info_t *dbug_print_info )
+{
+#ifdef _POSIX_THREADS
+  return pthread_setspecific( dbug_print_info_key.key, dbug_print_info );
+#else
+  if ( dbug_print_info )
+    g_dbug_print_info = *dbug_print_info;
+  return 0;
+#endif
+}
 
 /* 
  * definition of global functions 
@@ -1629,12 +1864,15 @@ dbug_init_ctx( const char * options, const char *name, dbug_ctx_t* dbug_ctx )
 {
   dbug_errno_t status = 0;
   int step_no;
+  char *dbug_options = (char*)options;
   const char *procname = "dbug_init_ctx";
 
-#ifndef NDEBUG
-  printf( "> %s( %s, %s, %s )\n", 
-	  procname, options, name?name:"(nil)", PTR_STR(dbug_ctx) );
-#endif
+  _DBUG_ENTER( procname );
+  _DBUG_PRINT( "input", 
+	       ( "options: %s; name: %s; dbug_ctx: %s", 
+		 (options ? options : "(nil)"),
+		 (name?name:"(nil)"),
+		 PTR_STR(dbug_ctx) ) );
 
 #ifdef _WIN32
 /* 
@@ -1694,22 +1932,32 @@ dbug_init_ctx( const char * options, const char *name, dbug_ctx_t* dbug_ctx )
 #ifdef _POSIX_THREADS
 	  status = pthread_mutex_lock( &ctx_nr_mutex );
 
-#ifndef NDEBUG
-	  printf( "pthread_mutex_lock = %d\n", status );
-#endif
+	  _DBUG_PRINT( "info", ( "pthread_mutex_lock = %d", status ) );
 
 	  if ( status != 0 )
 	    break;
 #endif
 	  ctx_nr++;
+	  if ( first_dbug_options == NULL )
+	    {
+	      if ( dbug_options == NULL )
+		dbug_options = "";
+
+	      first_dbug_options = (char*)malloc( strlen(dbug_options)+1 );
+	      if ( first_dbug_options != NULL )
+		strcpy( first_dbug_options, dbug_options );
+	      else
+		status = ENOMEM;
+	    }
+	  else if ( dbug_options == NULL )
+	    dbug_options = first_dbug_options;
+
 	  (*dbug_ctx)->ctx_nr = ctx_nr;
 
 #ifdef _POSIX_THREADS
 	  status = pthread_mutex_unlock( &ctx_nr_mutex );
 
-#ifndef NDEBUG
-	  printf( "pthread_mutex_unlock = %d\n", status );
-#endif
+	  _DBUG_PRINT( "info", ( "pthread_mutex_unlock = %d", status ) );
 
 	  if ( status != 0 )
 	    break;
@@ -1752,13 +2000,13 @@ dbug_init_ctx( const char * options, const char *name, dbug_ctx_t* dbug_ctx )
 	  break;
 	
 	case 8:
-	  if ( pthread_getspecific( dbug_print_info_key.key ) == NULL ) /* no dbug print info set */
+	  if ( dbug_print_info_get() == NULL ) /* no dbug print info set */
 	    {
 	      dbug_print_info_t *dbug_print_info = 
 		(dbug_print_info_t*)MALLOC( sizeof(*dbug_print_info) );
 
 	      if ( dbug_print_info )
-		status = pthread_setspecific( dbug_print_info_key.key, dbug_print_info );
+		dbug_print_info_set( dbug_print_info );
 	      else
 		status = ENOMEM;
 	    }
@@ -1766,34 +2014,47 @@ dbug_init_ctx( const char * options, const char *name, dbug_ctx_t* dbug_ctx )
 #endif
 
 	case 9:
-	  status = dbug_options_ctx( *dbug_ctx, options );
+	  status = dbug_options_ctx( *dbug_ctx, dbug_options );
 	  (*dbug_ctx)->magic = DBUG_MAGIC;
 
 	  /* output version info first */
 
 	  if ( (*dbug_ctx)->flags )
 	    {
-	      fprintf( (*dbug_ctx)->fp, DBUG_INIT_FMT, 
-		       (*dbug_ctx)->separator,
-		       (void*)(*dbug_ctx), 
-		       (*dbug_ctx)->separator,
-		       (*dbug_ctx)->separator,
-		       DBUG_MAJOR_VERSION,
-		       DBUG_MINOR_VERSION,
-		       DBUG_TEENY_VERSION,
-		       (*dbug_ctx)->separator,
-		       (*dbug_ctx)->name,
-		       (*dbug_ctx)->separator,
-		       (*dbug_ctx)->ctx_nr,
-		       (*dbug_ctx)->separator,
+	      FLOCKFILE( (*dbug_ctx)->fp );
+	      Gmtime( &(*dbug_ctx)->tm );
+ 	      (*dbug_ctx)->seq++;
+	      (void) fprintf( (*dbug_ctx)->fp, DBUG_INIT_FMT, 
+			      (*dbug_ctx)->separator,
+			      (void*)(*dbug_ctx), 
+			      (*dbug_ctx)->separator,
+			      (*dbug_ctx)->tm.tm_year + 1900,
+			      (*dbug_ctx)->tm.tm_mon + 1,
+			      (*dbug_ctx)->tm.tm_mday,
+			      (*dbug_ctx)->tm.tm_hour,
+			      (*dbug_ctx)->tm.tm_min,
+			      (*dbug_ctx)->tm.tm_sec,
+			      (*dbug_ctx)->separator,
+			      (*dbug_ctx)->seq,
+			      (*dbug_ctx)->separator,
+			      (*dbug_ctx)->separator,
+			      DBUG_MAJOR_VERSION,
+			      DBUG_MINOR_VERSION,
+			      DBUG_TEENY_VERSION,
+			      (*dbug_ctx)->separator,
+			      (*dbug_ctx)->name,
+			      (*dbug_ctx)->separator,
+			      (*dbug_ctx)->ctx_nr,
+			      (*dbug_ctx)->separator,
 #if HASGETPID
-		       (long)(*dbug_ctx)->pid,
+			      (*dbug_ctx)->pid,
 #else
-		       0L,
+			      0L,
 #endif
-		       (*dbug_ctx)->separator,
-		       (*dbug_ctx)->flags );
-	      fflush((*dbug_ctx)->fp);
+			      (*dbug_ctx)->separator,
+			      (*dbug_ctx)->flags );
+	      (void) fflush((*dbug_ctx)->fp);
+	      FUNLOCKFILE( (*dbug_ctx)->fp );
 	    }
 
 	  break;
@@ -1811,9 +2072,11 @@ dbug_init_ctx( const char * options, const char *name, dbug_ctx_t* dbug_ctx )
 
       if ( status != 0 )
 	{
-	  fprintf( stderr, "DBUG%c%p%cERROR: %s: status: %d; step_no: %d\n", 
+	  FLOCKFILE( stderr );
+	  (void) fprintf( stderr, "DBUG%c%p%cERROR: %s: status: %d; step_no: %d\n", 
 		   SEPARATOR, (dbug_ctx?(void*)*dbug_ctx:NULL), SEPARATOR, procname, status, step_no );
-	  fflush( stderr );
+	  (void) fflush( stderr );
+	  FUNLOCKFILE( stderr );
 
 	  switch( step_no-1 ) /* the last correct initialised member */
 	    {
@@ -1825,36 +2088,36 @@ dbug_init_ctx( const char * options, const char *name, dbug_ctx_t* dbug_ctx )
 	    case 6:
 	      FREE( (*dbug_ctx)->name );
 	      (*dbug_ctx)->name = NULL;
-	      /* no break */
+	      /*@fallthrough@*/
 
 	    case 5:
-	      dbug_stack_done( &(*dbug_ctx)->stack );
-	      /* no break */
+	      (void) dbug_stack_done( &(*dbug_ctx)->stack );
+	      /*@fallthrough@*/
 
 	    case 4:
 #if FUNCTIONS_ALLOWED
-	      dbug_names_done( &(*dbug_ctx)->functions_allowed );
+	      (void) dbug_names_done( &(*dbug_ctx)->functions_allowed );
 #endif
-	      /* no break */
+	      /*@fallthrough@*/
 
 	    case 3:
 #if BREAK_POINTS_ALLOWED
-	      dbug_names_done( &(*dbug_ctx)->break_points_allowed );
+	      (void) dbug_names_done( &(*dbug_ctx)->break_points_allowed );
 #endif
-	      /* no break */
+	      /*@fallthrough@*/
 
 	    case 2:
-	      dbug_names_done( &(*dbug_ctx)->functions );
-	      /* no break */
+	      (void) dbug_names_done( &(*dbug_ctx)->functions );
+	      /*@fallthrough@*/
 
 	    case 1:
-	      dbug_names_done( &(*dbug_ctx)->files );
-	      /* no break */
+	      (void) dbug_names_done( &(*dbug_ctx)->files );
+	      /*@fallthrough@*/
 
             case 0:
 	      FREE( *dbug_ctx );
 	      *dbug_ctx = NULL;
-	      /* no break */
+	      /*@fallthrough@*/
 
 	    default:
               break;
@@ -1866,9 +2129,8 @@ dbug_init_ctx( const char * options, const char *name, dbug_ctx_t* dbug_ctx )
 
 #undef DBUG_INIT_CTX_STEPS
 
-#ifndef NDEBUG
-  printf( "< %s = %d\n", procname, status );
-#endif
+  _DBUG_PRINT( "output", ( "status: %d", status ) );
+  _DBUG_LEAVE();
 
   return status;
 }
@@ -1898,10 +2160,10 @@ dbug_init( const char * options, const char *name )
   dbug_ctx_t dbug_ctx; /* local dbug_ctx */
   int step_no;
 
-#ifndef NDEBUG
-  printf( "> %s( %s, %s )\n", 
-	  procname, options, name?name:"(nil)" );
-#endif
+  _DBUG_ENTER( procname );
+  _DBUG_PRINT( "input", 
+	       ( "options: %s; name:  %s", 
+		 (options ? options : "(nil)"), name?name:"(nil)" ) );
 
   /* Now we have to lock a mutex, initialise a thread-specific data key,
      flag this initialisation and unlock the mutex,
@@ -1918,12 +2180,9 @@ dbug_init( const char * options, const char *name )
 	  break;
 
 	case 1:
-	  if ( pthread_getspecific( dbug_ctx_key.key ) == NULL ) /* no dbug context set */
+	  if ( dbug_ctx_get() == NULL ) /* no dbug context set */
 	    if ( (status = dbug_init_ctx( options, name, &dbug_ctx )) == 0 )
-	      status = pthread_setspecific( dbug_ctx_key.key, dbug_ctx );
-#ifndef NDEBUG
-	  printf( "pthread_setspecific = %d\n", status );
-#endif
+	      status = dbug_ctx_set( dbug_ctx );
 	  break;
 
 	case DBUG_INIT_STEPS:
@@ -1946,9 +2205,8 @@ dbug_init( const char * options, const char *name )
   status = dbug_init_ctx( options, name, &g_dbug_ctx ); /* global dbug_ctx */
 #endif /* #ifdef _POSIX_THREADS */
 
-#ifndef NDEBUG
-  printf( "< %s = %d\n", procname, status );
-#endif
+  _DBUG_PRINT( "output", ( "status: %d", status ) );
+  _DBUG_LEAVE();
 
   return status;
 }
@@ -1974,7 +2232,7 @@ dbug_push( const char * options )
 {
   char *options_tmp;
   int nr;
-  char ch_from, ch_to;
+  char ch_from = '\0', ch_to = '\0';
   char *str;
   dbug_errno_t status = 0;
 
@@ -2038,10 +2296,8 @@ dbug_done_ctx( dbug_ctx_t* dbug_ctx )
   dbug_errno_t status = 0;
   const char *procname = "dbug_done_ctx";
 
-#ifndef NDEBUG
-  printf( "> %s( %s )\n", 
-	  procname, PTR_STR(dbug_ctx) );
-#endif
+  _DBUG_ENTER( procname );
+  _DBUG_PRINT( "input", ( "dbug_ctx: %s", PTR_STR(dbug_ctx) ) );
 
   if ( dbug_ctx == NULL || !DBUG_CTX_VALID(*dbug_ctx) )
     {
@@ -2058,45 +2314,57 @@ dbug_done_ctx( dbug_ctx_t* dbug_ctx )
 
       if ( (*dbug_ctx)->flags )
 	{
-	  fprintf( (*dbug_ctx)->fp, DBUG_DONE_FMT, 
-		   (*dbug_ctx)->separator,
-		   (void*)(*dbug_ctx),
-		   (*dbug_ctx)->separator,
-		   (*dbug_ctx)->separator,
-		   (long)(*dbug_ctx)->stack.maxcount,
-		   (*dbug_ctx)->separator,
-		   stack_usage );
-	  fflush((*dbug_ctx)->fp);
+	  FLOCKFILE( (*dbug_ctx)->fp );
+	  Gmtime( &(*dbug_ctx)->tm );
+	  (*dbug_ctx)->seq++;
+	  (void) fprintf( (*dbug_ctx)->fp, DBUG_DONE_FMT, 
+			  (*dbug_ctx)->separator,
+			  (void*)(*dbug_ctx),
+			  (*dbug_ctx)->separator,
+			  (*dbug_ctx)->tm.tm_year + 1900,
+			  (*dbug_ctx)->tm.tm_mon + 1,
+			  (*dbug_ctx)->tm.tm_mday,
+			  (*dbug_ctx)->tm.tm_hour,
+			  (*dbug_ctx)->tm.tm_min,
+			  (*dbug_ctx)->tm.tm_sec,
+			  (*dbug_ctx)->separator,
+			  (*dbug_ctx)->seq,
+			  (*dbug_ctx)->separator,
+			  (*dbug_ctx)->separator,
+			  (long)(*dbug_ctx)->stack.maxcount,
+			  (*dbug_ctx)->separator,
+			  stack_usage );
+	  (void) fflush( (*dbug_ctx)->fp );
+	  FUNLOCKFILE( (*dbug_ctx)->fp );
 	}
 
 
       if ( (*dbug_ctx)->fp != stderr && (*dbug_ctx)->fp != stdout )
-	fclose( (*dbug_ctx)->fp );
+	(void) fclose( (*dbug_ctx)->fp );
 
       FREE( (*dbug_ctx)->name );
-      dbug_names_done( &(*dbug_ctx)->files );
-      dbug_names_done( &(*dbug_ctx)->functions );
+      (void) dbug_names_done( &(*dbug_ctx)->files );
+      (void) dbug_names_done( &(*dbug_ctx)->functions );
 #if BREAK_POINTS_ALLOWED
-      dbug_names_done( &(*dbug_ctx)->break_points_allowed );
+      (void) dbug_names_done( &(*dbug_ctx)->break_points_allowed );
 #endif
 #if FUNCTIONS_ALLOWED
-      dbug_names_done( &(*dbug_ctx)->functions_allowed );
+      (void) dbug_names_done( &(*dbug_ctx)->functions_allowed );
 #endif
-      dbug_stack_done( &(*dbug_ctx)->stack );
+      (void) dbug_stack_done( &(*dbug_ctx)->stack );
 
 #ifdef _POSIX_THREADS
       {
-	dbug_print_info_t *dbug_print_info = 
-	  pthread_getspecific( dbug_print_info_key.key );
+	dbug_print_info_t *dbug_print_info = dbug_print_info_get();
 
 	if ( dbug_print_info != NULL ) /* dbug print info set */
 	  {
 	    FREE( dbug_print_info );
-	    status = pthread_setspecific( dbug_print_info_key.key, NULL );
+	    status = dbug_print_info_set( NULL );
 	  }
       }
 
-      dbug_key_done( &dbug_print_info_key );
+      (void) dbug_key_done( &dbug_print_info_key );
 #endif
 	
       FREE( *dbug_ctx );
@@ -2105,14 +2373,15 @@ dbug_done_ctx( dbug_ctx_t* dbug_ctx )
 
   if ( status != 0 )
     {
-      fprintf( stderr, "DBUG%c%p%cERROR: %s; status: %d\n",
+      FLOCKFILE( stderr );
+      (void) fprintf( stderr, "DBUG%c%p%cERROR: %s; status: %d\n",
 	       SEPARATOR, (dbug_ctx?(void*)*dbug_ctx:NULL), SEPARATOR, procname, status );
-      fflush( stderr );
+      (void) fflush( stderr );
+      FUNLOCKFILE( stderr );
     }
 
-#ifndef NDEBUG
-  printf( "< %s = %d\n", procname, status );
-#endif
+  _DBUG_PRINT( "output", ( "status: %d", status ) );
+  _DBUG_LEAVE();
 
   return status;
 }
@@ -2121,27 +2390,24 @@ dbug_errno_t
 dbug_done( void )
 {
   dbug_errno_t status = 0;
-
-#ifdef _POSIX_THREADS
   dbug_ctx_t dbug_ctx; /* local dbug_ctx */
-
-  dbug_ctx = pthread_getspecific( dbug_ctx_key.key );
 #ifndef NDEBUG
-  printf( "pthread_getspecific = %p\n", (void*)dbug_ctx );
-#endif
-  status = dbug_done_ctx( &dbug_ctx );
-#else
-  status = dbug_done_ctx( &g_dbug_ctx );
+  const char *procname = "dbug_done";
 #endif
 
-#ifdef _POSIX_THREADS
-  if ( status == 0 )
-    status = pthread_setspecific( dbug_ctx_key.key, dbug_ctx );
-#endif /* #ifdef _POSIX_THREADS */
+  _DBUG_ENTER( procname );
+
+  dbug_ctx = dbug_ctx_get();
+
+  status = dbug_done_ctx( &dbug_ctx );
+
+  (void) dbug_ctx_set( dbug_ctx );
 
 #ifdef _POSIX_THREADS
   status = dbug_key_done( &dbug_ctx_key );
 #endif
+
+  _DBUG_LEAVE();
 	
   return status;
 }
@@ -2182,10 +2448,10 @@ dbug_enter_ctx( const dbug_ctx_t dbug_ctx, const char *file, const char *functio
   long time;
   const char *procname = "dbug_enter_ctx";
 
-#ifndef NDEBUG
-  printf( "> %s( %s, %s, %s, %d, %s )\n", 
-	  procname, PTR_STR(dbug_ctx), file, function, line, PTR_STR(dbug_level) );
-#endif
+  _DBUG_ENTER( procname );
+  _DBUG_PRINT( "input", 
+	       ( "dbug_ctx: %s; file: %s; function: %s; line: %d; dbug_level: %s", 
+		 PTR_STR(dbug_ctx), file, function, line, PTR_STR(dbug_level) ) );
 
 #define DBUG_ENTER_CTX_STEPS 5
 
@@ -2205,7 +2471,7 @@ dbug_enter_ctx( const dbug_ctx_t dbug_ctx, const char *file, const char *functio
 	    {
 	    case EEXIST:
 	      status = 0;
-	      /* no break */
+	      /*@fallthrough@*/
 
 	    case 0:
 	      call.file = result->name;
@@ -2221,7 +2487,7 @@ dbug_enter_ctx( const dbug_ctx_t dbug_ctx, const char *file, const char *functio
 	    {
 	    case EEXIST:
 	      status = 0;
-	      /* no break */
+	      /*@fallthrough@*/
 
 	    case 0:
 	      call.function = result->name;
@@ -2262,21 +2528,34 @@ dbug_enter_ctx( const dbug_ctx_t dbug_ctx, const char *file, const char *functio
 
 	  if ( print )
 	    {
-	      fprintf( dbug_ctx->fp, DBUG_ENTER_FMT, 
-		       dbug_ctx->separator,
-		       (void*)dbug_ctx, 
-		       dbug_ctx->separator,
-		       dbug_ctx->separator,
-		       call.file, 
-		       dbug_ctx->separator,
-		       call.function, 
-		       dbug_ctx->separator,
-		       (long)line, 
-		       dbug_ctx->separator,
-		       (long)dbug_ctx->stack.count,
-		       dbug_ctx->separator,
-		       (long)time );
-	      fflush(dbug_ctx->fp);
+	      FLOCKFILE( dbug_ctx->fp );
+	      Gmtime( &dbug_ctx->tm );
+	      dbug_ctx->seq++;
+	      (void) fprintf( dbug_ctx->fp, DBUG_ENTER_FMT, 
+			      dbug_ctx->separator,
+			      (void*)dbug_ctx, 
+			      dbug_ctx->separator,
+			      dbug_ctx->tm.tm_year + 1900,
+			      dbug_ctx->tm.tm_mon + 1,
+			      dbug_ctx->tm.tm_mday,
+			      dbug_ctx->tm.tm_hour,
+			      dbug_ctx->tm.tm_min,
+			      dbug_ctx->tm.tm_sec,
+			      dbug_ctx->separator,
+			      dbug_ctx->seq,
+			      dbug_ctx->separator,
+			      dbug_ctx->separator,
+			      call.file, 
+			      dbug_ctx->separator,
+			      call.function, 
+			      dbug_ctx->separator,
+			      (long)line, 
+			      dbug_ctx->separator,
+			      (long)dbug_ctx->stack.count,
+			      dbug_ctx->separator,
+			      (long)time );
+	      (void) fflush( dbug_ctx->fp );
+	      FUNLOCKFILE( dbug_ctx->fp );
 	    }
 	  break;
 
@@ -2293,9 +2572,11 @@ dbug_enter_ctx( const dbug_ctx_t dbug_ctx, const char *file, const char *functio
 
       if ( status != 0 && status != ENOENT )
 	{
-	  fprintf( stderr, "DBUG%c%p%cERROR: %s: status: %d; step_no: %d\n", 
+	  FLOCKFILE( stderr );	  
+	  (void) fprintf( stderr, "DBUG%c%p%cERROR: %s: status: %d; step_no: %d\n", 
 		   SEPARATOR, (void*)dbug_ctx, SEPARATOR, procname, status, step_no );
-	  fflush( stderr );
+	  (void) fflush( stderr );
+	  FUNLOCKFILE( stderr );	  
 	}
     }
 
@@ -2303,9 +2584,8 @@ dbug_enter_ctx( const dbug_ctx_t dbug_ctx, const char *file, const char *functio
 
 #undef DBUG_ENTER_CTX_STEPS
 
-#ifndef NDEBUG
-  printf( "< %s = %d\n", procname, status );
-#endif
+  _DBUG_PRINT( "output", ( "status: %d", status ) );
+  _DBUG_LEAVE();
 
   return status;
 }
@@ -2313,38 +2593,7 @@ dbug_enter_ctx( const dbug_ctx_t dbug_ctx, const char *file, const char *functio
 dbug_errno_t
 dbug_enter( const char *file, const char *function, const int line, int *dbug_level )
 {
-  dbug_errno_t status = 0;
-#ifdef _POSIX_THREADS
-  dbug_ctx_t dbug_ctx; /* local dbug_ctx */
-#endif
-
-#ifndef NDEBUG
-  const char *procname = "dbug_enter";
-
-  printf( "> %s( %s, %s, %d, %s )\n", 
-	  procname, file, function, line, PTR_STR(dbug_level) );
-#endif
-
-#ifdef _POSIX_THREADS
-
-  dbug_ctx = pthread_getspecific( dbug_ctx_key.key );
-#ifndef NDEBUG
-  printf( "pthread_getspecific = %p\n", (void*)dbug_ctx );
-#endif
-
-  status = dbug_enter_ctx( dbug_ctx, file, function, line, dbug_level );
-
-#else
-
-  status = dbug_enter_ctx( g_dbug_ctx, file, function, line, dbug_level );
-
-#endif
-
-#ifndef NDEBUG
-  printf( "< %s = %d\n", procname, status );
-#endif
-
-  return status;
+  return dbug_enter_ctx( dbug_ctx_get(), file, function, line, dbug_level );
 }
 
 
@@ -2383,10 +2632,10 @@ dbug_leave_ctx( const dbug_ctx_t dbug_ctx, const int line, int *dbug_level )
   long time;
   const char *procname = "dbug_leave_ctx";
 
-#ifndef NDEBUG
-  printf( "> %s( %s, %d, %s )\n", 
-	  procname, PTR_STR(dbug_ctx), line, PTR_STR(dbug_level) );
-#endif
+  _DBUG_ENTER( procname );
+  _DBUG_PRINT( "input", 
+	       ( "dbug_ctx: %s; line: %d; dbug_level: %s", 
+		 PTR_STR(dbug_ctx), line, PTR_STR(dbug_level) ) );
 
 #define DBUG_LEAVE_CTX_STEPS 6
 
@@ -2404,10 +2653,12 @@ dbug_leave_ctx( const dbug_ctx_t dbug_ctx, const int line, int *dbug_level )
 	case 1:
 	  if ( dbug_level && (size_t)*dbug_level != dbug_ctx->stack.count )
 	    {
-	      fprintf( stderr, "DBUG%c%p%cERROR: %s: dbug level (%ld) != stack count (%ld)\n", 
+	      FLOCKFILE( stderr );
+	      (void) fprintf( stderr, "DBUG%c%p%cERROR: %s: dbug level (%ld) != stack count (%ld)\n", 
 		       SEPARATOR, (void*)dbug_ctx, SEPARATOR, 
 		       procname, (long)*dbug_level, (long)dbug_ctx->stack.count );
-	      fflush( stderr );
+	      (void) fflush( stderr );
+	      FUNLOCKFILE( stderr );
 
 	      /* 
 	       * trying to restore invariant: *dbug_level == dbug_ctx->stack.count
@@ -2439,21 +2690,34 @@ dbug_leave_ctx( const dbug_ctx_t dbug_ctx, const int line, int *dbug_level )
 
 	  if ( print )
 	    {
-	      fprintf( dbug_ctx->fp, DBUG_LEAVE_FMT, 
-		       dbug_ctx->separator,
-		       (void*)dbug_ctx, 
-		       dbug_ctx->separator,
-		       dbug_ctx->separator,
-		       call->file, 
-		       dbug_ctx->separator,
-		       call->function, 
-		       dbug_ctx->separator,
-		       (long)line, 
-		       dbug_ctx->separator,
-		       (long)dbug_ctx->stack.count,
-		       dbug_ctx->separator,
-		       (long)time );
-	      fflush(dbug_ctx->fp);
+	      FLOCKFILE( dbug_ctx->fp );
+	      Gmtime( &dbug_ctx->tm );
+	      dbug_ctx->seq++;
+	      (void) fprintf( dbug_ctx->fp, DBUG_LEAVE_FMT, 
+			      dbug_ctx->separator,
+			      (void*)dbug_ctx, 
+			      dbug_ctx->separator,
+			      dbug_ctx->tm.tm_year + 1900,
+			      dbug_ctx->tm.tm_mon + 1,
+			      dbug_ctx->tm.tm_mday,
+			      dbug_ctx->tm.tm_hour,
+			      dbug_ctx->tm.tm_min,
+			      dbug_ctx->tm.tm_sec,
+			      dbug_ctx->separator,
+			      dbug_ctx->seq,
+			      dbug_ctx->separator,
+			      dbug_ctx->separator,
+			      call->file, 
+			      dbug_ctx->separator,
+			      call->function, 
+			      dbug_ctx->separator,
+			      (long)line, 
+			      dbug_ctx->separator,
+			      (long)dbug_ctx->stack.count,
+			      dbug_ctx->separator,
+			      (long)time );
+	      (void) fflush(dbug_ctx->fp);
+	      FUNLOCKFILE( dbug_ctx->fp );
 	    }
 	  break;
 
@@ -2482,9 +2746,11 @@ dbug_leave_ctx( const dbug_ctx_t dbug_ctx, const int line, int *dbug_level )
 
       if ( status != 0 && status != ENOENT )
 	{
-	  fprintf( stderr, "DBUG%c%p%cERROR: %s: status: %d; step_no: %d\n", 
+	  FLOCKFILE( stderr );
+	  (void) fprintf( stderr, "DBUG%c%p%cERROR: %s: status: %d; step_no: %d\n", 
 		   SEPARATOR, (void*)dbug_ctx, SEPARATOR, procname, status, step_no );
-	  fflush( stderr );
+	  (void) fflush( stderr );
+	  FUNLOCKFILE( stderr );
 	}
     }
 
@@ -2492,9 +2758,8 @@ dbug_leave_ctx( const dbug_ctx_t dbug_ctx, const int line, int *dbug_level )
 
 #undef DBUG_LEAVE_CTX_STEPS
 
-#ifndef NDEBUG
-  printf( "< %s = %d\n", procname, status );
-#endif
+  _DBUG_PRINT( "output", ( "status: %d", status ) );
+  _DBUG_LEAVE();
 
   return status;
 }
@@ -2514,32 +2779,14 @@ dbug_leave( const int line, int *dbug_level )
 /*
  *  DESCRIPTION
  *
- *	See dbug_print_ctx.
+ *	See dbug_leave_ctx.
  *
  *  RETURN VALUE
  *
- *	See dbug_print_ctx.
+ *	See dbug_leave_ctx.
  */
 {
-  dbug_errno_t status = 0;
-  dbug_ctx_t dbug_ctx; /* local dbug_ctx */
-
-#ifndef _POSIX_THREADS
-
-  dbug_ctx = g_dbug_ctx;
-
-#else
-
-  dbug_ctx = pthread_getspecific( dbug_ctx_key.key );
-#ifndef NDEBUG
-  printf( "pthread_getspecific = %p\n", (void*)dbug_ctx );
-#endif
-
-#endif
-
-  status = dbug_leave_ctx( dbug_ctx, line, dbug_level );
-
-  return status;
+  return dbug_leave_ctx( dbug_ctx_get(), line, dbug_level );
 }
 
 /*
@@ -2577,14 +2824,6 @@ va_dcl
 {
   dbug_errno_t status = 0;
   va_list args;
-#ifndef NDEBUG
-  const char *procname = "dbug_print";
-#endif
-
-#ifndef NDEBUG
-  printf( "> %s( %s, %d, %s, %s )\n", 
-	  procname, PTR_STR(dbug_ctx), line, break_point, format );
-#endif
 
 #if HASSTDARG
   va_start(args, format);
@@ -2595,11 +2834,7 @@ va_dcl
   status = _dbug_print_ctx( dbug_ctx, line, break_point, format, args );
 
   va_end(args);
-
-#ifndef NDEBUG
-  printf( "< %s = %d\n", procname, status );
-#endif
-
+  
   return status;
 }
 
@@ -2616,25 +2851,7 @@ va_dcl
 #endif
 {
   dbug_errno_t status = 0;
-  dbug_ctx_t dbug_ctx; /* local dbug_ctx */
   va_list args;
-#ifndef NDEBUG
-  const char *procname = "dbug_print";
-#endif
-
-#ifndef NDEBUG
-  printf( "> %s( %d, %s, %s )\n", 
-	  procname, line, break_point, format );
-#endif
-
-#ifndef _POSIX_THREADS
-  dbug_ctx = g_dbug_ctx;
-#else
-  dbug_ctx = pthread_getspecific( dbug_ctx_key.key );
-#ifndef NDEBUG
-  printf( "pthread_getspecific = %p\n", (void*)dbug_ctx );
-#endif
-#endif
 
 #if HASSTDARG
   va_start(args, format);
@@ -2642,13 +2859,9 @@ va_dcl
   va_start(args);
 #endif
 
-  status = _dbug_print_ctx( dbug_ctx, line, break_point, format, args );
+  status = _dbug_print_ctx( dbug_ctx_get(), line, break_point, format, args );
 
   va_end(args);
-
-#ifndef NDEBUG
-  printf( "< %s = %d\n", procname, status );
-#endif
 
   return status;
 }
@@ -2678,27 +2891,19 @@ dbug_print_start_ctx( const dbug_ctx_t dbug_ctx, const int line, const char *bre
   const char *procname = "dbug_print_start_ctx";
 #endif
 
-#ifndef NDEBUG
-  printf( "> %s( %s, %d, %s )\n", 
-	  procname, PTR_STR(dbug_ctx), line, break_point );
-#endif
+  _DBUG_ENTER( procname );
+  _DBUG_PRINT( "input", 
+	       ( "dbug_ctx: %s; line: %d; break_point: %s", 
+		 PTR_STR(dbug_ctx), line, break_point ) );
 
-#ifdef _POSIX_THREADS
-  dbug_print_info = pthread_getspecific( dbug_print_info_key.key );
-#ifndef NDEBUG
-  printf( "pthread_getspecific = %p\n", (void*)dbug_print_info );
-#endif
-#else
-  dbug_print_info = &g_dbug_print_info;
-#endif
+  dbug_print_info = dbug_print_info_get();
 
   dbug_print_info->dbug_ctx = dbug_ctx;
   dbug_print_info->line = line;
   dbug_print_info->break_point = (char *)break_point;
 
-#ifndef NDEBUG
-  printf( "< %s = %d\n", procname, status );
-#endif
+  _DBUG_PRINT( "output", ( "status: %d", status ) );
+  _DBUG_LEAVE();
 
   return status;
 }
@@ -2722,34 +2927,7 @@ dbug_print_start( const int line, const char *break_point )
  *
  */
 {
-  dbug_errno_t status = 0;
-#ifndef NDEBUG
-  const char *procname = "dbug_print_start";
-#endif
-#ifdef _POSIX_THREADS
-  dbug_ctx_t dbug_ctx; /* local dbug_ctx */
-#endif
-
-#ifndef NDEBUG
-  printf( "> %s( %d, %s )\n", 
-	  procname, line, break_point );
-#endif
-
-#ifdef _POSIX_THREADS
-  dbug_ctx = pthread_getspecific( dbug_ctx_key.key );
-#ifndef NDEBUG
-  printf( "pthread_getspecific = %p\n", (void*)dbug_ctx );
-#endif
-  status = dbug_print_start_ctx( dbug_ctx, line, break_point );
-#else
-  status = dbug_print_start_ctx( g_dbug_ctx, line, break_point );
-#endif
-
-#ifndef NDEBUG
-  printf( "< %s = %d\n", procname, status );
-#endif
-
-  return status;
+  return dbug_print_start_ctx( dbug_ctx_get(), line, break_point );
 }
 
 /*
@@ -2785,22 +2963,8 @@ va_dcl
   dbug_errno_t status = 0;
   dbug_print_info_t *dbug_print_info;
   va_list args;
-#ifndef NDEBUG
-  const char *procname = "dbug_print_end";
-#endif
 
-#ifdef _POSIX_THREADS
-  dbug_print_info = pthread_getspecific( dbug_print_info_key.key );
-#else
-  dbug_print_info = &g_dbug_print_info;
-#endif
-
-#ifndef NDEBUG
-  printf( "> %s( %s, %d, %s, %s )\n", 
-	  procname, PTR_STR(dbug_print_info->dbug_ctx), 
-	  dbug_print_info->line, 
-	  dbug_print_info->break_point, format );
-#endif
+  dbug_print_info = dbug_print_info_get();
 
 #if HASSTDARG
   va_start(args, format);
@@ -2812,11 +2976,64 @@ va_dcl
 
   va_end(args);
 
-#ifndef NDEBUG
-  printf( "< %s = %d\n", procname, status );
-#endif
-
   return status;
+}
+
+/*
+ *  FUNCTION
+ *
+ *	      dbug_dump    dump memory
+ *
+ *  SYNOPSIS
+ *
+ */
+
+dbug_errno_t
+dbug_dump_ctx( const dbug_ctx_t dbug_ctx,
+	       const int line,
+	       const char *break_point,
+	       const void *memory,
+	       const unsigned int len )
+
+/*
+ *  DESCRIPTION
+ *  
+ *      Print a piece of memory of len bytes. Each 16 bytes will be printed on one line.
+ */
+
+{
+  /* number of bytes per line */
+#define NR_BYTES 16
+  char str[NR_BYTES*3+1] = ""; /* NR_BYTES bytes long e.g. AB 10 20 30 BD 41 51 65 */
+  unsigned char *byte = (unsigned char*) memory;
+  unsigned int nr;
+  dbug_errno_t status = 0;
+
+  if ( memory )
+    {
+      for ( nr = 0; status == 0 && nr < len; nr++ )
+	{
+	  sprintf( &str[(nr % NR_BYTES) * 3], "%02X ", (unsigned int)byte[nr] );
+	  if ( nr % NR_BYTES == NR_BYTES-1 || nr == len-1 )
+	    status = dbug_print_ctx( dbug_ctx,
+				     line,
+				     break_point,
+				     "byte %03d: %s",
+				     ( nr / NR_BYTES ) * NR_BYTES,
+				     str );
+	}
+    }
+#undef NR_BYTES
+  return status;
+}
+
+dbug_errno_t
+dbug_dump( const int line,
+	   const char *break_point,
+	   const void *memory,
+	   const unsigned int len )
+{
+  return dbug_dump_ctx( dbug_ctx_get(), line, break_point, memory, len );
 }
 
 
@@ -2834,7 +3051,7 @@ int main( int argc, char **argv )
 
   if ( argc < 3 )
     {
-      fprintf( stderr, "Usage: dbugtest <DBUG_INIT options> <DBUG_PUSH options> <name1> <name2> .. <nameN>\n" );
+      (void) fprintf( stderr, "Usage: dbugtest <DBUG_INIT options> <DBUG_PUSH options> <name1> <name2> .. <nameN>\n" );
       exit (0);
     }
 

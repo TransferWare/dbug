@@ -83,11 +83,11 @@ typedef void * dbug_ctx_t; /* dbug context */
 
 extern
 dbug_errno_t
-dbug_init_ctx( const char * options, const char *name, dbug_ctx_t* dbug_ctx );
+dbug_init_ctx( /*@in@*/ /*@null@*/ const char * options, /*@in@*/ /*@null@*/ const char *name, /*@out@*/ dbug_ctx_t* dbug_ctx );
 
 extern
 dbug_errno_t
-dbug_init( const char * options, const char *name );
+dbug_init( /*@in@*/ /*@null@*/ const char * options, /*@in@*/ /*@null@*/ const char *name );
 
 extern
 dbug_errno_t
@@ -103,19 +103,19 @@ dbug_done( void );
 
 extern
 dbug_errno_t
-dbug_enter_ctx( const dbug_ctx_t dbug_ctx, const char *file, const char *function, const int line, int *dbug_level );
+dbug_enter_ctx( const dbug_ctx_t dbug_ctx, const char *file, const char *function, const int line, /*@out@*/ /*@null@*/ int *dbug_level );
 
 extern
 dbug_errno_t
-dbug_enter( const char *file, const char *function, const int line, int *dbug_level );
+dbug_enter( const char *file, const char *function, const int line, /*@out@*/ /*@null@*/ int *dbug_level );
 
 extern
 dbug_errno_t
-dbug_leave_ctx( const dbug_ctx_t dbug_ctx, const int line, int *dbug_level );
+dbug_leave_ctx( const dbug_ctx_t dbug_ctx, const int line, /*@null@*/ int *dbug_level );
 
 extern
 dbug_errno_t
-dbug_leave( const int line, int *dbug_level );
+dbug_leave( const int line, /*@null@*/ int *dbug_level );
 
 extern
 dbug_errno_t
@@ -137,6 +137,23 @@ extern
 dbug_errno_t
 dbug_print_end( const char *format, ... );
 
+extern	
+dbug_errno_t
+dbug_dump_ctx( const dbug_ctx_t dbug_ctx,
+	       const int line,
+	       const char *break_point,
+	       const void *memory,
+	       const unsigned int len );
+
+extern	
+dbug_errno_t
+dbug_dump( const int line,
+	   const char *break_point,
+	   const void *memory,
+	   const unsigned int len );
+
+/*@-exportlocal@*/
+
 /*
  *	These macros provide a user interface into functions in the
  *	dbug runtime support library.  They isolate users from changes
@@ -151,6 +168,61 @@ dbug_print_end( const char *format, ... );
  *	statements in the user function.
  *
  */
+
+extern
+void
+DBUG_INIT_CTX( /*@in@*/ /*@null@*/ const char * options, /*@in@*/ /*@null@*/ const char *name, /*@out@*/ dbug_ctx_t* dbug_ctx );
+
+extern
+void
+DBUG_INIT( /*@in@*/ /*@null@*/ const char * options, /*@in@*/ /*@null@*/ const char *name );
+
+extern
+void
+DBUG_PUSH( const char * options );
+
+extern
+void
+DBUG_DONE_CTX( dbug_ctx_t* dbug_ctx );
+
+extern
+void
+DBUG_DONE( void );
+
+extern
+void
+DBUG_POP( void );
+
+extern
+void
+DBUG_ENTER_CTX( const dbug_ctx_t dbug_ctx, const char *function );
+
+extern
+void
+DBUG_ENTER( const char *function );
+
+extern
+void
+DBUG_LEAVE_CTX( const dbug_ctx_t dbug_ctx );
+
+extern
+void
+DBUG_LEAVE( void );
+
+extern	
+void
+DBUG_DUMP_CTX( const dbug_ctx_t dbug_ctx,
+	       const char *break_point,
+	       const void *memory,
+	       const unsigned int len );
+
+extern	
+void
+DBUG_DUMP( const char *break_point,
+	   const void *memory,
+	   const unsigned int len );
+
+/*@=exportlocal@*/
 
 #    define DBUG_EXECUTE(keyword,a1)
 #    define DBUG_PROCESS(a1)
@@ -171,27 +243,33 @@ dbug_print_end( const char *format, ... );
 #    define DBUG_VOID_RETURN return
 #    define DBUG_PRINT_CTX(dbug_ctx, break_point, arglist)
 #    define DBUG_PRINT(break_point, arglist)
+#    define DBUG_DUMP_CTX(dbug_ctx, break_point, memory, len) 
+#    define DBUG_DUMP(break_point, memory, len)
 # else
-#    define DBUG_INIT_CTX(options, name, dbug_ctx) dbug_init_ctx(options, name, dbug_ctx)
-#    define DBUG_INIT(options, name) dbug_init(options, name)
-#    define DBUG_PUSH(options) dbug_push(options)
-#    define DBUG_DONE_CTX(dbug_ctx) dbug_done_ctx(dbug_ctx)
-#    define DBUG_DONE() dbug_done()
-#    define DBUG_POP() dbug_done()
+#    define DBUG_INIT_CTX(options, name, dbug_ctx) (void)dbug_init_ctx(options, name, dbug_ctx)
+#    define DBUG_INIT(options, name) (void)dbug_init(options, name)
+#    define DBUG_PUSH(options) (void)dbug_push(options)
+#    define DBUG_DONE_CTX(dbug_ctx) (void)dbug_done_ctx(dbug_ctx)
+#    define DBUG_DONE() (void)dbug_done()
+#    define DBUG_POP() (void)dbug_done()
 #    define DBUG_ENTER_CTX(dbug_ctx, function) \
 	int dbug_level; \
-	dbug_enter_ctx(dbug_ctx, __FILE__, function, __LINE__, &dbug_level)
+	(void)dbug_enter_ctx(dbug_ctx, __FILE__, function, __LINE__, &dbug_level)
 #    define DBUG_ENTER(function) \
 	int dbug_level; \
-	dbug_enter(__FILE__, function, __LINE__, &dbug_level)
-#    define DBUG_LEAVE_CTX(dbug_ctx) dbug_leave_ctx(dbug_ctx, __LINE__, &dbug_level)
-#    define DBUG_LEAVE() dbug_leave(__LINE__, &dbug_level)
+	(void)dbug_enter(__FILE__, function, __LINE__, &dbug_level)
+#    define DBUG_LEAVE_CTX(dbug_ctx) (void)dbug_leave_ctx(dbug_ctx, __LINE__, &dbug_level)
+#    define DBUG_LEAVE() (void)dbug_leave(__LINE__, &dbug_level)
 #    define DBUG_RETURN(a1) { DBUG_LEAVE(); return (a1); }
 #    define DBUG_VOID_RETURN { DBUG_LEAVE(); return; }
 #    define DBUG_PRINT_CTX(dbug_ctx, break_point, arglist) \
-       { dbug_print_start_ctx(dbug_ctx, __LINE__, break_point); dbug_print_end arglist ; }
+       { (void)dbug_print_start_ctx(dbug_ctx, __LINE__, break_point); (void)dbug_print_end arglist ; }
 #    define DBUG_PRINT(break_point, arglist) \
-       { dbug_print_start(__LINE__, break_point); dbug_print_end arglist ; }
+       { (void)dbug_print_start(__LINE__, break_point); (void)dbug_print_end arglist ; }
+#    define DBUG_DUMP_CTX(dbug_ctx, break_point, memory, len) \
+       (void)dbug_dump_ctx(dbug_ctx, __LINE__, break_point, memory, len)
+#    define DBUG_DUMP(break_point, memory, len) \
+       (void)dbug_dump(__LINE__, break_point, memory, len)
 # endif
 
 #ifdef __cplusplus
