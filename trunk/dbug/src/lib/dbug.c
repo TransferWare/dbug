@@ -191,6 +191,9 @@ void
 FLOCKFILE( FILE *f );
 extern
 void 
+FFLUSH( FILE *f );
+extern
+void 
 FUNLOCKFILE( FILE *f );
 extern
 void 
@@ -198,6 +201,8 @@ DBUGLOCKFILE( file_t *f );
 extern
 void 
 DBUGUNLOCKFILE( file_t *f );
+
+#define FFLUSH(f) (void) fflush(f)
 
 #if !HASPTHREAD
 
@@ -343,7 +348,7 @@ typedef struct {
 #if DEBUG_DBUG
 
 #define _DBUG_ENTER( procname ) \
-  { FLOCKFILE(stdout); (void)fprintf( stdout, "> %s\n", procname ); FUNLOCKFILE(stdout); }
+  { FLOCKFILE(stdout); (void) fprintf( stdout, "> %s\n", procname ); FUNLOCKFILE(stdout); }
 #define _DBUG_LEAVE() \
   { FLOCKFILE(stdout); (void) fprintf( stdout, "< %s\n", procname ); FUNLOCKFILE(stdout); }
 #define _DBUG_PRINT( break_point, args ) \
@@ -376,7 +381,6 @@ typedef struct {
 #define TRACING (dbug_ctx->flags & TRACE_ON)
 #define DEBUGGING (dbug_ctx->flags & DEBUG_ON)
 #define PROFILING (dbug_ctx->flags & PROFILE_ON)
-
 
 #ifndef SEPARATOR 
 #define SEPARATOR '#'
@@ -710,7 +714,15 @@ static dbug_print_info_t g_dbug_print_info = { NULL, 0, NULL };
  *  SYNOPSIS
  */
 
-static BOOLEAN is_break_point(const dbug_ctx_t dbug_ctx, /*@unused@*/ const call_t *call, /*@unused@*/ const char *break_point)
+#if FUNCTIONS_ALLOWED || BREAK_POINTS_ALLOWED
+static
+BOOLEAN
+is_break_point( const dbug_ctx_t dbug_ctx,
+		/*@unused@*/ const call_t *call,
+		/*@unused@*/ const char *break_point )
+#else
+#define is_break_point( dbug_ctx, call, break_point ) ((dbug_ctx)->flags & DEBUG_ON)
+#endif
 
 /*
  *  DESCRIPTION
@@ -728,10 +740,9 @@ static BOOLEAN is_break_point(const dbug_ctx_t dbug_ctx, /*@unused@*/ const call
  *
  */
 
-{
 #if FUNCTIONS_ALLOWED || BREAK_POINTS_ALLOWED
+{
   name_t *result;
-#endif
 
   return
     DEBUGGING &&
@@ -745,6 +756,7 @@ static BOOLEAN is_break_point(const dbug_ctx_t dbug_ctx, /*@unused@*/ const call
 #endif
     TRUE;
 }
+#endif
 
 /*
  *  FUNCTION
@@ -835,9 +847,9 @@ _dbug_print_ctx( const dbug_ctx_t dbug_ctx, const int line, const char *break_po
 			  dbug_ctx->separator );
 	  (void) vfprintf(dbug_ctx->file->fptr, format, args);
 	  (void) fprintf(dbug_ctx->file->fptr, "\n");
-	  (void) fflush(dbug_ctx->file->fptr);
+	  FFLUSH(dbug_ctx->file->fptr);
 	  DBUGUNLOCKFILE( dbug_ctx->file );
-	  SleepMsec(dbug_ctx->delay);
+	  SLEEPMSEC(dbug_ctx->delay);
 	  break;
 	}
     }
@@ -849,7 +861,7 @@ _dbug_print_ctx( const dbug_ctx_t dbug_ctx, const int line, const char *break_po
       (void) fprintf( stderr, "DBUG%c%p%cERROR: %s: status: %d\n", 
 		      SEPARATOR, (void*)dbug_ctx, SEPARATOR, procname, status );
       /*@=nullpass@*/
-      (void) fflush( stderr );
+      FFLUSH( stderr );
       FUNLOCKFILE( stderr );
     }
 
@@ -952,9 +964,13 @@ dbug_parse_list (names_t *names, char *ctlp)
  *  SYNOPSIS
  */
 
+#if FUNCTIONS_ALLOWED
 static
 BOOLEAN
 dbug_profile ( const dbug_ctx_t dbug_ctx, /*@unused@*/ const char *function )
+#else
+#define dbug_profile( dbug_ctx, function ) ((dbug_ctx)->flags & PROFILE_ON)
+#endif
 
 /*
  *  DESCRIPTION
@@ -967,19 +983,16 @@ dbug_profile ( const dbug_ctx_t dbug_ctx, /*@unused@*/ const char *function )
  *
  */
 
-{
 #if FUNCTIONS_ALLOWED
+{
   name_t *result;
-#endif
 
   return
     PROFILING &&
-#if FUNCTIONS_ALLOWED
     ( dbug_ctx->functions_allowed.count == 0 ||
-      dbug_names_fnd( &dbug_ctx->functions_allowed, function, &result ) == 0 ) && 
-#endif
-    TRUE;
+      dbug_names_fnd( &dbug_ctx->functions_allowed, function, &result ) == 0 );
 }
+#endif
 
 /*
  *  FUNCTION
@@ -989,7 +1002,11 @@ dbug_profile ( const dbug_ctx_t dbug_ctx, /*@unused@*/ const char *function )
  *  SYNOPSIS
  */
 
+#if FUNCTIONS_ALLOWED
 static BOOLEAN dbug_trace (const dbug_ctx_t dbug_ctx, /*@unused@*/ const char *function)
+#else 
+#define dbug_trace(dbug_ctx, function) ((dbug_ctx)->flags & TRACE_ON)
+#endif
 
 /*
  *  DESCRIPTION
@@ -1001,19 +1018,17 @@ static BOOLEAN dbug_trace (const dbug_ctx_t dbug_ctx, /*@unused@*/ const char *f
  *
  */
 
-{
 #if FUNCTIONS_ALLOWED
+{
   name_t *result;
-#endif
 
   return
     TRACING &&
-#if FUNCTIONS_ALLOWED
     ( dbug_ctx->functions_allowed.count == 0 ||
-      dbug_names_fnd( &dbug_ctx->functions_allowed, function, &result ) == 0 ) &&
-#endif
-    TRUE;
+      dbug_names_fnd( &dbug_ctx->functions_allowed, function, &result ) == 0 );
 }
+#endif
+
 
 static
 dbug_errno_t
@@ -1144,7 +1159,7 @@ dbug_options_ctx( const dbug_ctx_t dbug_ctx, const char *options )
 	  FLOCKFILE( stderr );
 	  (void) fprintf( stderr, "DBUG%c%p%cERROR: %s: unrecognized option: %s\n", 
 		   SEPARATOR, (void*)dbug_ctx, SEPARATOR, procname, scan );
-	  (void) fflush( stderr );
+	  FFLUSH( stderr );
 	  FUNLOCKFILE( stderr );
 	}
 
@@ -2716,7 +2731,7 @@ dbug_init_ctx( const char * options, const char *name, dbug_ctx_t* dbug_ctx )
 #endif
 			      (*dbug_ctx)->separator,
 			      (*dbug_ctx)->flags );
-	      (void) fflush((*dbug_ctx)->file->fptr);
+	      FFLUSH((*dbug_ctx)->file->fptr);
 	      DBUGUNLOCKFILE( (*dbug_ctx)->file );
 	    }
 	  break;
@@ -2737,7 +2752,7 @@ dbug_init_ctx( const char * options, const char *name, dbug_ctx_t* dbug_ctx )
 	  FLOCKFILE( stderr );
 	  (void) fprintf( stderr, "DBUG%c%p%cERROR: %s: status: %d; step_no: %d\n", 
 		   SEPARATOR, (dbug_ctx?(void*)*dbug_ctx:NULL), SEPARATOR, procname, status, step_no );
-	  (void) fflush( stderr );
+	  FFLUSH( stderr );
 	  FUNLOCKFILE( stderr );
 
 	  switch( step_no-1 ) /* the last correct initialised member */
@@ -3037,7 +3052,7 @@ dbug_done_ctx( dbug_ctx_t* dbug_ctx )
 			  (long)(*dbug_ctx)->stack.maxcount,
 			  (*dbug_ctx)->separator,
 			  stack_usage );
-	  (void) fflush( (*dbug_ctx)->file->fptr );
+	  FFLUSH( (*dbug_ctx)->file->fptr );
 	  DBUGUNLOCKFILE( (*dbug_ctx)->file );
 	}
 
@@ -3094,7 +3109,7 @@ dbug_done_ctx( dbug_ctx_t* dbug_ctx )
       FLOCKFILE( stderr );
       (void) fprintf( stderr, "DBUG%c%p%cERROR: %s; status: %d\n",
 	       SEPARATOR, (dbug_ctx?(void*)*dbug_ctx:NULL), SEPARATOR, procname, status );
-      (void) fflush( stderr );
+      FFLUSH( stderr );
       FUNLOCKFILE( stderr );
     }
 
@@ -3179,7 +3194,7 @@ dbug_enter_ctx( const dbug_ctx_t dbug_ctx, const char *file, const char *functio
 	       ( "dbug_ctx: %s; file: %s; function: %s; line: %d; dbug_level: %s", 
 		 PTR_STR(dbug_ctx), file, function, line, PTR_STR(dbug_level) ) );
 
- for ( step_no = 0; status == 0 && step_no < DBUG_ENTER_CTX_STEPS; step_no++ )
+  for ( step_no = 0; status == 0 && step_no < DBUG_ENTER_CTX_STEPS; step_no++ )
     {
       switch( step_no )
 	{
@@ -3231,7 +3246,7 @@ dbug_enter_ctx( const dbug_ctx_t dbug_ctx, const char *file, const char *functio
 	case PRINT_STEP:
 	  if ( dbug_trace(dbug_ctx, function) != 0 )
 	    {
-	      SleepMsec(dbug_ctx -> delay);
+	      SLEEPMSEC(dbug_ctx->delay);
 	      time = -1;
 	      print = TRUE;
 	    }
@@ -3277,7 +3292,7 @@ dbug_enter_ctx( const dbug_ctx_t dbug_ctx, const char *file, const char *functio
 			      (long)dbug_ctx->stack.count,
 			      dbug_ctx->separator,
 			      (long)time );
-	      (void) fflush( dbug_ctx->file->fptr );
+	      FFLUSH( dbug_ctx->file->fptr );
 	      DBUGUNLOCKFILE( dbug_ctx->file );
 	    }
 	  break;
@@ -3297,13 +3312,13 @@ dbug_enter_ctx( const dbug_ctx_t dbug_ctx, const char *file, const char *functio
 	{
 	  FLOCKFILE( stderr );	  
 	  (void) fprintf( stderr, "DBUG%c%p%cERROR: %s: status: %d; step_no: %d\n", 
-		   SEPARATOR, (void*)dbug_ctx, SEPARATOR, procname, status, step_no );
-	  (void) fflush( stderr );
+			  SEPARATOR, (void*)dbug_ctx, SEPARATOR, procname, status, step_no );
+	  FFLUSH( stderr );
 	  FUNLOCKFILE( stderr );	  
 	}
     }
 
- assert( status != 0 || step_no == DBUG_ENTER_CTX_STEPS );
+  assert( status != 0 || step_no == DBUG_ENTER_CTX_STEPS );
 
 #undef DBUG_ENTER_CTX_STEPS
 
@@ -3387,7 +3402,7 @@ dbug_leave_ctx( const dbug_ctx_t dbug_ctx, const int line, int *dbug_level )
 	      (void) fprintf( stderr, "DBUG%c%p%cERROR: %s: dbug level (%ld) != stack count (%ld)\n", 
 		       SEPARATOR, (void*)dbug_ctx, SEPARATOR, 
 		       procname, (long)*dbug_level, (long)dbug_ctx->stack.count );
-	      (void) fflush( stderr );
+	      FFLUSH( stderr );
 	      FUNLOCKFILE( stderr );
 
 	      /* 
@@ -3407,7 +3422,7 @@ dbug_leave_ctx( const dbug_ctx_t dbug_ctx, const int line, int *dbug_level )
 	case PRINT_STEP:
 	  if ( dbug_trace(dbug_ctx, call->function) != 0 )
 	    {
-	      SleepMsec(dbug_ctx->delay);
+	      SLEEPMSEC(dbug_ctx->delay);
 	      time = -1;
 	      print = TRUE;
 	    }
@@ -3446,7 +3461,7 @@ dbug_leave_ctx( const dbug_ctx_t dbug_ctx, const int line, int *dbug_level )
 			      (long)dbug_ctx->stack.count,
 			      dbug_ctx->separator,
 			      (long)time );
-	      (void) fflush(dbug_ctx->file->fptr);
+	      FFLUSH(dbug_ctx->file->fptr);
 	      DBUGUNLOCKFILE( dbug_ctx->file );
 	    }
 	  break;
@@ -3478,8 +3493,8 @@ dbug_leave_ctx( const dbug_ctx_t dbug_ctx, const int line, int *dbug_level )
 	{
 	  FLOCKFILE( stderr );
 	  (void) fprintf( stderr, "DBUG%c%p%cERROR: %s: status: %d; step_no: %d\n", 
-		   SEPARATOR, (void*)dbug_ctx, SEPARATOR, procname, status, step_no );
-	  (void) fflush( stderr );
+			  SEPARATOR, (void*)dbug_ctx, SEPARATOR, procname, status, step_no );
+	  FFLUSH( stderr );
 	  FUNLOCKFILE( stderr );
 	}
     }
@@ -3791,7 +3806,7 @@ int main( int argc, char **argv )
 
   /* PRINT ALL ERRNO NUMBERS USED IN THIS SOURCE */
 
-#define PRINT_ERRNO(errno) printf( "%s: %d\n", #errno, errno )
+#define PRINT_ERRNO(errno) (void) printf( "%s: %d\n", #errno, errno )
 
   PRINT_ERRNO(EINVAL);
   PRINT_ERRNO(ENOENT);
@@ -3805,35 +3820,35 @@ int main( int argc, char **argv )
   for ( idx = idx_names; idx < argc; idx++ )
     dbug_names_ins( &names, argv[idx], &result );
 
-  printf( "\n" );
+  (void) printf( "\n" );
 
   for ( idx = idx_names; idx < argc; idx++ )
     dbug_names_ins( &names, argv[idx], &result );
 
-  printf( "\n" );
+  (void) printf( "\n" );
 
   for ( idx = idx_names; idx < argc; idx++ )
     dbug_names_fnd( &names, argv[idx], &result );
 
-  printf( "\n" );
+  (void) printf( "\n" );
 
   for ( idx = idx_names; idx < argc; idx++ )
     dbug_names_del( &names, argv[idx] );
 
-  printf( "\n" );
+  (void) printf( "\n" );
 
   for ( idx = idx_names; idx < argc; idx++ )
     dbug_names_del( &names, argv[idx] );
 
-  printf( "\n" );
+  (void) printf( "\n" );
 
   dbug_names_done( &names );
 
-  printf( "\n" );
+  (void) printf( "\n" );
 
   dbug_stack_init( &stack );
 
-  printf( "\n" );
+  (void) printf( "\n" );
 
   for ( idx = idx_names; idx < argc; idx++ )
     {
@@ -3842,7 +3857,7 @@ int main( int argc, char **argv )
       dbug_stack_push( &stack, &call );
     }
 
-  printf( "\n" );
+  (void) printf( "\n" );
 
   for ( idx = idx_names; idx < argc; idx++ )
     {
@@ -3850,13 +3865,13 @@ int main( int argc, char **argv )
       dbug_stack_top( &stack, &top );
     }
 
-  printf( "\n" );
+  (void) printf( "\n" );
 
   dbug_stack_done( &stack );
 
-  printf( "\n" );
+  (void) printf( "\n" );
 
-  printf( "Using supplied dbug context.\n" );
+  (void) printf( "Using supplied dbug context.\n" );
 
   DBUG_INIT_CTX( argv[1], argv[0], &dbug_ctx );
 
@@ -3872,8 +3887,8 @@ int main( int argc, char **argv )
 
   DBUG_DONE_CTX( &dbug_ctx );
 
-  printf( "\n" );
-  printf( "Using old DBUG library.\n" );
+  (void) printf( "\n" );
+  (void) printf( "Using old DBUG library.\n" );
 
   DBUG_PUSH( argv[2] );
 
