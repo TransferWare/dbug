@@ -26,7 +26,7 @@ dbugtest_LDADD       =
 AM_CPPFLAGS          = -I$(top_srcdir)/src/lib -DDEBUG_DBUG=1 -DDBUGTEST
 RUNTESTDEFAULTFLAGS  = --tool dbug DBUG=$$top_builddir/test/dbugtest --srcdir $$top_srcdir/test
 
-EXTRA_DIST           = Imakefile
+EXTRA_DIST           = 
 
 TESTS = test1 test2 test3 test4 test5 test6
 

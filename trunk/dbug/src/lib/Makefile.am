@@ -34,4 +34,4 @@ libdbug_la_SOURCES   = dbug.c Clock.c SleepMsec.c Clock.h SleepMsec.h vargs.h
 
 libdbug_la_LDFLAGS   = -no-undefined -version-info 1:0:0
 
-EXTRA_DIST           = .lclintrc Imakefile dbug-def.msub dbugtest.ref
+EXTRA_DIST           = dbugtest.ref
