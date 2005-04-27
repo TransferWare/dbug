@@ -1,5 +1,10 @@
 2004-12-14  Gert-Jan Paulissen  <g.paulissen@chello.nl>
 
+	* dbugrpt.in: [ 1174400 ] average is displayed wrongly by dbugrpt
+	The average is now divided by 1000
+
+2004-12-14  Gert-Jan Paulissen  <g.paulissen@chello.nl>
+
 	* dbugrpt.in: [ 1061551 ] Timing incorrect error
 	The missing time is assigned to function *** UNKNOWN ***.
 
