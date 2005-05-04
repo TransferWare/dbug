@@ -51,10 +51,15 @@ $(TESTS): $(FORCE)
 
 $(FORCE): ;
 
+# Create the test scripts which are run by dejagnu. The test scripts do nothing (:) but creating the test scripts
+# is the actual test. Ensure the test scripts are made executable (chmod +x).
+
 test1 test2 test3 test4 test5:
 	$(DBUGTEST) $@ 1>$(STDOUT) 2>$(STDERR)
 	@echo : > $@
+	@chmod +x $@
 
 test6:
 	$(DBUGTEST) $@ d,t,g,D=1000 d:t:g:D,1000 b c a d 1>$(STDOUT) 2>$(STDERR)
 	@echo : > $@
+	@chmod +x $@
