@@ -50,6 +50,7 @@ TESTS = test1 test2 test3 test4 test5 test6
 ## Each test depends on this Makefile, because the code is here.
 ## Each test must be a program too, because of the test support by automake
 ## Therefore let each test be a script with a single true command (:).
+## Ensure the test scripts are made executable (chmod +x).
 
 $(TESTS): Makefile
 
@@ -59,27 +60,32 @@ test1:
 	$(FACTORIAL) 1 2 3 4 5 > $@.log
 	$(DIFF) $@.log $(doc_srcdir)/$@.ref
 	@echo : > $@
+	@chmod +x $@
 
 test2:	$(DBUGRPT)
 	$(FACTORIAL) -#t 3 2 | @PERL@ $(DBUGRPT) > $@.log
 	$(DIFF) $@.log $(doc_srcdir)/$@.ref
 	@echo : > $@
+	@chmod +x $@
 
 test3:  $(DBUGRPT)
 	$(FACTORIAL) -#d,t 3 | @PERL@ $(DBUGRPT) > $@.log
 	$(DIFF) $@.log $(doc_srcdir)/$@.ref
 	@echo : > $@
+	@chmod +x $@
 
 test4:  $(DBUGRPT)
 	$(FACTORIAL) -#d 4 | @PERL@ $(DBUGRPT) -d result > $@.log
 	$(DIFF) $@.log $(doc_srcdir)/$@.ref
 	@echo : > $@
+	@chmod +x $@
 
 test5:  $(DBUGRPT)
 # GJP 19-3-2003 Ignore changes due to differences between source and build locations.
 	$(FACTORIAL) -#d 3 | @PERL@ $(DBUGRPT) -t factorial -FL | sed -e 's!$(top_srcdir)/doc/!!g' > $@.log
 	$(DIFF) $@.log $(doc_srcdir)/$@.ref
 	@echo : > $@
+	@chmod +x $@
 
 test6:  $(DBUGRPT)
 	$(FACTORIAL) -#t,D=1000,g 3 | @PERL@ $(DBUGRPT) > $@.log
@@ -88,3 +94,4 @@ test6:  $(DBUGRPT)
 	$(GREP) -f tmp.ref $@.log >$@.lis
 	test "`cat $@.lis | wc -l`" -eq "`cat $@.log | wc -l`"
 	@echo : > $@
+	@chmod +x $@

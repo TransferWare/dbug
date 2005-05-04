@@ -2093,6 +2093,7 @@ dbug_file_open( const char *name, const char *mode, files_t *result )
             {
               (void) strcpy( new->fname.name, name );
               new->fname.ref_count = 1;
+	      new->fname.size = strlen(name)+1; /* GJP 4-5-2005 */
               (void) strncpy( new->mode, mode, sizeof(new->mode) );
               new->mode[sizeof(new->mode)-1] = '\0';
 
