@@ -1,9 +1,14 @@
 DBUG NEWS - History of user visible changes.		-*- indented-text -*-
-Copyright (C) 2002 G.J. Paulissen 
+Copyright (C) 2002, 2003, 2004, 2005  G.J. Paulissen 
 
 See the end for copying conditions.
 
 Please send DBUG bug reports to g.paulissen@chello.nl.
+
+
+Release 4.2.0
+
+* [ 1174400 ] average is displayed wrongly by dbugrpt
 
 
 Release 4.1.0
