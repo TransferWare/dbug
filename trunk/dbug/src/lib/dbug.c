@@ -63,7 +63,7 @@ static char vcid[] = "$Header$";
  *      seismo!bpa!sjuvax!bbanerje
  *
  *      Gert-Jan Paulissen      (thread support)
- *      e-mail: G.Paulissen@speed.a2000.nl
+ *      e-mail: G.Paulissen@chello.nl
  */
 
 #ifndef HAVE_CONFIG_H
@@ -2093,7 +2093,7 @@ dbug_file_open( const char *name, const char *mode, files_t *result )
             {
               (void) strcpy( new->fname.name, name );
               new->fname.ref_count = 1;
-	      new->fname.size = strlen(name)+1; /* GJP 4-5-2005 */
+              new->fname.size = strlen(name)+1; /* GJP 4-5-2005 */
               (void) strncpy( new->mode, mode, sizeof(new->mode) );
               new->mode[sizeof(new->mode)-1] = '\0';
 
