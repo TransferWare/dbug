@@ -22,6 +22,10 @@ test ! -d autom4te.cache || rm -fr autom4te.cache
 set -ex
 aclocal -I config
 libtoolize --force --copy
-autoheader
+autoheader 
 automake --add-missing --copy
 autoconf
+for p in aclocal libtoolize autoheader automake autoconf
+do
+  $p --version | grep $p
+done
