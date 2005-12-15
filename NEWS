@@ -6,6 +6,11 @@ See the end for copying conditions.
 Please send DBUG bug reports to g.paulissen@chello.nl.
 
 
+Release 4.3.0
+
+* Solved build problems due to new versions of autoconf/automake/libtool.
+
+
 Release 4.2.0
 
 * [ 1174400 ] average is displayed wrongly by dbugrpt
