@@ -18,7 +18,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 AC_REVISION([$Revision$])
-AC_INIT([dbug],[4.3.0],[g.paulissen@chello.nl])
+AC_INIT([dbug],[4.4.0],[g.paulissen@chello.nl])
 
 # version check
 if test -f "$srcdir/VERSION"
@@ -83,8 +83,7 @@ AC_CHECK_FUNCS(
 # Check for time related functions. One of them must be available.
 AC_CHECK_FUNCS(
   [ftime getrusage clock],
-  [break],
-  [AC_MSG_ERROR([One of the functions ftime(), getrusage() or clock() must be available.])]
+  [break]
 )
 # Check the Posix threads flockfile() function.
 AC_CHECK_FUNCS([flockfile])
