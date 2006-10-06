@@ -63,22 +63,93 @@ pdbug - Perl extension for C dbug library.
   use pdbug;
 
   init( $options, $name );
-  init_ctx( $options, $name, $dbug_ctx );
+  my $dbug_ctx = init_ctx( $options, $name );
 
   done();
   done_ctx( $dbug_ctx );
 
-  enter( $file, $function, $line, $dbug_level );
-  enter_ctx( $dbug_ctx, $file, $function, $line, $dbug_level );
+  my $dbug_level = enter();
+  my $dbug_level = enter_ctx( $dbug_ctx );
 
-  leave( $line, $dbug_level ); 
-  leave_ctx( $dbug_ctx, $line, $dbug_level ); 
+=cut
 
-  print( $line, $break_point, $str );
-  print_ctx( $dbug_ctx, $line, $break_point, $str );
+sub enter {
+    my ($package, $filename, $line, $subroutine) = caller(0);
+
+    return &pdbug::_enter($filename, $subroutine, $line);
+}
+
+sub enter_ctx {
+    my $dbug_ctx = $_[0];
+    my ($package, $filename, $line, $subroutine) = caller(0);
+
+    return &pdbug::_enter_ctx($dbug_ctx, $filename, $subroutine, $line);
+}
+
+=pod
+
+  leave( $dbug_level ); 
+  leave_ctx( $dbug_ctx, $dbug_level ); 
+
+=cut
+
+sub leave {
+    my $dbug_level = $_[0];
+    my ($package, $filename, $line, $subroutine) = caller(0);
+
+    &pdbug::_leave($line, $dbug_level);
+}
+
+sub leave_ctx {
+    my ($dbug_ctx, $dbug_level) = @_;
+    my ($package, $filename, $line, $subroutine) = caller(0);
+
+    &pdbug::_leave_ctx($dbug_ctx, $line, $dbug_level);
+}
+
+=pod
+
+  print( $break_point, $str );
+  print_ctx( $dbug_ctx, $break_point, $str );
+
+=cut
+
+sub print {
+    my ($break_point, $str) = @_;
+    my ($package, $filename, $line, $subroutine) = caller(0);
+
+    &pdbug::_print($line, $break_point, $str);
+}
+
+sub print_ctx {
+    my ($dbug_ctx, $break_point, $str) = @_;
+    my ($package, $filename, $line, $subroutine) = caller(0);
+
+    &pdbug::_print_ctx($dbug_ctx, $line, $break_point, $str);
+}
+
+=pod
 
   dump( $line, $break_point, $memory, $len );
   dump_ctx( $dbug_ctx, $line, $break_point, $memory, $len );
+
+=cut
+
+sub dump {
+    my ($break_point, $memory, $len) = @_;
+    my ($package, $filename, $line, $subroutine) = caller(0);
+
+    &pdbug::_dump($line, $break_point, $memory, $len);
+}
+
+sub dump_ctx {
+    my ($dbug_ctx, $break_point, $memory, $len) = @_;
+    my ($package, $filename, $line, $subroutine) = caller(0);
+
+    &pdbug::_dump($dbug_ctx, line, $break_point, $memory, $len);
+}
+
+=pod
 
 =head1 DESCRIPTION
 
@@ -99,30 +170,31 @@ Destroy a dbug thread.
 
 =item enter
 
-Enter a function. Input parameters are the name of the file, function and a
-line indicator. The level output parameter is used for checking balanced
-enter/leave calls. The enter_ctx has an extra input parameter dbug context
-which is set at init time.
+Enter a function. The return value, the dbug level, is used for
+checking balanced enter/leave calls. The enter_ctx has an extra input
+parameter dbug context which is set at init time.
 
 Preconditions: init/init_ctx must be called before using these functions.
 
 =item leave
 
-Leave a function. This must always be called if enter was called before, even
-if an exception has been raised. The input/output parameter dbug_level is used
-to check balanced enter/leave calls.
+Leave a function. This must always be called if enter was called
+before, even if an exception has been raised. The input parameter
+dbug_level (returned by enter) is used to check balanced enter/leave
+calls.
 
 Preconditions: init/init_ctx must be called before using these functions.
 
 =item print
 
-Print a line. Input parameters are a line and a break point and a string.
+Print a line. Input parameters are a break point and a string.
 
 Preconditions: init/init_ctx must be called before using these functions.
 
 =item dump
 
-Dumps a memory structure. Input parameters are a line, a break point, the memory to print and the number of bytes to print.
+Dumps a memory structure. Input parameters are a break point,
+the memory to print and the number of bytes to print.
 
 Preconditions: init/init_ctx must be called before using these functions.
 
@@ -134,7 +206,7 @@ See file F<./test.pl> for an example.
 
 =head1 AUTHOR
 
-Gert-Jan Paulissen, E<lt>G.Paulissen@speed.A2000.nlE<gt>.
+Gert-Jan Paulissen, E<lt>G.Paulissen@chello.nlE<gt>.
 
 =head1 NOTES
 
