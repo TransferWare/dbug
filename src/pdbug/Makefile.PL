@@ -24,7 +24,7 @@ if ( $^O eq 'MSWin32' ) {
     $libpth = '-L' . join( ' -L', split(/;/, $ENV{LIB}) );
 }
 
-die "DBUG_HOME environment variable must be defined.\n"
+die "DBUG_HOME environment variable must be set to the directoy where the library and include files can be found.\n"
     if $ENV{DBUG_HOME} eq '';
 
 $libpth .= ' -L' . $ENV{DBUG_HOME} . '/lib' . ' -ldbug';

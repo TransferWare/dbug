@@ -51,15 +51,17 @@ constant(name,arg)
 	char *		name
 	int		arg
 
-void 
-init_ctx( options, name, dbug_ctx )
+void*
+init_ctx( options, name )
 	char* options
 	char* name
-	void* &dbug_ctx
+PREINIT:
+	void* dbug_ctx;
 CODE:
 	dbug_init_ctx( options, name, &dbug_ctx );
+	RETVAL = dbug_ctx;
 OUTPUT:
-	dbug_ctx
+	RETVAL
 
 void 
 init( options, name )
@@ -81,50 +83,50 @@ done()
 CODE:
 	dbug_done();
 
-void 
-enter_ctx( dbug_ctx, file, function, line, dbug_level ) 
+int
+_enter_ctx( dbug_ctx, file, function, line ) 
 	void* dbug_ctx       
 	char* file
 	char* function
 	int line
-	int &dbug_level
+PREINIT:
+	int dbug_level;
 CODE:
 	dbug_enter_ctx( dbug_ctx, file, function, line, &dbug_level );
+	RETVAL = dbug_level;
 OUTPUT:
-	dbug_level
+	RETVAL
 
-void 
-enter( file, function, line, dbug_level ) 
+int
+_enter( file, function, line ) 
 	char* file
 	char* function
 	int line
-	int &dbug_level
+PREINIT:
+	int dbug_level;
 CODE:
 	dbug_enter( file, function, line, &dbug_level );
+	RETVAL = dbug_level;
 OUTPUT:
-	dbug_level
+	RETVAL
 
 void 
-leave_ctx( dbug_ctx, line, dbug_level ) 
+_leave_ctx( dbug_ctx, line, dbug_level ) 
 	void* dbug_ctx       
 	int line
-	int &dbug_level
+	int dbug_level
 CODE:
 	dbug_leave_ctx( dbug_ctx, line, &dbug_level );
-OUTPUT:
-	dbug_level
 
 void 
-leave( line, dbug_level ) 
+_leave( line, dbug_level ) 
 	int line
-	int &dbug_level
+	int dbug_level
 CODE:
 	dbug_leave( line, &dbug_level );
-OUTPUT:
-	dbug_level
 
 void 
-print_ctx( dbug_ctx, line, break_point, str ) 
+_print_ctx( dbug_ctx, line, break_point, str ) 
 	void* dbug_ctx
 	int line
 	char* break_point
@@ -133,7 +135,7 @@ CODE:
 	dbug_print_ctx( dbug_ctx, line, break_point, str );
 
 void 
-print( line, break_point, str ) 
+_print( line, break_point, str ) 
 	int line
 	char* break_point
 	char* str
@@ -141,7 +143,7 @@ CODE:
 	dbug_print( line, break_point, str );
 
 void 
-dump_ctx( dbug_ctx, line, break_point, memory, len ) 
+_dump_ctx( dbug_ctx, line, break_point, memory, len ) 
 	void* dbug_ctx
 	int line
 	char* break_point
@@ -151,7 +153,7 @@ CODE:
 	dbug_dump_ctx( dbug_ctx, line, break_point, memory, len );
 
 void 
-dump( line, break_point, memory, len ) 
+_dump( line, break_point, memory, len ) 
 	int line
 	char* break_point
 	void* memory
