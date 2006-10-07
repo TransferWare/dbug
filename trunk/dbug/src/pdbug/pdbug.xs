@@ -51,98 +51,108 @@ constant(name,arg)
 	char *		name
 	int		arg
 
-void*
-init_ctx( options, name )
+int
+_init_ctx( options, name, dbug_ctx )
 	char* options
 	char* name
-PREINIT:
-	void* dbug_ctx;
+	void* &dbug_ctx
 CODE:
-	dbug_init_ctx( options, name, &dbug_ctx );
-	RETVAL = dbug_ctx;
+	RETVAL = dbug_init_ctx( options, name, &dbug_ctx );
+OUTPUT:
+	dbug_ctx
+	RETVAL
+
+int
+_init( options, name )
+	char* options
+	char* name
+CODE:
+	RETVAL = dbug_init( options, name );
 OUTPUT:
 	RETVAL
 
-void 
-init( options, name )
-	char* options
-	char* name
-CODE:
-	dbug_init( options, name );
-
-void 
-done_ctx( dbug_ctx )
+int
+_done_ctx( dbug_ctx )
 	void* &dbug_ctx
 CODE:
-	dbug_done_ctx( &dbug_ctx );
+	RETVAL = dbug_done_ctx( &dbug_ctx );
 OUTPUT:
 	dbug_ctx
-
-void 
-done()
-CODE:
-	dbug_done();
+	RETVAL
 
 int
-_enter_ctx( dbug_ctx, file, function, line ) 
+_done()
+CODE:
+	RETVAL = dbug_done();
+OUTPUT:
+	RETVAL
+
+int
+_enter_ctx( dbug_ctx, file, function, line, dbug_level ) 
 	void* dbug_ctx       
 	char* file
 	char* function
 	int line
-PREINIT:
-	int dbug_level;
+	int &dbug_level
 CODE:
-	dbug_enter_ctx( dbug_ctx, file, function, line, &dbug_level );
-	RETVAL = dbug_level;
+	RETVAL = dbug_enter_ctx( dbug_ctx, file, function, line, &dbug_level );
 OUTPUT:
+	dbug_level
 	RETVAL
 
 int
-_enter( file, function, line ) 
+_enter( file, function, line, dbug_level ) 
 	char* file
 	char* function
 	int line
-PREINIT:
-	int dbug_level;
+	int &dbug_level
 CODE:
-	dbug_enter( file, function, line, &dbug_level );
-	RETVAL = dbug_level;
+	RETVAL = dbug_enter( file, function, line, &dbug_level );
 OUTPUT:
+	dbug_level
 	RETVAL
 
-void 
+int
 _leave_ctx( dbug_ctx, line, dbug_level ) 
 	void* dbug_ctx       
 	int line
 	int dbug_level
 CODE:
-	dbug_leave_ctx( dbug_ctx, line, &dbug_level );
+	RETVAL = dbug_leave_ctx( dbug_ctx, line, &dbug_level );
+OUTPUT:
+	RETVAL
 
-void 
+int
 _leave( line, dbug_level ) 
 	int line
 	int dbug_level
 CODE:
-	dbug_leave( line, &dbug_level );
+	RETVAL = dbug_leave( line, &dbug_level );
+OUTPUT:
+	RETVAL
 
-void 
+int
 _print_ctx( dbug_ctx, line, break_point, str ) 
 	void* dbug_ctx
 	int line
 	char* break_point
 	char* str
 CODE:
-	dbug_print_ctx( dbug_ctx, line, break_point, str );
+	RETVAL = dbug_print_ctx( dbug_ctx, line, break_point, str );
+OUTPUT:
+	RETVAL
 
-void 
+int
 _print( line, break_point, str ) 
 	int line
 	char* break_point
 	char* str
 CODE:
 	dbug_print( line, break_point, str );
+OUTPUT:
+	RETVAL
 
-void 
+int
 _dump_ctx( dbug_ctx, line, break_point, memory, len ) 
 	void* dbug_ctx
 	int line
@@ -150,13 +160,17 @@ _dump_ctx( dbug_ctx, line, break_point, memory, len )
 	void* memory
 	int len
 CODE:
-	dbug_dump_ctx( dbug_ctx, line, break_point, memory, len );
+	RETVAL = dbug_dump_ctx( dbug_ctx, line, break_point, memory, len );
+OUTPUT:
+	RETVAL
 
-void 
+int
 _dump( line, break_point, memory, len ) 
 	int line
 	char* break_point
 	void* memory
 	int len
 CODE:
-	dbug_dump( line, break_point, memory, len );
+	RETVAL = dbug_dump( line, break_point, memory, len );
+OUTPUT:
+	RETVAL
