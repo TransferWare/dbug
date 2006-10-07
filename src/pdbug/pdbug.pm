@@ -62,34 +62,65 @@ pdbug - Perl extension for C dbug library.
 
   use pdbug;
 
-  init( $options, $name );
-  my $dbug_ctx = init_ctx( $options, $name );
-
-  done();
-  done_ctx( $dbug_ctx );
-
-  my $dbug_level = enter();
-  my $dbug_level = enter_ctx( $dbug_ctx );
+  my $status = &pdbug::init( $options, $name );
+  my $status = &pdbug::init_ctx( $options, $name, \$dbug_ctx );
 
 =cut
 
-sub enter {
-    my ($package, $filename, $line, $subroutine) = caller(0);
+sub init {
+    my ($options, $name) = @_;
 
-    return &pdbug::_enter($filename, $subroutine, $line);
+    return &pdbug::_init($options, $name);
 }
 
-sub enter_ctx {
-    my $dbug_ctx = $_[0];
-    my ($package, $filename, $line, $subroutine) = caller(0);
+sub init_ctx {
+    my ($options, $name, $r_dbug_ctx) = @_;
 
-    return &pdbug::_enter_ctx($dbug_ctx, $filename, $subroutine, $line);
+    return &pdbug::_init_ctx($options, $name, $$r_dbug_ctx);
 }
 
 =pod
 
-  leave( $dbug_level ); 
-  leave_ctx( $dbug_ctx, $dbug_level ); 
+  my $status = &pdbug::done();
+  my $status = &pdbug::done_ctx( \$dbug_ctx );
+
+=cut
+
+sub done {
+    return &pdbug::_done();
+}
+
+sub done_ctx {
+    my $r_dbug_ctx = $_[0];
+
+    return &pdbug::_done_ctx($$r_dbug_ctx);
+}
+
+=pod
+
+  my $status = &pdbug::enter( \$dbug_level );
+  my $status = &pdbug::enter_ctx( $dbug_ctx, \$dbug_level );
+
+=cut
+
+sub enter {
+    my $r_dbug_level = $_[0];
+    my ($package, $filename, $line, $subroutine) = caller(0);
+
+    return &pdbug::_enter($filename, $subroutine, $line, $$r_dbug_level);
+}
+
+sub enter_ctx {
+    my ($dbug_ctx, $r_dbug_level) = @_;
+    my ($package, $filename, $line, $subroutine) = caller(0);
+
+    return &pdbug::_enter_ctx($dbug_ctx, $filename, $subroutine, $line, $$r_dbug_level);
+}
+
+=pod
+
+  my $status = &pdbug::leave( $dbug_level ); 
+  my $status = &pdbug::leave_ctx( $dbug_ctx, $dbug_level ); 
 
 =cut
 
@@ -97,20 +128,20 @@ sub leave {
     my $dbug_level = $_[0];
     my ($package, $filename, $line, $subroutine) = caller(0);
 
-    &pdbug::_leave($line, $dbug_level);
+    return &pdbug::_leave($line, $dbug_level);
 }
 
 sub leave_ctx {
     my ($dbug_ctx, $dbug_level) = @_;
     my ($package, $filename, $line, $subroutine) = caller(0);
 
-    &pdbug::_leave_ctx($dbug_ctx, $line, $dbug_level);
+    return &pdbug::_leave_ctx($dbug_ctx, $line, $dbug_level);
 }
 
 =pod
 
-  print( $break_point, $str );
-  print_ctx( $dbug_ctx, $break_point, $str );
+  my $status = &pdbug::print( $break_point, $str );
+  my $status = &pdbug::print_ctx( $dbug_ctx, $break_point, $str );
 
 =cut
 
@@ -118,20 +149,20 @@ sub print {
     my ($break_point, $str) = @_;
     my ($package, $filename, $line, $subroutine) = caller(0);
 
-    &pdbug::_print($line, $break_point, $str);
+    return &pdbug::_print($line, $break_point, $str);
 }
 
 sub print_ctx {
     my ($dbug_ctx, $break_point, $str) = @_;
     my ($package, $filename, $line, $subroutine) = caller(0);
 
-    &pdbug::_print_ctx($dbug_ctx, $line, $break_point, $str);
+    return &pdbug::_print_ctx($dbug_ctx, $line, $break_point, $str);
 }
 
 =pod
 
-  dump( $line, $break_point, $memory, $len );
-  dump_ctx( $dbug_ctx, $line, $break_point, $memory, $len );
+  my $status = &pdbug::dump( $line, $break_point, $memory, $len );
+  my $status = &pdbug::dump_ctx( $dbug_ctx, $line, $break_point, $memory, $len );
 
 =cut
 
@@ -139,14 +170,14 @@ sub dump {
     my ($break_point, $memory, $len) = @_;
     my ($package, $filename, $line, $subroutine) = caller(0);
 
-    &pdbug::_dump($line, $break_point, $memory, $len);
+    return &pdbug::_dump($line, $break_point, $memory, $len);
 }
 
 sub dump_ctx {
     my ($dbug_ctx, $break_point, $memory, $len) = @_;
     my ($package, $filename, $line, $subroutine) = caller(0);
 
-    &pdbug::_dump($dbug_ctx, line, $break_point, $memory, $len);
+    return &pdbug::_dump($dbug_ctx, line, $break_point, $memory, $len);
 }
 
 =pod
@@ -162,17 +193,17 @@ perform regression testing and profiling.
 =item init
 
 Initialise a dbug context either implicit (init) or explicit (init_ctx). Set
-debugging options, i.e. whether tracing is enabled or debugging, etc.
+debugging options, i.e. whether tracing is enabled or debugging, etc. Returns 0 when correct.
 
 =item done
 
-Destroy a dbug thread.
+Destroy a dbug thread. Returns 0 when correct.
 
 =item enter
 
-Enter a function. The return value, the dbug level, is used for
+Enter a function. The dbug level parameter is used for
 checking balanced enter/leave calls. The enter_ctx has an extra input
-parameter dbug context which is set at init time.
+parameter dbug context which is set at init time. Returns 0 when correct.
 
 Preconditions: init/init_ctx must be called before using these functions.
 
@@ -180,21 +211,21 @@ Preconditions: init/init_ctx must be called before using these functions.
 
 Leave a function. This must always be called if enter was called
 before, even if an exception has been raised. The input parameter
-dbug_level (returned by enter) is used to check balanced enter/leave
-calls.
+dbug_level (set by enter) is used to check balanced enter/leave
+calls. Returns 0 when correct.
 
 Preconditions: init/init_ctx must be called before using these functions.
 
 =item print
 
-Print a line. Input parameters are a break point and a string.
+Print a line. Input parameters are a break point and a string. Returns 0 when correct.
 
 Preconditions: init/init_ctx must be called before using these functions.
 
 =item dump
 
 Dumps a memory structure. Input parameters are a break point,
-the memory to print and the number of bytes to print.
+the memory to print and the number of bytes to print. Returns 0 when correct.
 
 Preconditions: init/init_ctx must be called before using these functions.
 
