@@ -62,23 +62,25 @@ pdbug - Perl extension for C dbug library.
 
   use pdbug;
 
-  my $status = &pdbug::init( $options );
-  my $status = &pdbug::init_ctx( $options, \$dbug_ctx );
+  my $status = &pdbug::init( $options, $name );
+  my $status = &pdbug::init_ctx( $options, $name, \$dbug_ctx );
 
 =cut
 
 sub init {
-    my ($options) = @_;
-    my ($package, $filename, $line, $subroutine) = caller(0);
+    my ($options, $name) = @_;
 
-    return &pdbug::_init($options, $subroutine);
+    my $status = &pdbug::_init($options, $name);
+
+    return $status;
 }
 
 sub init_ctx {
-    my ($options, $r_dbug_ctx) = @_;
-    my ($package, $filename, $line, $subroutine) = caller(0);
+    my ($options, $name, $r_dbug_ctx) = @_;
 
-    return &pdbug::_init_ctx($options, $subroutine, $$r_dbug_ctx);
+    my $status = &pdbug::_init_ctx($options, $name, $$r_dbug_ctx);
+
+    return $status;
 }
 
 =pod
@@ -89,13 +91,17 @@ sub init_ctx {
 =cut
 
 sub done {
-    return &pdbug::_done();
+    my $status = &pdbug::_done();
+
+    return $status;
 }
 
 sub done_ctx {
     my ($r_dbug_ctx) = @_;
 
-    return &pdbug::_done_ctx($$r_dbug_ctx);
+    my $status = &pdbug::_done_ctx($$r_dbug_ctx);
+
+    return $status;
 }
 
 =pod
@@ -109,14 +115,18 @@ sub enter {
     my ($r_dbug_level) = @_;
     my ($package, $filename, $line, $subroutine) = caller(0);
 
-    return &pdbug::_enter($filename, $subroutine, $line, $$r_dbug_level);
+    my $status = &pdbug::_enter($filename, $subroutine, $line, $$r_dbug_level);
+
+    return $status;
 }
 
 sub enter_ctx {
     my ($dbug_ctx, $r_dbug_level) = @_;
     my ($package, $filename, $line, $subroutine) = caller(0);
 
-    return &pdbug::_enter_ctx($dbug_ctx, $filename, $subroutine, $line, $$r_dbug_level);
+    my $status = &pdbug::_enter_ctx($dbug_ctx, $filename, $subroutine, $line, $$r_dbug_level);
+
+    return $status;
 }
 
 =pod
@@ -130,14 +140,18 @@ sub leave {
     my ($dbug_level) = @_;
     my ($package, $filename, $line, $subroutine) = caller(0);
 
-    return &pdbug::_leave($line, $dbug_level);
+    my $status = &pdbug::_leave($line, $dbug_level);
+
+    return $status;
 }
 
 sub leave_ctx {
     my ($dbug_ctx, $dbug_level) = @_;
     my ($package, $filename, $line, $subroutine) = caller(0);
 
-    return &pdbug::_leave_ctx($dbug_ctx, $line, $dbug_level);
+    my $status = &pdbug::_leave_ctx($dbug_ctx, $line, $dbug_level);
+
+    return $status;
 }
 
 =pod
@@ -151,14 +165,18 @@ sub print {
     my ($break_point, $str) = @_;
     my ($package, $filename, $line, $subroutine) = caller(0);
 
-    return &pdbug::_print($line, $break_point, $str);
+    my $status = &pdbug::_print($line, $break_point, $str);
+
+    return $status;
 }
 
 sub print_ctx {
     my ($dbug_ctx, $break_point, $str) = @_;
     my ($package, $filename, $line, $subroutine) = caller(0);
 
-    return &pdbug::_print_ctx($dbug_ctx, $line, $break_point, $str);
+    my $status = &pdbug::_print_ctx($dbug_ctx, $line, $break_point, $str);
+
+    return $status;
 }
 
 =pod
@@ -172,14 +190,18 @@ sub dump {
     my ($break_point, $memory, $len) = @_;
     my ($package, $filename, $line, $subroutine) = caller(0);
 
-    return &pdbug::_dump($line, $break_point, $memory, $len);
+    my $status = &pdbug::_dump($line, $break_point, $memory, $len);
+
+    return $status;
 }
 
 sub dump_ctx {
     my ($dbug_ctx, $break_point, $memory, $len) = @_;
     my ($package, $filename, $line, $subroutine) = caller(0);
 
-    return &pdbug::_dump($dbug_ctx, line, $break_point, $memory, $len);
+    my $status = &pdbug::_dump($dbug_ctx, line, $break_point, $memory, $len);
+
+    return $status;
 }
 
 =pod
@@ -194,8 +216,9 @@ perform regression testing and profiling.
 
 =item init
 
-Initialise a dbug context either implicit (init) or explicit (init_ctx). Set
-debugging options, i.e. whether tracing is enabled or debugging, etc. Returns 0 when correct.
+Initialise a dbug context either implicit (init) or explicit
+(init_ctx). Set debugging options, i.e. whether tracing is enabled or
+debugging, etc. Returns 0 when correct.
 
 =item done
 
