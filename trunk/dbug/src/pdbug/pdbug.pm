@@ -62,21 +62,23 @@ pdbug - Perl extension for C dbug library.
 
   use pdbug;
 
-  my $status = &pdbug::init( $options, $name );
-  my $status = &pdbug::init_ctx( $options, $name, \$dbug_ctx );
+  my $status = &pdbug::init( $options );
+  my $status = &pdbug::init_ctx( $options, \$dbug_ctx );
 
 =cut
 
 sub init {
-    my ($options, $name) = @_;
+    my ($options) = @_;
+    my ($package, $filename, $line, $subroutine) = caller(0);
 
-    return &pdbug::_init($options, $name);
+    return &pdbug::_init($options, $subroutine);
 }
 
 sub init_ctx {
-    my ($options, $name, $r_dbug_ctx) = @_;
+    my ($options, $r_dbug_ctx) = @_;
+    my ($package, $filename, $line, $subroutine) = caller(0);
 
-    return &pdbug::_init_ctx($options, $name, $$r_dbug_ctx);
+    return &pdbug::_init_ctx($options, $subroutine, $$r_dbug_ctx);
 }
 
 =pod
@@ -91,7 +93,7 @@ sub done {
 }
 
 sub done_ctx {
-    my $r_dbug_ctx = $_[0];
+    my ($r_dbug_ctx) = @_;
 
     return &pdbug::_done_ctx($$r_dbug_ctx);
 }
@@ -104,7 +106,7 @@ sub done_ctx {
 =cut
 
 sub enter {
-    my $r_dbug_level = $_[0];
+    my ($r_dbug_level) = @_;
     my ($package, $filename, $line, $subroutine) = caller(0);
 
     return &pdbug::_enter($filename, $subroutine, $line, $$r_dbug_level);
@@ -125,7 +127,7 @@ sub enter_ctx {
 =cut
 
 sub leave {
-    my $dbug_level = $_[0];
+    my ($dbug_level) = @_;
     my ($package, $filename, $line, $subroutine) = caller(0);
 
     return &pdbug::_leave($line, $dbug_level);
