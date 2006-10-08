@@ -32,7 +32,7 @@ sub main
     my ($testcase, $status, $dbug_ctx, $dbug_level) = 2;
 
     # Test whether dbug_init writes a line containing #I#
-    $status = &pdbug::init('d,t,g,o=test.log'); 
+    $status = &pdbug::init('d,t,g,o=test.log', 'test'); 
     open(LOG, "<test.log") || die "Can not open test.log: $!\n";
     $_ = <LOG>;
     print $status == 0 && $_ =~ m/#I#/ ? "" : "not ", "ok ", $testcase++, "\n";
@@ -44,7 +44,7 @@ sub main
     print $status == 0 && $_ =~ m/#D#/ ? "" : "not ", "ok ", $testcase++, "\n";
 
     # Test whether dbug_init_ctx writes a line containing #I# and returns a non-zero context
-    $status = &pdbug::init_ctx('d,t,g,o=test.log', \$dbug_ctx); 
+    $status = &pdbug::init_ctx('d,t,g,o=test.log', 'test', \$dbug_ctx); 
     open(LOG, "<test.log") || die "Can not open test.log: $!\n";
     $_ = <LOG>;
     print $status == 0 && $dbug_ctx != 0 && $_ =~ m/#I#/ && $dbug_ctx != 0 ? "" : "not ", "ok ", $testcase++, "\n";
@@ -56,7 +56,7 @@ sub main
     print $status == 0 && $dbug_ctx == 0 && $_ =~ m/#D#/ && $dbug_ctx == 0 ? "" : "not ", "ok ", $testcase++, "\n";
     
     # Just initialize for enter/leave pairs
-    $status = &pdbug::init('d,t,g,o=test.log');
+    $status = &pdbug::init('d,t,g,o=test.log', 'test');
     open(LOG, "<test.log") || die "Can not open test.log: $!\n";
     $_ = <LOG>;
 
@@ -102,7 +102,7 @@ sub main
     #
 
     # Just initialize for enter/leave pairs
-    $status = &pdbug::init_ctx('d,t,g,o=test.log', \$dbug_ctx);
+    $status = &pdbug::init_ctx('d,t,g,o=test.log', 'test', \$dbug_ctx);
     open(LOG, "<test.log") || die "Can not open test.log: $!\n";
     $_ = <LOG>;
 
@@ -155,7 +155,7 @@ sub main
 	$options = substr($ARGV[$ix], 2);
     }
 
-    &pdbug::init( $options );
+    &pdbug::init( $options, 'factorial' );
     &pdbug::enter(\$dbug_level);
     for (; $ix < $argc; $ix++) 
     {
