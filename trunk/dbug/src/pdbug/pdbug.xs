@@ -148,7 +148,7 @@ _print( line, break_point, str )
 	char* break_point
 	char* str
 CODE:
-	dbug_print( line, break_point, str );
+	RETVAL = dbug_print( line, break_point, str );
 OUTPUT:
 	RETVAL
 
