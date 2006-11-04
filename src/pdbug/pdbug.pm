@@ -64,6 +64,8 @@ pdbug - Perl extension for C dbug library.
 
   my $status = &pdbug::init( $options, $name );
   my $status = &pdbug::init_ctx( $options, $name, \$dbug_ctx );
+  # OO interface
+  my $dbug_ctx = pdbug->new( $options, name );
 
 =cut
 
@@ -83,10 +85,22 @@ sub init_ctx {
     return $status;
 }
 
+sub new {
+    my ($class, $options, $name) = @_;
+
+    my ($dbug_ctx);
+    
+    &pdbug::init_ctx($options, $name, \$dbug_ctx);
+
+    return bless(\$dbug_ctx, $class)
+}
+
 =pod
 
   my $status = &pdbug::done();
   my $status = &pdbug::done_ctx( \$dbug_ctx );
+  # OO interface
+  undef $dbug_ctx;
 
 =cut
 
@@ -104,20 +118,34 @@ sub done_ctx {
     return $status;
 }
 
+sub DESTROY {
+    my ($dbug_ctx) = @_;
+
+    &pdbug::done_ctx(ref($dbug_ctx) ? $dbug_ctx : \$dbug_ctx);
+}
+
 =pod
 
   my $status = &pdbug::enter( \$dbug_level );
   my $status = &pdbug::enter_ctx( $dbug_ctx, \$dbug_level );
+  # OO interface
+  my $status = $dbug_ctx->enter( \$dbug_level );
 
 =cut
 
 sub enter {
-    my ($r_dbug_level) = @_;
-    my ($package, $filename, $line, $subroutine) = caller(0);
+    if (ref($_[0]) && ref($_[0]) ne 'SCALAR') {
+	my $r_dbug_ctx = shift @_;
 
-    my $status = &pdbug::_enter($filename, $subroutine, $line, $$r_dbug_level);
+	return &pdbug::enter_ctx($$r_dbug_ctx, @_);
+    } else {
+	my ($r_dbug_level) = @_;
+	my ($package, $filename, $line, $subroutine) = caller(0);
 
-    return $status;
+	my $status = &pdbug::_enter($filename, $subroutine, $line, $$r_dbug_level);
+
+	return $status;
+    }
 }
 
 sub enter_ctx {
@@ -133,16 +161,24 @@ sub enter_ctx {
 
   my $status = &pdbug::leave( $dbug_level ); 
   my $status = &pdbug::leave_ctx( $dbug_ctx, $dbug_level ); 
+  # OO interface
+  my $status = $dbug_ctx->leave( $dbug_level );
 
 =cut
 
 sub leave {
-    my ($dbug_level) = @_;
-    my ($package, $filename, $line, $subroutine) = caller(0);
+    if (ref($_[0])) {
+	my $r_dbug_ctx = shift @_;
 
-    my $status = &pdbug::_leave($line, $dbug_level);
+	return &pdbug::leave_ctx($$r_dbug_ctx, @_);
+    } else {
+	my ($dbug_level) = @_;
+	my ($package, $filename, $line, $subroutine) = caller(0);
 
-    return $status;
+	my $status = &pdbug::_leave($line, $dbug_level);
+
+	return $status;
+    }
 }
 
 sub leave_ctx {
@@ -158,16 +194,24 @@ sub leave_ctx {
 
   my $status = &pdbug::print( $break_point, $str );
   my $status = &pdbug::print_ctx( $dbug_ctx, $break_point, $str );
+  # OO interface
+  my $status = $dbug_ctx->print( $break_point, $str );
 
 =cut
 
 sub print {
-    my ($break_point, $str) = @_;
-    my ($package, $filename, $line, $subroutine) = caller(0);
+    if (ref($_[0])) {
+	my $r_dbug_ctx = shift @_;
 
-    my $status = &pdbug::_print($line, $break_point, $str);
+	return &pdbug::print_ctx($$r_dbug_ctx, @_);
+    } else {
+	my ($break_point, $str) = @_;
+	my ($package, $filename, $line, $subroutine) = caller(0);
 
-    return $status;
+	my $status = &pdbug::_print($line, $break_point, $str);
+
+	return $status;
+    }
 }
 
 sub print_ctx {
@@ -183,16 +227,24 @@ sub print_ctx {
 
   my $status = &pdbug::dump( $line, $break_point, $memory, $len );
   my $status = &pdbug::dump_ctx( $dbug_ctx, $line, $break_point, $memory, $len );
+  # OO interface
+  my $status = $dbug_ctx->dump( $line, $break_point, $memory, $len );
 
 =cut
 
 sub dump {
-    my ($break_point, $memory, $len) = @_;
-    my ($package, $filename, $line, $subroutine) = caller(0);
+    if (ref($_[0])) {
+	my $r_dbug_ctx = shift @_;
 
-    my $status = &pdbug::_dump($line, $break_point, $memory, $len);
+	return &pdbug::dump_ctx($$r_dbug_ctx, @_);
+    } else {
+	my ($break_point, $memory, $len) = @_;
+	my ($package, $filename, $line, $subroutine) = caller(0);
 
-    return $status;
+	my $status = &pdbug::_dump($line, $break_point, $memory, $len);
+
+	return $status;
+    }
 }
 
 sub dump_ctx {
@@ -216,43 +268,61 @@ perform regression testing and profiling.
 
 =item init
 
+=item init_ctx
+
+=item new
+
 Initialise a dbug context either implicit (init) or explicit
-(init_ctx). Set debugging options, i.e. whether tracing is enabled or
-debugging, etc. Returns 0 when correct.
+(init_ctx/new). Set debugging options, i.e. whether tracing is enabled
+or debugging, etc. Returns 0 for init/init_ctx when correct and it
+returns a reference to a debugging context for the OO interface.
 
 =item done
 
-Destroy a dbug thread. Returns 0 when correct.
+=item done_ctx
+
+Destroy a dbug thread. Returns 0 when correct. Only needed for the
+procedural (non OO) interface. When the OO interface is used and the
+debugging context object goes out of scope the DESTROY function will
+call done_ctx automatically.
 
 =item enter
+
+=item enter_ctx
 
 Enter a function. The dbug level parameter is used for
 checking balanced enter/leave calls. The enter_ctx has an extra input
 parameter dbug context which is set at init time. Returns 0 when correct.
 
-Preconditions: init/init_ctx must be called before using these functions.
+Preconditions: init/init_ctx/new must be called before using these functions.
 
 =item leave
+
+=item leave_ctx
 
 Leave a function. This must always be called if enter was called
 before, even if an exception has been raised. The input parameter
 dbug_level (set by enter) is used to check balanced enter/leave
 calls. Returns 0 when correct.
 
-Preconditions: init/init_ctx must be called before using these functions.
+Preconditions: init/init_ctx/new must be called before using these functions.
 
 =item print
 
+=item print_ctx
+
 Print a line. Input parameters are a break point and a string. Returns 0 when correct.
 
-Preconditions: init/init_ctx must be called before using these functions.
+Preconditions: init/init_ctx/new must be called before using these functions.
 
 =item dump
+
+=item dump_ctx
 
 Dumps a memory structure. Input parameters are a break point,
 the memory to print and the number of bytes to print. Returns 0 when correct.
 
-Preconditions: init/init_ctx must be called before using these functions.
+Preconditions: init/init_ctx/new must be called before using these functions.
 
 =back
 
