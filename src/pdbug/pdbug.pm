@@ -48,10 +48,6 @@ bootstrap pdbug $VERSION;
 
 # Preloaded methods go here.
 
-# Autoload methods go after =cut, and are processed by the autosplit program.
-
-1;
-__END__
 # Documentation for pdbug.
 
 =head1 NAME
@@ -134,23 +130,25 @@ sub DESTROY {
 =cut
 
 sub enter {
-    if (ref($_[0]) && ref($_[0]) ne 'SCALAR') {
-	my $r_dbug_ctx = shift @_;
+    my ($package, $filename, $line, $subroutine) = caller(1);
+    my $status;
 
-	return &pdbug::enter_ctx($$r_dbug_ctx, @_);
+    if (ref($_[0]) && ref($_[0]) ne 'SCALAR') {
+	my ($r_dbug_ctx, $r_dbug_level) = @_;
+
+	$status = &pdbug::_enter_ctx($$r_dbug_ctx, $filename, $subroutine, $line, $$r_dbug_level);
     } else {
 	my ($r_dbug_level) = @_;
-	my ($package, $filename, $line, $subroutine) = caller(0);
 
-	my $status = &pdbug::_enter($filename, $subroutine, $line, $$r_dbug_level);
-
-	return $status;
+	$status = &pdbug::_enter($filename, $subroutine, $line, $$r_dbug_level);
     }
+
+    return $status;
 }
 
 sub enter_ctx {
     my ($dbug_ctx, $r_dbug_level) = @_;
-    my ($package, $filename, $line, $subroutine) = caller(0);
+    my ($package, $filename, $line, $subroutine) = caller(1);
 
     my $status = &pdbug::_enter_ctx($dbug_ctx, $filename, $subroutine, $line, $$r_dbug_level);
 
@@ -167,23 +165,24 @@ sub enter_ctx {
 =cut
 
 sub leave {
-    if (ref($_[0])) {
-	my $r_dbug_ctx = shift @_;
+    my (undef, undef, $line, undef) = caller(1);
+    my $status;
 
-	return &pdbug::leave_ctx($$r_dbug_ctx, @_);
+    if (ref($_[0])) {
+	my ($r_dbug_ctx, $dbug_level) = @_;
+
+	$status = &pdbug::_leave_ctx($$r_dbug_ctx, $line, $dbug_level);
     } else {
 	my ($dbug_level) = @_;
-	my ($package, $filename, $line, $subroutine) = caller(0);
 
-	my $status = &pdbug::_leave($line, $dbug_level);
-
-	return $status;
+	$status = &pdbug::_leave($line, $dbug_level);
     }
+    return $status;
 }
 
 sub leave_ctx {
     my ($dbug_ctx, $dbug_level) = @_;
-    my ($package, $filename, $line, $subroutine) = caller(0);
+    my (undef, undef, $line, undef) = caller(1);
 
     my $status = &pdbug::_leave_ctx($dbug_ctx, $line, $dbug_level);
 
@@ -200,23 +199,25 @@ sub leave_ctx {
 =cut
 
 sub print {
-    if (ref($_[0])) {
-	my $r_dbug_ctx = shift @_;
+    my (undef, undef, $line, undef) = caller(1);
+    my $status;
 
-	return &pdbug::print_ctx($$r_dbug_ctx, @_);
+    if (ref($_[0])) {
+	my ($r_dbug_ctx, $break_point, $str) = @_;
+
+	$status = &pdbug::_print_ctx($$r_dbug_ctx, $line, $break_point, $str);
     } else {
 	my ($break_point, $str) = @_;
-	my ($package, $filename, $line, $subroutine) = caller(0);
 
-	my $status = &pdbug::_print($line, $break_point, $str);
-
-	return $status;
+	$status = &pdbug::_print($line, $break_point, $str);
     }
+
+    return $status;
 }
 
 sub print_ctx {
     my ($dbug_ctx, $break_point, $str) = @_;
-    my ($package, $filename, $line, $subroutine) = caller(0);
+    my (undef, undef, $line, undef) = caller(1);
 
     my $status = &pdbug::_print_ctx($dbug_ctx, $line, $break_point, $str);
 
@@ -233,25 +234,27 @@ sub print_ctx {
 =cut
 
 sub dump {
-    if (ref($_[0])) {
-	my $r_dbug_ctx = shift @_;
+    my (undef, undef, $line, undef) = caller(1);
+    my $status;
 
-	return &pdbug::dump_ctx($$r_dbug_ctx, @_);
+    if (ref($_[0])) {
+	my ($r_dbug_ctx, $break_point, $memory, $len) = @_;
+
+	$status = &pdbug::_dump($$r_dbug_ctx, $line, $break_point, $memory, $len);
     } else {
 	my ($break_point, $memory, $len) = @_;
-	my ($package, $filename, $line, $subroutine) = caller(0);
 
-	my $status = &pdbug::_dump($line, $break_point, $memory, $len);
-
-	return $status;
+	$status = &pdbug::_dump($line, $break_point, $memory, $len);
     }
+
+    return $status;
 }
 
 sub dump_ctx {
     my ($dbug_ctx, $break_point, $memory, $len) = @_;
-    my ($package, $filename, $line, $subroutine) = caller(0);
+    my (undef, undef, $line, undef) = caller(1);
 
-    my $status = &pdbug::_dump($dbug_ctx, line, $break_point, $memory, $len);
+    my $status = &pdbug::_dump($dbug_ctx, $line, $break_point, $memory, $len);
 
     return $status;
 }
@@ -360,3 +363,7 @@ perl(1).
 
 =cut
 
+# Autoload methods go after =cut, and are processed by the autosplit program.
+
+1;
+__END__
