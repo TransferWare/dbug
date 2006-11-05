@@ -883,8 +883,8 @@ _dbug_print_ctx( const dbug_ctx_t dbug_ctx, const int line, const char *break_po
     {
       FLOCKFILE( stderr );
       /*@-nullpass@*/
-      (void) fprintf( stderr, "DBUG%c%p%cERROR: %s: status: %d\n", 
-                      SEPARATOR, (void*)dbug_ctx, SEPARATOR, procname, status );
+      (void) fprintf( stderr, "DBUG%c%p%cERROR: %s: status: %d (%s#%s#%d)\n", 
+                      SEPARATOR, (void*)dbug_ctx, SEPARATOR, procname, status, file, function, line );
       /*@=nullpass@*/
       FFLUSH( stderr );
       FUNLOCKFILE( stderr );
@@ -3434,8 +3434,11 @@ dbug_enter_ctx( const dbug_ctx_t dbug_ctx, const char *file, const char *functio
       if ( status != 0 && status != ENOENT )
         {
           FLOCKFILE( stderr );    
-          (void) fprintf( stderr, "DBUG%c%p%cERROR: %s: status: %d; step_no: %d\n", 
-                          SEPARATOR, (void*)dbug_ctx, SEPARATOR, procname, status, step_no );
+          (void) fprintf( stderr, "DBUG%c%p%cERROR: %s: status: %d; step_no: %d (%s#%s#%d)\n", 
+                          SEPARATOR, (void*)dbug_ctx, SEPARATOR, procname, status, step_no,                               
+			  ( call.file != NULL ? call.file : "UNKNOWN" ), 
+			  ( call.function != NULL ? call.function : "UNKNOWN" ), 
+			  line );
           FFLUSH( stderr );
           FUNLOCKFILE( stderr );          
         }
@@ -3619,8 +3622,11 @@ dbug_leave_ctx( const dbug_ctx_t dbug_ctx, const int line, int *dbug_level )
       if ( status != 0 && status != ENOENT )
         {
           FLOCKFILE( stderr );
-          (void) fprintf( stderr, "DBUG%c%p%cERROR: %s: status: %d; step_no: %d\n", 
-                          SEPARATOR, (void*)dbug_ctx, SEPARATOR, procname, status, step_no );
+          (void) fprintf( stderr, "DBUG%c%p%cERROR: %s: status: %d; step_no: %d (%s#%s#%d)\n", 
+                          SEPARATOR, (void*)dbug_ctx, SEPARATOR, procname, status, step_no,
+			  ( call != NULL && call->file != NULL ? call->file : "UNKNOWN" ), 
+			  ( call != NULL && call->function != NULL ? call->function : "UNKNOWN" ), 
+			  line );
           FFLUSH( stderr );
           FUNLOCKFILE( stderr );
         }
