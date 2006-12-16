@@ -2,20 +2,39 @@
 
 Bugs
 
-* On a Windows platform the DBUG library can be built with Cygwin using the
-  standard OS libraries (i.e. without the Cygwin DLL). There are two approaches:
-  1) Use the MinGW compiler by putting the MinGW bin directory in the PATH
-  before the GNU C compiler directory. The disadvantage is that 
-  $ make all 
-  and
-  $ make check
-  fail.
-  2) Use the GNU C compiler with the -mno-cygwin option. However a shared DBUG
-  library (DLL) might result in rebase errors for other programs linked with the
-  DLL. This can be solved by building the library with the --enable-shared
-  configure option.
+* Windows OS libraries
 
+On a Windows platform the DBUG library can be built with Cygwin using the
+standard OS libraries (i.e. without the Cygwin DLL). There are two
+approaches:
+1) Use the MinGW compiler by putting the MinGW bin directory in the
+1) PATH
+before the GNU C compiler directory. The disadvantage is that $ make
+all and $ make check fail.
+2) Use the GNU C compiler with the -mno-cygwin option. However a
+2) shared DBUG
+library (DLL) might result in rebase errors for other programs
+linked with the DLL. This can be solved by building the library with
+the --disable-shared configure option.
 
-  The second approach is probably best:
+The second approach is probably best:
 
   $ configure [ --disable-shared ] ... CC="gcc -mno-cygwin"
+
+* multiple targets patterns
+
+On the Cygwin platform the following commands
+
+  $ configure --prefix=c:/usr/local
+  $ make
+
+may eventually result in the make error message concerning multiple
+targets patterns. This is because of the colon in the prefix and
+targets which depend on a file below the directory specified with the
+prefix. The generated Makefile contains (hidden by variables) something like:
+
+TARGET: ... c:/usr/local/DEPENDENCY
+
+So there are two colons in the make rule, which is plain wrong.
+
+Solution: change the prefix into /cygdrive/c/usr/local.
