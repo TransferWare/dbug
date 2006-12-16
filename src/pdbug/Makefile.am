@@ -28,8 +28,10 @@ MAKEFILE_PERL        = $(builddir)/Makefile.perl
 
 CP                   = cp
 
+MAKEFILE_PERL_ENV    = CPPFLAGS="-I${srcdir}/../lib"
+
 $(MAKEFILE_PERL): copy_sources
-	$(PERL) Makefile.PL
+	$(MAKEFILE_PERL_ENV) $(PERL) Makefile.PL
 
 copy_sources: Makefile_PL pdbug_pm pdbug_xs test_pl
 

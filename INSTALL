@@ -72,7 +72,7 @@ On Windows systems using the Visual C++ compiler:
 
 On Windows systems using the system DLLs (see BUGS):
 
-    ./configure --prefix=c:/usr/local CC="gcc -mno-cygwin"
+    ./configure --prefix=/cygdrive/c/usr/local CC="gcc -mno-cygwin"
 
 Compiling For Multiple Architectures
 ====================================

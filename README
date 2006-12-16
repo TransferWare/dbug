@@ -3,7 +3,7 @@
 This is `DBUG', a Posix-threads debugging library.
 
 DBUG itself consists of the library, libdbug.la, and the headers installed
-in `/usr/local/include/ulib'.
+in `/usr/local/include'.
 
 See INSTALL for installation instructions.
 

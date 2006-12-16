@@ -4,6 +4,9 @@
 use ExtUtils::MakeMaker;
 use Carp;
 
+# GJP 16-12-2006  Change Windows && command by two commands?
+# Temporarily comment it out
+=pod
 sub MY::xs_c {
     package MY;
     my $inherited = shift->SUPER::xs_c(@_);
@@ -11,23 +14,15 @@ sub MY::xs_c {
     $inherited =~ s/(.*) && (.*)/$1\n\t$2/;            
     $inherited;
 }
+=cut
 
-my $libpth = "";
-my $incpth = "";
-
-if ( $^O eq 'MSWin32' ) {
-
-    # LIB contains library search path (directories separated by a semi-colon)
-
-    die "Library search path LIB undefined. Run vcvars32 for Microsoft Visual C++.\n"
-	if $ENV{LIB} eq '';
-
-    $libpth = '-L' . join( ' -L', split(/;/, $ENV{LIB}) );
+foreach my $var ('CPPFLAGS') {
+    die "Environment variable $var undefined.\n" unless exists($ENV{$var});
 }
 
-$libpth .= ' -L../src -ldbug';
+my $incpth = "$ENV{'CPPFLAGS'}";
 
-$incpth = '-I../src';
+print STDERR "incpth: $incpth\n";
 
 my $makefile = 'Makefile';
 
@@ -40,11 +35,12 @@ WriteMakefile(
     'FIRST_MAKEFILE' => "$makefile.perl",
     'NAME'           => 'pdbug',
     'VERSION_FROM'   => 'pdbug.pm', # finds $VERSION
-    'LIBS'	     => $libpth,   # e.g., '-lm' 
+#    'LIBS'	     => $libpth,   # e.g., '-lm' 
+    'OBJECT'         => '../lib/dbug.o ../lib/Clock.o ../lib/SleepMsec.o $(BASEEXT)$(OBJ_EXT)',
     'CCFLAGS'        => undef,
     'OPTIMIZE'       => undef,
     'DEFINE'	     => '',     # e.g., '-DHAVE_SOMETHING' 
-    'INC'	     => $incpth,     # e.g., '-I/usr/include/other' 
+    'INC'	     => $incpth     # e.g., '-I/usr/include/other' 
 );
 
 croak("Could not rename $makefile into $makefile.perl: $!")
