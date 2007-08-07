@@ -26,7 +26,6 @@ include_HEADERS      = dbug.h
 lib_LTLIBRARIES	     = libdbug.la
 libdbug_la_SOURCES   = dbug.c Clock.c SleepMsec.c Clock.h SleepMsec.h vargs.h
 
-
 ##
 ## History of interface versions:
 ## - 0:0:0 start

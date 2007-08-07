@@ -18,7 +18,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 AC_REVISION([$Revision$])
-AC_INIT([dbug],[4.4.0],[g.paulissen@chello.nl])
+AC_INIT([dbug],[4.5.0],[g.paulissen@chello.nl])
 
 # version check
 if test -f "$srcdir/VERSION"
@@ -101,7 +101,27 @@ AC_SUBST(LTLIBOBJS)
 
 AC_SUBST(ac_aux_dir)
 
-AC_CONFIG_FILES([Makefile doc/Makefile src/Makefile src/lib/Makefile src/pdbug/Makefile src/prog/Makefile src/prog/dbugrpt test/Makefile])
+AC_ARG_ENABLE([pdbug],
+              AS_HELP_STRING([--enable-pdbug],
+                             [install dbug for perl [[default=yes]]]),
+              [case "$enableval" in
+                 yes) acx_cv_use_pdbug=true ;;
+                 no)  acx_cv_use_pdbug=false ;;
+                 *)   AC_MSG_ERROR([bad value ${enableval} for --enable-pdbug]) ;;
+               esac],
+              [acx_cv_use_pdbug=true])
+
+AM_CONDITIONAL([PDBUG], [test x$acx_cv_use_pdbug = xtrue])
+
+AC_CONFIG_FILES([Makefile doc/Makefile src/Makefile src/lib/Makefile])
+
+case $acx_cv_use_pdbug in
+true)	
+	AC_CONFIG_FILES([src/pdbug/Makefile]);;
+esac
+
+AC_CONFIG_FILES([src/prog/Makefile src/prog/dbugrpt test/Makefile])
+
 AC_OUTPUT
 
 echo \

@@ -95,6 +95,7 @@ test6:  $(DBUGRPT)
 # .ref file may be a DOS file, hence remove ^M
 	sed "s/^M//g" $(doc_srcdir)/$@.ref > tmp.ref
 	$(GREP) -f tmp.ref $@.log >$@.lis
+	-@rm -f tmp.ref
 	test "`cat $@.lis | wc -l`" -eq "`cat $@.log | wc -l`"
 	@echo : > $@
 	@chmod +x $@

@@ -1,9 +1,16 @@
 DBUG NEWS - History of user visible changes.		-*- indented-text -*-
-Copyright (C) 2002, 2003, 2004, 2005  G.J. Paulissen 
+Copyright (C) 2002, 2003, 2004, 2005, 2006, 2007  G.J. Paulissen 
 
 See the end for copying conditions.
 
 Please send DBUG bug reports to g.paulissen@chello.nl.
+
+
+Release 4.5.0
+
+* Installing the Perl pdbug library can be disabled by using 
+
+  $ configure --disable-pdbug
 
 
 Release 4.4.0
