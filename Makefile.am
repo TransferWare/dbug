@@ -36,3 +36,6 @@ dist-hook:
 ## @end 1
 
 EXTRA_DIST              = VERSION BUGS
+
+dist-hook:
+	chmod +x $(top_srcdir)/config/*
