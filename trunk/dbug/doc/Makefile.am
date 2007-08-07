@@ -44,7 +44,8 @@ DBUGRPT = $(top_builddir)/src/prog/dbugrpt
 
 # Ignore whitespace
 DIFF = diff -w
-GREP = grep
+
+FGREP = @FGREP@ -f
 
 doc_srcdir = $(top_srcdir)/doc
 
@@ -94,7 +95,7 @@ test6:  $(DBUGRPT)
 	$(FACTORIAL) -#t,D=1000,g 3 | @PERL@ $(DBUGRPT) > $@.log
 # .ref file may be a DOS file, hence remove ^M
 	sed "s/^M//g" $(doc_srcdir)/$@.ref > tmp.ref
-	$(GREP) -f tmp.ref $@.log >$@.lis
+	$(FGREP) tmp.ref $@.log >$@.lis
 	-@rm -f tmp.ref
 	test "`cat $@.lis | wc -l`" -eq "`cat $@.log | wc -l`"
 	@echo : > $@
