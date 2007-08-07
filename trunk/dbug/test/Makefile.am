@@ -63,3 +63,8 @@ test6:
 	$(DBUGTEST) $@ d,t,g,D=1000 d:t:g:D,1000 b c a d 1>$(STDOUT) 2>$(STDERR)
 	@echo : > $@
 	@chmod +x $@
+
+dist-hook:
+	-@rm -f dbugtest.log
+# GJP 2007-08-07 Do not where they come from
+	-@test $(top_builddir) = $(top_srcdir) || rm -f $(top_builddir)/src/lib/Clock.c $(top_builddir)/src/lib/dbug.c $(top_builddir)/src/lib/SleepMsec.c

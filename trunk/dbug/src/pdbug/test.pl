@@ -217,6 +217,9 @@ sub check_pdbug {
     # testcase 26
     print $$dbug_ctx != 0 && $_ =~ m/#I#/ ? "" : "not ", "ok ", $testcase++, "\n";
 
+    # clean up for distcheck
+    unlink("test.log");
+
     # test actual number of testcases
     # testcase 27
     print $testcase == $MAX_TESTCASES ? "" : "not ", "ok ", $testcase++, "\n";
