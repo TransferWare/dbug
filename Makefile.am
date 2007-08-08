@@ -28,14 +28,14 @@ html:
 	@echo Making $@ in $(docdir)
 	@cd $(docdir) && make $@
 ## @end 2
+
 ## @start 1
 dist-hook:
 	for file in $(AUX_DIST) $(AUX_DIST_EXTRA); do \
 	  cp $$file $(distdir)/$$file; \
 	done
+	chmod +x $(top_srcdir)/config/*
 ## @end 1
 
 EXTRA_DIST              = VERSION BUGS
 
-dist-hook:
-	chmod +x $(top_srcdir)/config/*
