@@ -26,26 +26,36 @@ print STDERR "incpth: $incpth\n";
 
 my $makefile = 'Makefile';
 
-croak("Could not remove $makefile.old: $!")
-    if (-e "$makefile.old" && unlink("$makefile.old") != 1);
-croak("Could not rename $makefile into $makefile.old: $!")
-    if (-e $makefile && !rename($makefile, "$makefile.old"));
+BEGIN {
+    foreach my $ext ('old', 'perl') {
+        croak("Could not remove $makefile.$ext: $!")
+            if (-e "$makefile.$ext" && unlink("$makefile.$ext") != 1);
+    }
+    croak("Could not rename $makefile into $makefile.old: $!")
+        if (-e $makefile && !rename($makefile, "$makefile.old"));
+}
 
 WriteMakefile(
     'FIRST_MAKEFILE' => "$makefile.perl",
     'NAME'           => 'pdbug',
     'VERSION_FROM'   => 'pdbug.pm', # finds $VERSION
-#    'LIBS'	     => $libpth,   # e.g., '-lm' 
+#    'LIBS'          => $libpth,   # e.g., '-lm' 
     'OBJECT'         => '../lib/dbug.o ../lib/Clock.o ../lib/SleepMsec.o $(BASEEXT)$(OBJ_EXT)',
     'CCFLAGS'        => undef,
     'OPTIMIZE'       => undef,
-    'DEFINE'	     => '',     # e.g., '-DHAVE_SOMETHING' 
-    'INC'	     => $incpth     # e.g., '-I/usr/include/other' 
+    'DEFINE'         => '',     # e.g., '-DHAVE_SOMETHING' 
+    'INC'            => $incpth     # e.g., '-I/usr/include/other' 
 );
 
 croak("Could not rename $makefile into $makefile.perl: $!")
-    if (!rename($makefile, "$makefile.perl"));
+    if (-e $makefile && !rename($makefile, "$makefile.perl"));
+croak("File $makefile.perl does not exists")
+    unless (-e "$makefile.perl");
+
 print STDOUT "Created $makefile.perl\n";
-croak("Could not rename $makefile.old into $makefile: $!")
-    if (-e "$makefile.old" && !rename("$makefile.old", $makefile));
+
+END {
+    croak("Could not rename $makefile.old into $makefile: $!")
+        if (-e "$makefile.old" && !rename("$makefile.old", $makefile));
+}
 
