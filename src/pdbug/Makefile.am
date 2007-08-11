@@ -19,87 +19,73 @@ MAINTAINERCLEANFILES = Makefile.in
 
 EXTRA_DIST           = Makefile.PL pdbug.html pdbug.pm pdbug.xs test.pl
 
-## Call the perl makefile from this makefile
-## Copy the sources first
+## Call the perl Makefile from this makefile but in another directory at the same level 
+## (needed for finding files in the tree).
 
-builddir             = .
-
-MAKEFILE_PERL        = $(builddir)/Makefile.perl
+perlbuilddir         = ../pdbug.perl
 
 CP                   = cp -f
 
 MAKEFILE_PERL_ENV    = CPPFLAGS="-I${srcdir}/../lib"
 
-$(MAKEFILE_PERL): copy_sources
-	$(MAKEFILE_PERL_ENV) $(PERL) Makefile.PL
-
-copy_sources: Makefile_PL pdbug_pm pdbug_xs test_pl
-
-Makefile_PL: $(srcdir)/Makefile.PL
-	test $(builddir) = $(srcdir) || $(CP) $< $(builddir)
-
-pdbug_pm: $(srcdir)/pdbug.pm
-	test $(builddir) = $(srcdir) || $(CP) $< $(builddir)
-
-pdbug_xs: $(srcdir)/pdbug.xs
-	test $(builddir) = $(srcdir) || $(CP) $< $(builddir)
-
-test_pl: $(srcdir)/test.pl
-	test $(builddir) = $(srcdir) || $(CP) $< $(builddir)
+$(perlbuilddir): $(srcdir)/Makefile.PL $(srcdir)/pdbug.pm $(srcdir)/pdbug.xs $(srcdir)/test.pl
+	test -d $@ || mkdir $@
+	$(CP) $? $@
+	cd $(perlbuilddir) && $(MAKEFILE_PERL_ENV) $(PERL) Makefile.PL
+# $(perlbuilddir)/Makefile is newer than the .o files in ${top_builddir}/src/lib, so it would try to rebuild without touch
+	touch ${top_builddir}/src/lib/*.o
 
 ## The targets for the Perl makefile can be found in ExtUtils::MakeMaker documentation.
 
 all: all.perl
 
-all.perl: $(MAKEFILE_PERL)
-	$(MAKE) -f $< all
+all.perl: $(perlbuilddir)
+	cd $(perlbuilddir) && $(MAKE)
 
 # check is the automake target, test is the Perl make target
 check: test.perl
 
-test.perl: $(MAKEFILE_PERL)
-	$(MAKE) -f $< test
+test.perl: $(perlbuilddir)
+	cd $(perlbuilddir) && $(MAKE) test
 
 install: install.perl
 
-install.perl: $(MAKEFILE_PERL)
-	$(MAKE) -f $< install
+install.perl: $(perlbuilddir)
+	cd $(perlbuilddir) && $(MAKE) install
 
 config: config.perl
 
-config.perl: $(MAKEFILE_PERL)
-	$(MAKE) -f $< config
+config.perl: $(perlbuilddir)
+	cd $(perlbuilddir) && $(MAKE) config
 
 clean: clean.perl
 
-clean.perl: $(MAKEFILE_PERL)
-	$(MAKE) -f $< clean
+clean.perl: 
+	rm -fr $(perlbuilddir)
 
 realclean: realclean.perl
 
-realclean.perl: $(MAKEFILE_PERL)
-	$(MAKE) -f $< realclean
+realclean.perl: $(perlbuilddir)
+	cd $(perlbuilddir) && $(MAKE) realclean
 
 ci: ci.perl
 
-ci.perl: $(MAKEFILE_PERL)
-	$(MAKE) -f $< ci
+ci.perl: $(perlbuilddir)
+	cd $(perlbuilddir) && $(MAKE) ci
 
-dist: dist.perl
+#dist: dist.perl
 
-dist.perl: $(MAKEFILE_PERL)
-	$(MAKE) -f $< dist
+#dist.perl: $(perlbuilddir)
+#	cd $(perlbuilddir) && $(MAKE) dist
 
 ## DOCUMENTATION section
 
 all: pdbug.html
 
-pdbug.html: pdbug.pm
-	$(PERL) -S pod2html --infile=$? --outfile=$@
+pdbug.html: $(srcdir)/pdbug.pm
+	$(PERL) -S pod2html --infile=$< --outfile=$@
 	-@rm pod2htm*.tmp
 
 dist-hook:
-	-@rm -fr $(builddir)/blib
-	-@rm $(MAKEFILE_PERL) $(builddir)/pdbug.bs $(builddir)/pdbug.c $(builddir)/pdbug.o $(builddir)/pm_to_blib $(builddir)/pdbug.html
-	-@test $(builddir) = $(srcdir) || rm -f $(builddir)/Makefile.PL $(builddir)/pdbug.pm $(builddir)/pdbug.xs $(builddir)/test.pl
+	-@rm -fr $(perlbuilddir)
 
