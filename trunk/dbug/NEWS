@@ -6,6 +6,13 @@ See the end for copying conditions.
 Please send DBUG bug reports to g.paulissen@chello.nl.
 
 
+Release 4.6.0
+
+* make distcheck now works with or without the Perl pdbug library.
+* added M4 configuration file config/dbug.m4 to be used by projects
+  which depend on dbug.
+
+
 Release 4.5.0
 
 * Installing the Perl pdbug library can be disabled by using 
