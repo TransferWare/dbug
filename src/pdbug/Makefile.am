@@ -53,6 +53,11 @@ install: install.perl
 install.perl: $(perlbuilddir)
 	cd $(perlbuilddir) && $(MAKE) install
 
+uninstall: uninstall.perl
+
+uninstall.perl: $(perlbuilddir)
+	-cd $(perlbuilddir) && $(MAKE) uninstall
+
 config: config.perl
 
 config.perl: $(perlbuilddir)

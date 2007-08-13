@@ -11,6 +11,9 @@ Release 4.6.0
 * make distcheck now works with or without the Perl pdbug library.
 * added M4 configuration file config/dbug.m4 to be used by projects
   which depend on dbug.
+* the installation for Cygwin will set CC to "gcc -mno-cygwin" (if
+  not set already).
+* the installation for Cygwin will set the default prefix /cygdrive/c/usr/local.
 
 
 Release 4.5.0

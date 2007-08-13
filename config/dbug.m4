@@ -20,21 +20,28 @@
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 # 02111-1307, USA.
 
+AC_DEFUN([ACX_DBUG],
+[AC_PREFIX_PROGRAM([dbugrpt])
+AC_PATH_PROG([DBUGRPT],[dbugrpt])
+acx_dbugrpt_dir=`dirname $DBUGRPT`
+acx_dbugrpt_dir=`dirname $acx_dbugrpt_dir`
+LDFLAGS="$LDFLAGS -L${acx_dbugrpt_dir}/lib"
+CPPFLAGS="$CPPFLAGS -I${acx_dbugrpt_dir}/include"
+])
+
 AC_DEFUN([ACX_ENABLE_DBUG],
-[LIBS="$LIBS -ldbug"
-AC_SUBST([dbug_LDADD],[])
-AC_SUBST([dbug_LDFLAGS],[])
+[ACX_DBUG
+LIBS="$LIBS -ldbug"
 AC_CHECK_FUNC([dbug_enter],[],[AC_MSG_ERROR(dbug_enter not found)])
 ])
 
 AC_DEFUN([ACX_DISABLE_DBUG],
-[AC_DEFINE([DBUG_OFF],[1],
-           [Define if NOT using the debugging package dbug])
-AC_SUBST([dbug_LDADD],[])
-AC_SUBST([dbug_LDFLAGS],[])
+[ACX_DBUG
+AC_DEFINE([DBUG_OFF],[1],
+          [Define if NOT using the debugging package dbug])
 ])
 
-AC_DEFUN([AMX_WITH_DBUG],
+AC_DEFUN([ACX_WITH_DBUG],
 [AC_MSG_CHECKING([if debugging package dbug is wanted])
 AC_ARG_WITH(dbug,
 [  --with-dbug             use dbug, as in
