@@ -44,7 +44,21 @@ AH_BOTTOM(
 AC_SUBST([DBUGRPT_PREFIX_SEPARATOR],[:])
 AC_CONFIG_SRCDIR([src/lib/dbug.c])
 AM_CONFIG_HEADER([config.h])
+
+AC_CANONICAL_HOST
+
+case ${host} in
+*-cygwin)
+	test "$CC" = "" && CC="gcc -mno-cygwin" && export CC
+	AC_PREFIX_DEFAULT([/cygdrive/c/usr/local])
+	;;
+?*)	;;
+*)	AC_MSG_ERROR([Host not set])
+	;;
+esac
+
 AM_INIT_AUTOMAKE
+
 AM_C_PROTOTYPES
 
 # Checks for programs.
@@ -56,6 +70,7 @@ x)
 	;;
 esac
 dnl AC_ARG_VAR(PERL,[The program name of Perl.])
+
 AC_PROG_CC
 AM_PROG_CC_STDC
 AC_LIBTOOL_WIN32_DLL
@@ -104,13 +119,13 @@ AC_SUBST(ac_aux_dir)
 
 AC_ARG_ENABLE([pdbug],
               AS_HELP_STRING([--enable-pdbug],
-                             [install dbug for perl [[default=yes]]]),
+                             [install dbug for perl [[default=no]]]),
               [case "$enableval" in
                  yes) acx_cv_use_pdbug=true ;;
                  no)  acx_cv_use_pdbug=false ;;
                  *)   AC_MSG_ERROR([bad value ${enableval} for --enable-pdbug]) ;;
                esac],
-              [acx_cv_use_pdbug=true])
+              [acx_cv_use_pdbug=no])
 
 AM_CONDITIONAL([PDBUG], [test x$acx_cv_use_pdbug = xtrue])
 

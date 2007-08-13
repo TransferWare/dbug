@@ -15,14 +15,17 @@
 ## License along with this library; if not, write to the Free Software
 ## Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-AUTOMAKE_OPTIONS 	= 
-SUBDIRS 		= src doc test
-MAINTAINERCLEANFILES 	= Makefile.in aclocal.m4 configure config-h.in \
-			stamp-h.in $(AUX_DIST)
-ACLOCAL			= aclocal -I $(ac_aux_dir)
+AUTOMAKE_OPTIONS          = 
+SUBDIRS 		  = src doc test
+MAINTAINERCLEANFILES 	  = Makefile.in aclocal.m4 configure config-h.in \
+			    stamp-h.in $(AUX_DIST)
+#ACLOCAL		  = aclocal -I $(ac_aux_dir)
+EXTRA_DIST                = VERSION BUGS
+
+DISTCHECK_CONFIGURE_FLAGS = CC=gcc --enable-pdbug
 
 ## @start 2
-docdir			= $(top_builddir)/doc
+docdir			  = $(top_builddir)/doc
 
 html:
 	@echo Making $@ in $(docdir)
@@ -37,5 +40,6 @@ dist-hook:
 	chmod +x $(top_srcdir)/config/*
 ## @end 1
 
-EXTRA_DIST              = VERSION BUGS
-
+# Uninstalling the Perl pdbug package causes too many problems
+distuninstallcheck:
+        @:
