@@ -1,7 +1,7 @@
-## ----------------------------------- ##
-## Check if --with-dbug was given.     ##
-## From Gert-Jan Paulissen             ##
-## ----------------------------------- ##
+## ----------------------------------------- ##
+## DBUG M4 macros for use in other projects. ##
+## From Gert-Jan Paulissen                   ##
+## ----------------------------------------- ##
 
 # Copyright 1996, 1998, 1999, 2000, 2001 Free Software Foundation, Inc.
 
@@ -25,14 +25,13 @@ AC_DEFUN([ACX_DBUG],
 AC_PATH_PROG([DBUGRPT],[dbugrpt])
 acx_dbugrpt_dir=`dirname $DBUGRPT`
 acx_dbugrpt_dir=`dirname $acx_dbugrpt_dir`
-LDFLAGS="$LDFLAGS -L${acx_dbugrpt_dir}/lib"
-CPPFLAGS="$CPPFLAGS -I${acx_dbugrpt_dir}/include"
+AC_SUBST([DBUG_LIBADD],[${acx_dbugrpt_dir}/lib/libdbug.la])
+AC_SUBST([DBUG_LDADD],[${acx_dbugrpt_dir}/lib/libdbug.la])
+AC_SUBST([DBUG_CPPFLAGS],[-I${acx_dbugrpt_dir}/include])
 ])
 
 AC_DEFUN([ACX_ENABLE_DBUG],
 [ACX_DBUG
-LIBS="$LIBS -ldbug"
-AC_CHECK_FUNC([dbug_enter],[],[AC_MSG_ERROR(dbug_enter not found)])
 ])
 
 AC_DEFUN([ACX_DISABLE_DBUG],
