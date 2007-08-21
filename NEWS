@@ -13,7 +13,6 @@ Release 4.6.0
   which depend on dbug.
 * the installation for Cygwin will set CC to "gcc -mno-cygwin" (if
   not set already).
-* the installation for Cygwin will set the default prefix /cygdrive/c/usr/local.
 
 
 Release 4.5.0
