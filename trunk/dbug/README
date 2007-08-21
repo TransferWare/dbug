@@ -4,10 +4,16 @@ This is `DBUG', a Posix-threads debugging library.
 
 DBUG itself consists of the library (-ldbug), reporting tool dbugrpt and
 the header dbug.h installed in /usr/local/lib, /usr/local/bin and
-/usr/local/include by default. For Cygwin environments they are
-installed into /cygdrive/c/usr/local/lib, etcetera. The compiler (CC
-variable) will be set to to "gcc -mno-cygwin" (if not set already).
+/usr/local/include by default. 
 
+For Cygwin environments they may be installed into
+/cygdrive/c/usr/local/lib, etcetera, using the command:
+
+  $ configure --prefix /cygdrive/c/usr/local
+
+The Cygwin compiler (CC variable) will be set to to "gcc -mno-cygwin"
+(if not set already). This is needed to link with standard Windows system
+DLL's.
 
 See INSTALL for installation instructions.
 
