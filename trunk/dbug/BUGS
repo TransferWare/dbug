@@ -38,3 +38,14 @@ TARGET: ... c:/usr/local/DEPENDENCY
 So there are two colons in the make rule, which is plain wrong.
 
 Solution: change the prefix into /cygdrive/c/usr/local.
+
+* configure: error: C++ preprocessor "/lib/cpp" fails sanity check
+
+This has happened on the Mac.
+
+$ which cpp
+/usr/bin/cpp
+
+Run 
+
+$ configure CXXCPP="/usr/bin/cpp"
