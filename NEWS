@@ -6,6 +6,12 @@ See the end for copying conditions.
 Please send DBUG bug reports to g.paulissen@chello.nl.
 
 
+Release 4.7.0
+
+* Autoconf upgrade.
+* make check fixed.
+
+
 Release 4.6.0
 
 * make distcheck now works with or without the Perl pdbug library.

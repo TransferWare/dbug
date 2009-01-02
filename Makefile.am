@@ -16,11 +16,12 @@
 ## Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 AUTOMAKE_OPTIONS          = 
-SUBDIRS 		  = src doc test
+SUBDIRS 		  = src test doc
 MAINTAINERCLEANFILES 	  = Makefile.in aclocal.m4 configure config-h.in \
 			    stamp-h.in $(AUX_DIST)
 #ACLOCAL		  = aclocal -I $(ac_aux_dir)
 EXTRA_DIST                = VERSION BUGS
+ACLOCAL_AMFLAGS           = -I m4
 
 DISTCHECK_CONFIGURE_FLAGS = CC=gcc --enable-pdbug
 

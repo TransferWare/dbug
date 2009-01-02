@@ -18,7 +18,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 AC_REVISION([$Revision$])
-AC_INIT([dbug],[4.6.0],[g.paulissen@chello.nl])
+AC_INIT([dbug],[4.7.0],[g.paulissen@chello.nl])
 
 # version check
 if test -f "$srcdir/VERSION"
@@ -34,6 +34,7 @@ then
   echo "$PACKAGE_VERSION" > $srcdir/VERSION
 fi
 
+AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_AUX_DIR([config])
 AH_BOTTOM(
 [#if defined(STDC_HEADERS) && STDC_HEADERS

@@ -38,7 +38,12 @@ CLEANFILES = dbug.html pod2htm*
 # GJP 15-12-2005
 # The new libtoolize seems to create an empty factorial.exe in the build directory and ./factorial
 # starts this dummy one. /bin/sh ./factorial starts the script though.
-FACTORIAL = $(SHELL) ./factorial
+# FACTORIAL = $(SHELL) ./factorial
+
+# GJP 02-01-2009
+# Shell not needed anymore.
+
+FACTORIAL = ./factorial
 
 DBUGRPT = $(top_builddir)/src/prog/dbugrpt
 
