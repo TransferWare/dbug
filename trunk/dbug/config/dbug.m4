@@ -20,7 +20,8 @@
 
 AC_DEFUN([ACX_DBUG],
 [AC_PREFIX_PROGRAM([dbugrpt])
-AC_PATH_PROG([DBUGRPT],[dbugrpt])
+AC_ARG_VAR([DBUGRPT],[The full path name of program dbugrpt])
+AC_PATH_PROG([DBUGRPT],[dbugrpt],[${bindir}/dbugrpt])
 acx_dbugrpt_dir=`dirname $DBUGRPT`
 acx_dbugrpt_dir=`dirname $acx_dbugrpt_dir`
 AC_SUBST([DBUG_LIBADD],[${acx_dbugrpt_dir}/lib/libdbug.la])
