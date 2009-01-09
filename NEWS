@@ -6,7 +6,7 @@ See the end for copying conditions.
 Please send DBUG bug reports to g.paulissen@chello.nl.
 
 
-Release 4.7.0
+Release 4.6.1
 
 * Autoconf upgrade.
 * make check fixed.
