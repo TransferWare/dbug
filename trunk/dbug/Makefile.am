@@ -19,9 +19,8 @@ AUTOMAKE_OPTIONS          =
 SUBDIRS 		  = src test doc
 MAINTAINERCLEANFILES 	  = Makefile.in aclocal.m4 configure config-h.in \
 			    stamp-h.in $(AUX_DIST)
-#ACLOCAL		  = aclocal -I $(ac_aux_dir)
 EXTRA_DIST                = VERSION BUGS
-ACLOCAL_AMFLAGS           = -I m4
+ACLOCAL_AMFLAGS           = -I $(ac_aux_dir)
 
 DISTCHECK_CONFIGURE_FLAGS = CC=gcc --enable-pdbug
 

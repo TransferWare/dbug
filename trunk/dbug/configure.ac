@@ -34,7 +34,7 @@ then
   echo "$PACKAGE_VERSION" > $srcdir/VERSION
 fi
 
-AC_CONFIG_MACRO_DIR([m4])
+AC_CONFIG_MACRO_DIR([config])
 AC_CONFIG_AUX_DIR([config])
 AH_BOTTOM(
 [#if defined(STDC_HEADERS) && STDC_HEADERS
@@ -44,7 +44,7 @@ AH_BOTTOM(
 )
 AC_SUBST([DBUGRPT_PREFIX_SEPARATOR],[:])
 AC_CONFIG_SRCDIR([src/lib/dbug.c])
-AM_CONFIG_HEADER([config.h])
+AC_CONFIG_HEADERS([config.h])
 
 AC_CANONICAL_HOST
 
@@ -72,7 +72,7 @@ esac
 dnl AC_ARG_VAR(PERL,[The program name of Perl.])
 
 AC_PROG_CC
-AM_PROG_CC_STDC
+
 AC_LIBTOOL_WIN32_DLL
 AC_PROG_LIBTOOL
 AC_PROG_FGREP
@@ -101,7 +101,8 @@ AC_CHECK_FUNCS(
   [ftime getrusage clock],
   [break]
 )
-# Check the Posix threads flockfile() function.
+# Check the Posix threads pthread_key_create() and flockfile() function.
+AC_SEARCH_LIBS([pthread_key_create], [pthread]) 
 AC_CHECK_FUNCS([flockfile])
 
 # Check sleep functions: stop if one is found. None found is allowed.
