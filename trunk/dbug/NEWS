@@ -6,6 +6,11 @@ See the end for copying conditions.
 Please send DBUG bug reports to g.paulissen@chello.nl.
 
 
+Release 4.7.0
+
+* Added support for Cygwin 1.7.x
+
+
 Release 4.6.1
 
 * Autoconf upgrade.

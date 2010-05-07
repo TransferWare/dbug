@@ -4,22 +4,16 @@ Bugs
 
 * Windows OS libraries
 
-On a Windows platform the DBUG library can be built with Cygwin using the
-standard OS libraries (i.e. without the Cygwin DLL). There are two
+On a Windows platform the DBUG library can be built using the standard
+Microsoft OS libraries (i.e. without the Cygwin DLL). There are two
 approaches:
-1) Use the MinGW compiler by putting the MinGW bin directory in the
-1) PATH
-before the GNU C compiler directory. The disadvantage is that $ make
-all and $ make check fail.
-2) Use the GNU C compiler with the -mno-cygwin option. However a
-2) shared DBUG
-library (DLL) might result in rebase errors for other programs
-linked with the DLL. This can be solved by building the library with
-the --disable-shared configure option.
+1) For Cygwin 1.5.x and below use the cygwin GCC compiler with MinGW support
+and add the -mno-cygwin option to the compiler command.
 
-The second approach is probably best:
+  $ configure CC="gcc -mno-cygwin"
 
-  $ configure [ --disable-shared ] ... CC="gcc -mno-cygwin"
+2) For Cygwin 1.7.x and above the -mno-cygwin option has been removed.
+Use the MinGW compiler and MSYS environment to build.
 
 * multiple targets patterns
 
@@ -49,3 +43,8 @@ $ which cpp
 Run 
 
 $ configure CXXCPP="/usr/bin/cpp"
+
+* make check fails in an MSYS environment when pthreadGC2.dll could not be found
+
+See http://gnunet.org/hacking_win32_build.php3 section Pthreads.
+
