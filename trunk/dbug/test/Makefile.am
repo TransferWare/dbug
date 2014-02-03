@@ -17,7 +17,8 @@
 
 MAINTAINERCLEANFILES = Makefile.in
 
-AUTOMAKE_OPTIONS     = $(top_srcdir)/src/lib/ansi2knr dejagnu
+# AUTOMAKE_OPTIONS     = $(top_srcdir)/src/lib/ansi2knr dejagnu
+AUTOMAKE_OPTIONS     = dejagnu
 
 check_PROGRAMS       = dbugtest
 dbugtest_SOURCES     = $(top_srcdir)/src/lib/dbug.c $(top_srcdir)/src/lib/Clock.c $(top_srcdir)/src/lib/SleepMsec.c

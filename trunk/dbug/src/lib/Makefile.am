@@ -17,7 +17,7 @@
 
 MAINTAINERCLEANFILES = Makefile.in
 
-AUTOMAKE_OPTIONS     = ansi2knr
+# AUTOMAKE_OPTIONS     = ansi2knr
 
 AM_CPPFLAGS          = -I$(top_srcdir)/src/lib
 

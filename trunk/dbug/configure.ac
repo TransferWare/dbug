@@ -59,7 +59,7 @@ esac
 
 AM_INIT_AUTOMAKE
 
-AM_C_PROTOTYPES
+# AM_C_PROTOTYPES
 
 # Checks for programs.
 AC_PATH_PROG([PERL],[perl])
