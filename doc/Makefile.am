@@ -17,7 +17,7 @@
 
 MAINTAINERCLEANFILES = Makefile.in
 
-AUTOMAKE_OPTIONS     = $(top_srcdir)/src/lib/ansi2knr
+# AUTOMAKE_OPTIONS     = $(top_srcdir)/src/lib/ansi2knr
 
 check_PROGRAMS       = factorial
 factorial_SOURCES    = main.c factorial.c
