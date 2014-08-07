@@ -13,7 +13,10 @@ and add the -mno-cygwin option to the compiler command.
   $ configure CC="gcc -mno-cygwin"
 
 2) For Cygwin 1.7.x and above the -mno-cygwin option has been removed.
-Use the MinGW compiler and MSYS environment to build.
+Use the following flags during configuration (and install the Cygwin packages
+mingw-gcc-core and mingw-runtime):
+
+  $ configure --host=i686-pc-mingw32 --prefix=/cygdrive/c/usr/local
 
 * multiple targets patterns
 

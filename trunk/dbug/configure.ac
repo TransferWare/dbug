@@ -50,7 +50,11 @@ AC_CANONICAL_HOST
 
 case ${host} in
 *-cygwin)
-	test "$CC" = "" && CC="gcc -mno-cygwin" && export CC
+  if gcc --version | grep -E "gcc \(GCC\) [1-3]\." 1>/dev/null 2>&1
+  then
+    # gcc (GCC) 1.x or 2.x or 3.x: use -mno-cygwin
+    test "$CC" = "" && CC="gcc -mno-cygwin" && export CC
+  fi
 	;;
 ?*)	;;
 *)	AC_MSG_ERROR([Host not set])
