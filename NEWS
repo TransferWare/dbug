@@ -1,9 +1,14 @@
 DBUG NEWS - History of user visible changes.		-*- indented-text -*-
-Copyright (C) 2002, 2003, 2004, 2005, 2006, 2007  G.J. Paulissen 
+Copyright (C) 2002-2016  G.J. Paulissen 
 
 See the end for copying conditions.
 
-Please send DBUG bug reports to g.paulissen@chello.nl.
+Please send DBUG bug reports to gert.jan.paulissen@gmail.com
+
+
+Release 4.8.0
+
+* Added support for Cygwin 2.5.1 64 bit.
 
 
 Release 4.7.0

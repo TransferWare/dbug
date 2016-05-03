@@ -13,10 +13,12 @@ and add the -mno-cygwin option to the compiler command.
   $ configure CC="gcc -mno-cygwin"
 
 2) For Cygwin 1.7.x and above the -mno-cygwin option has been removed.
-Use the following flags during configuration (and install the Cygwin packages
-mingw-gcc-core and mingw-runtime):
+   a) for Cygwin 32 bit install the Cygwin packages mingw-gcc-core and mingw-runtime
+   b) for Cygwin 64 bit install the Cygwin packages mingw64-i686-gcc-core and mingw64-i686-runtime
 
-  $ configure --host=i686-pc-mingw32 --prefix=/cygdrive/c/usr/local
+   Next use the following flags during configuration:
+
+  $ configure --prefix=/cygdrive/c/usr/local CC="gcc -mwindows"
 
 * multiple targets patterns
 

@@ -78,7 +78,7 @@ On Windows systems using the Cygwin (at most 1.5.x) GCC compiler and Microsoft s
 On Windows systems using the Cygwin (at most 1.7.x) GCC compiler and Microsoft system DLLs
 with Mingw support installed (see BUGS):
 
-    ./configure --host=i686-pc-mingw32 --prefix=/cygdrive/c/usr/local
+    ./configure --prefix=/cygdrive/c/usr/local CC="gcc -mwindows"
 
 On Windows systems using the MinGW and MSYS environment:
 
