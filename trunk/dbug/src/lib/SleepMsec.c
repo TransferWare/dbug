@@ -62,7 +62,7 @@ static char vcid[] = "$Header$";
  *      seismo!bpa!sjuvax!bbanerje
  *
  *      Gert-Jan Paulissen      (thread support)
- *      e-mail: g.paulissen@chello.nl
+ *      e-mail: gert.jan.paulissen@gmail.com
  */
 
 #ifndef HAVE_CONFIG_H

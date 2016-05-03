@@ -21,7 +21,8 @@ MAINTAINERCLEANFILES = Makefile.in
 AUTOMAKE_OPTIONS     = dejagnu
 
 check_PROGRAMS       = dbugtest
-dbugtest_SOURCES     = $(top_srcdir)/src/lib/dbug.c $(top_srcdir)/src/lib/Clock.c $(top_srcdir)/src/lib/SleepMsec.c
+# dbugtest_SOURCES     = $(top_srcdir)/src/lib/dbug.c $(top_srcdir)/src/lib/Clock.c $(top_srcdir)/src/lib/SleepMsec.c
+dbugtest_SOURCES     = ../src/lib/dbug.c ../src/lib/Clock.c ../src/lib/SleepMsec.c
 #dbugtest_LDADD       = $(top_builddir)/src/lib/libdbug.la
 dbugtest_LDADD       = 
 AM_CPPFLAGS          = -I$(top_srcdir)/src/lib -DDEBUG_DBUG=1 -DDBUGTEST

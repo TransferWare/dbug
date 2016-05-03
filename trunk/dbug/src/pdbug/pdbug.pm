@@ -335,7 +335,7 @@ See file F<./test.pl> for an example.
 
 =head1 AUTHOR
 
-Gert-Jan Paulissen, E<lt>G.Paulissen@chello.nlE<gt>.
+Gert-Jan Paulissen, E<lt>gert.jan.paulissen@gmail.comE<gt>.
 
 =head1 NOTES
 
