@@ -13,15 +13,28 @@ BUILD
 This section is for maintainers only.
 1) First download the code from the internet.
 2) Install the following programs (if necessary):
-	 a) dos2unix (on Cygwin)
-   b) automake
-	 c) autoconf
-	 d) libtool
-	 e) diffutils (on Cygwin)
-3) Next on Cygwin issue:
+   a) automake
+	 b) autoconf
+	 c) libtool
+3) On Cygwin also install
+	 a) dos2unix
+   b) diffutils
+	 c) libcrypt-dev
+	 d) g++
+4) Next on Cygwin issue:
    $ dos2unix bootstrap
-4) Next the following command will generate all the machinery:
+5) Next the following command will generate all the machinery:
 	 $ ./bootstrap
+
+DIST
+====
+See section BUILD.
+Next:
+1) mkdir build
+2) cd build
+3) ../configure --enable-pdbug
+4) make distcheck
+5) make dist
 
 
 DOCUMENTATION
