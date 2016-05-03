@@ -124,7 +124,7 @@ AC_SUBST(ac_aux_dir)
 
 AC_ARG_ENABLE([pdbug],
               AS_HELP_STRING([--enable-pdbug],
-                             [install dbug for perl [[default=no]]]),
+                             [install dbug for perl [default=no]]),
               [case "$enableval" in
                  yes) acx_cv_use_pdbug=true ;;
                  no)  acx_cv_use_pdbug=false ;;

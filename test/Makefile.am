@@ -20,12 +20,13 @@ MAINTAINERCLEANFILES = Makefile.in
 # AUTOMAKE_OPTIONS     = $(top_srcdir)/src/lib/ansi2knr dejagnu
 AUTOMAKE_OPTIONS     = dejagnu
 
+AM_CPPFLAGS          = -I$(top_srcdir)/src/lib
+
 check_PROGRAMS       = dbugtest
-# dbugtest_SOURCES     = $(top_srcdir)/src/lib/dbug.c $(top_srcdir)/src/lib/Clock.c $(top_srcdir)/src/lib/SleepMsec.c
-dbugtest_SOURCES     = ../src/lib/dbug.c ../src/lib/Clock.c ../src/lib/SleepMsec.c
-#dbugtest_LDADD       = $(top_builddir)/src/lib/libdbug.la
-dbugtest_LDADD       = 
-AM_CPPFLAGS          = -I$(top_srcdir)/src/lib -DDEBUG_DBUG=1 -DDBUGTEST
+
+dbugtest_SOURCES     = dbugtest.c
+dbugtest_LDADD       = $(top_builddir)/src/lib/libdbug.la
+
 RUNTESTDEFAULTFLAGS  = --tool dbug DBUG=$$top_builddir/test/dbugtest --srcdir $$top_srcdir/test
 
 EXTRA_DIST           = 
@@ -70,3 +71,6 @@ dist-hook:
 	-@rm -f dbugtest.log
 # GJP 2007-08-07 Do not where they come from
 	-@test $(top_builddir) = $(top_srcdir) || rm -f $(top_builddir)/src/lib/Clock.c $(top_builddir)/src/lib/dbug.c $(top_builddir)/src/lib/SleepMsec.c
+
+$(top_builddir)/src/lib/libdbug.la:
+	cd $(top_builddir)/src/lib && $(MAKE) all
