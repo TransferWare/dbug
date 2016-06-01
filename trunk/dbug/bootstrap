@@ -21,11 +21,16 @@ test ! -d autom4te.cache || rm -fr autom4te.cache
 
 set -ex
 aclocal -I config
-libtoolize --force --copy
+chmod +x config/install-sh
+case `uname` in 
+  Darwin*) LIBTOOLIZE=glibtoolize;;
+  *) LIBTOOLIZE=libtoolize;;
+esac
+$LIBTOOLIZE --force --copy
 autoheader 
 automake --add-missing --copy
 autoconf
-for p in aclocal libtoolize autoheader automake autoconf
+for p in aclocal $LIBTOOLIZE autoheader automake autoconf
 do
   $p --version | grep $p
 done
