@@ -31,7 +31,8 @@ WriteMakefile(
     'NAME'           => 'pdbug',
     'VERSION_FROM'   => 'pdbug.pm', # finds $VERSION
 #    'LIBS'          => $libpth,   # e.g., '-lm' 
-    'OBJECT'         => "$libdir/dbug.o $libdir/Clock.o $libdir/SleepMsec.o " . '$(BASEEXT)$(OBJ_EXT)',
+#    'OBJECT'         => "$libdir/dbug.o $libdir/Clock.o $libdir/SleepMsec.o " . '$(BASEEXT)$(OBJ_EXT)',
+    'OBJECT'         => "$libdir/.libs/libdbug.a " . '$(BASEEXT)$(OBJ_EXT)',
     'CCFLAGS'        => undef,
     'OPTIMIZE'       => undef,
     'DEFINE'         => '',     # e.g., '-DHAVE_SOMETHING' 

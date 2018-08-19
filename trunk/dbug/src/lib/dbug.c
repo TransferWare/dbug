@@ -2380,9 +2380,8 @@ dbug_key_init( dbug_key_t *dbug_key )
     LOCK_STEP,
     KEY_CREATE_STEP,
     INCR_STEP,
-    UNLOCK_STEP
-
-#define DBUG_KEY_INIT_STEPS (UNLOCK_STEP+1)
+    UNLOCK_STEP,
+    DBUG_KEY_INIT_STEPS
   } step_no;
 
 #if DEBUG_DBUG
@@ -2445,9 +2444,8 @@ dbug_key_done( dbug_key_t *dbug_key )
   enum {
     LOCK_STEP,
     DECR_STEP,
-    UNLOCK_STEP
-
-#define DBUG_KEY_DONE_STEPS (UNLOCK_STEP+1)
+    UNLOCK_STEP,
+    DBUG_KEY_DONE_STEPS
   } step_no;
 
 #if DEBUG_DBUG
@@ -2632,9 +2630,8 @@ dbug_init_ctx( const char * options, const char *name, dbug_ctx_t* dbug_ctx )
     NAME_STEP,
     DBUG_KEY_STEP,
     DBUG_PRINT_INFO_STEP,
-    DBUG_OPTIONS_STEP
-
-#define DBUG_INIT_CTX_STEPS (DBUG_OPTIONS_STEP+1)
+    DBUG_OPTIONS_STEP,
+    DBUG_INIT_CTX_STEPS
   } step_no;
   /*@temp@*/ char *dbug_options = (char*)options;
   const char *procname = "dbug_init_ctx";
@@ -2984,9 +2981,8 @@ dbug_init( const char * options, const char *name )
   dbug_ctx_t dbug_ctx; /* local dbug_ctx */
   enum {
     DBUG_KEY_INIT_STEP,
-    DBUG_INIT_CTX_STEP
-
-#define DBUG_INIT_STEPS (DBUG_INIT_CTX_STEP+1)
+    DBUG_INIT_CTX_STEP,
+    DBUG_INIT_STEPS
   } step_no;
 
   _DBUG_ENTER( procname );
@@ -3298,9 +3294,8 @@ dbug_enter_ctx( const dbug_ctx_t dbug_ctx, const char *file, const char *functio
     INS_FILE_STEP,
     INS_FUNCTION_STEP,
     PUSH_STEP,
-    PRINT_STEP
-
-#define DBUG_ENTER_CTX_STEPS (PRINT_STEP+1)
+    PRINT_STEP,
+    DBUG_ENTER_CTX_STEPS
   } step_no;
   BOOLEAN print = FALSE;
   double time = 0;
@@ -3497,9 +3492,8 @@ dbug_leave_ctx( const dbug_ctx_t dbug_ctx, const int line, int *dbug_level )
     PRINT_STEP,
     DEL_FILE_STEP,
     DEL_FUNCTION_STEP,
-    POP_STEP
-
-#define DBUG_LEAVE_CTX_STEPS (POP_STEP+1)
+    POP_STEP,
+    DBUG_LEAVE_CTX_STEPS
   } step_no;
   BOOLEAN print = FALSE;
   double time = 0;

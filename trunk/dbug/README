@@ -8,8 +8,8 @@ the header dbug.h installed in /usr/local/lib, /usr/local/bin and
 
 See INSTALL for installation instructions.
 
-BUILD
-=====
+MAINTAINER BUILD
+================
 This section is for maintainers only.
 1) First download the code from the internet.
 2) Install the following programs (if necessary):
@@ -25,17 +25,6 @@ This section is for maintainers only.
    $ dos2unix bootstrap
 5) Next the following command will generate all the machinery:
    $ ./bootstrap
-
-DIST
-====
-See section BUILD.
-Next:
-1) mkdir build
-2) cd build
-3) ../configure --enable-pdbug
-4) make distcheck
-5) make dist
-
 
 DOCUMENTATION
 =============
