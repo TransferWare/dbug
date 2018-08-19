@@ -1,7 +1,9 @@
-if PDBUG
-SUBDIRS    = lib pdbug prog
-else
 SUBDIRS    = lib prog
+
+if PDBUG
+
+SUBDIRS   += pdbug
+
 endif
 
 EXTRA_DIST = 

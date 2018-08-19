@@ -1,9 +1,15 @@
 DBUG NEWS - History of user visible changes.		-*- indented-text -*-
-Copyright (C) 2002-2016  G.J. Paulissen 
+Copyright (C) 2002-2018  G.J. Paulissen 
 
 See the end for copying conditions.
 
 Please send DBUG bug reports to gert.jan.paulissen@gmail.com
+
+
+Release 5.0.0
+
+* Solved issues with Perl dbug not well distributed
+* Solved compiler warnings
 
 
 Release 4.8.0

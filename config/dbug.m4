@@ -29,29 +29,21 @@ AC_SUBST([DBUG_LDADD],[${acx_dbugrpt_dir}/lib/libdbug.la])
 AC_SUBST([DBUG_CPPFLAGS],[-I${acx_dbugrpt_dir}/include])
 ])
 
-AC_DEFUN([ACX_ENABLE_DBUG],
-[ACX_DBUG
-])
-
-AC_DEFUN([ACX_DISABLE_DBUG],
-[ACX_DBUG
-AC_DEFINE([DBUG_OFF],[1],
-          [Define if NOT using the debugging package dbug])
-])
-
 AC_DEFUN([ACX_WITH_DBUG],
 [AC_MSG_CHECKING([if debugging package dbug is wanted])
 AC_ARG_WITH(dbug,
-[  --with-dbug             use dbug, as in
-                          http://www.sourceforge.net/projects/transferware],
-[if test "$withval" = yes; then
-  AC_MSG_RESULT(yes)
-  ACX_ENABLE_DBUG
-else
-  AC_MSG_RESULT(no)
-  ACX_DISABLE_DBUG
-fi], 
-[AC_MSG_RESULT(yes)
-ACX_ENABLE_DBUG
-])
+	    AS_HELP_STRING([--with-dbug],
+		           [use dbug, as in http://www.sourceforge.net/projects/transferware]),
+            [case "$with_dbug" in
+              yes) ;;
+              no)  ;;
+              *)   AC_MSG_ERROR([bad value ${with_dbug} for --with-dbug]) ;;
+            esac], 
+	    [with_dbug=yes])
+ACX_DBUG
+if test "$with_dbug" = "no"
+then
+  AC_DEFINE([DBUG_OFF],[1],[Define if NOT using the debugging package dbug])
+fi
+AC_MSG_RESULT([test x$with_dbug != xno])
 ])
