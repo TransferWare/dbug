@@ -30,8 +30,7 @@ AC_SUBST([DBUG_CPPFLAGS],[-I${acx_dbugrpt_dir}/include])
 ])
 
 AC_DEFUN([ACX_WITH_DBUG],
-[AC_MSG_CHECKING([if debugging package dbug is wanted])
-AC_ARG_WITH(dbug,
+[AC_ARG_WITH(dbug,
 	    AS_HELP_STRING([--with-dbug],
 		           [use dbug, as in http://www.sourceforge.net/projects/transferware]),
             [case "$with_dbug" in
@@ -45,5 +44,4 @@ if test "$with_dbug" = "no"
 then
   AC_DEFINE([DBUG_OFF],[1],[Define if NOT using the debugging package dbug])
 fi
-AC_MSG_RESULT([test x$with_dbug != xno])
 ])
