@@ -1,0 +1,219 @@
+#!@PYTHON@
+
+"""Usage: rf2dbug.py inpath
+
+Reads Robot Framework test execution result from an output XML file and output to a DBUG log file.
+
+That DBUG log file (name dbug.log in the following example) can then be used by the dbug report utility like this:
+
+  $ perl dbugrpt < dbug.log > dbug.txt
+
+The main reason for this is that the dbugrpt utility can show an intelligent profiler report.
+
+"""
+
+import sys
+from datetime import datetime
+import argparse
+
+from robot.api import ExecutionResult, ResultVisitor
+
+class dbug(object):
+    """
+    This class traverses a Robot Framework output.xml file and prints a DBUG log file.
+    """
+    
+    def __init__(self):
+        self._seq = 0
+        self._level = 0
+
+    def seq(self):
+        self._seq += 1
+        return self._seq
+
+    def version(self):
+        return '@PACKAGE_VERSION@'
+
+    def now(self):
+        return datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+
+    def uid(self):
+        return 1
+
+    def flags(self):
+        return 7 # bit masked 1, 2, 4
+
+    def init(self, time, name):
+        """
+        Output of DBUG_INIT, DBUG_INIT_CTX, dbug_init and dbug_init_ctx
+
+        A line containing 'DBUG', the UID (unique id) of dbug context, date (in GMT YYYYMMDDhhmmss
+        format), a sequence number, 'I', major version, minor version,
+        teeny version, name, address of dbug context, process id and the flags will be
+        printed. Flags is a bit masked integer where tracing equals 1 (see C<t>),
+        debugging equals 2 (see C<d>) and profiling equals 4 (see C<g>).
+
+        This is the line printed: 
+
+        DBUG#<dbug uid>#<date>#<seq>#I#<major version>.<minor version>.<teeny version>#<name>#<dbug context>#<process id>#<flags>
+        """
+        print('DBUG#%s#%s#%s#I#%s#%s#%s#%s#%s'
+              % (self.uid(), time, self.seq(), self.version(), name, 0, 0, self.flags()))
+
+    def done(self, time, name):
+        """
+        Output of DBUG_DONE, DBUG_DONE_CTX, dbug_done and dbug_done_ctx
+
+        A line containing 'DBUG', the UID of the dbug context, date (in GMT YYYYMMDDhhmmss
+        format), a sequence number, 'D', the maximum number of
+        functions on the stack and the stack usage will be printed.
+
+        This is the line printed: 
+
+        DBUG#<dbug uid>#<date>#<seq>#D#<maximum number of functions on the stack>#<stack usage>
+        """
+        print('DBUG#%s#%s#%s#D#%s#%s' % (self.uid(), time, self.seq(), -1, -1))
+
+    def enter(self, time, file, function, milliseconds=0, line=0):
+        """
+        Output of DBUG_ENTER, DBUG_ENTER_CTX, dbug_enter and dbug_enter_ctx
+
+        A line consisting of 'DBUG', the UID of dbug context, date (in GMT YYYYMMDDhhmmss
+        format), a sequence number, 'E', file, function, line, level
+        and time (-1 if profiling is off else in milliseconds) is printed.
+        
+        This is the line printed: 
+
+        DBUG#<dbug uid>#<date>#<seq>#E#<file>#<function>#<line>#<level>#<time>
+        """
+        print('DBUG#%s#%s#%s#E#%s#%s#%s#%s#%f' % (self.uid(), time, self.seq(), file, function, line, self.incr_level(), float(milliseconds/1000)))
+
+    def leave(self, time, file, function, milliseconds, line=0):
+        """
+        Output of DBUG_LEAVE, DBUG_LEAVE_CTX, dbug_leave and dbug_leave_ctx
+
+        A line consisting of 'DBUG', the UID of dbug context, date (in GMT YYYYMMDDhhmmss
+        format), a sequence number, 'L', file, function, line, level
+        and time (-1 if profiling is off else in milliseconds) is printed.
+        
+        This is the line printed: 
+
+        DBUG#<dbug uid>#<date>#<seq>#L#<file>#<function>#<line>#<level>#<time>
+        """
+        print('DBUG#%s#%s#%s#L#%s#%s#%s#%s#%f' % (self.uid(), time, self.seq(), file, function, line, self.decr_level(), float(milliseconds/1000)))
+
+    def print(self, time, file, function, message, break_point, line=0):
+        """
+        Output of DBUG_PRINT, DBUG_PRINT_CTX, dbug_print and dbug_print_ctx
+
+        A line consisting of 'DBUG', the UID of dbug context, date (in GMT YYYYMMDDhhmmss
+        format), a sequence number, 'P', file, function, line, level,
+        break point and user supplied parameters is printed. File and function may be
+        empty when there is no active function context.
+
+        DBUG#<dbug uid>#<date>#<seq>#P#<file>#<function>#<line>#<level>#<break point>#<user supplied parameters>
+        """
+        for line in message.splitlines():
+            print('DBUG#%s#%s#%s#P#%s#%s#%s#%s#%s#%s' % (self.uid(), time, self.seq(), file, function, line, self.level(), break_point, line))
+
+    def incr_level(self):
+        self._level += 1
+        return self._level
+    
+    def decr_level(self):
+        level = self._level
+        self._level -= 1
+        return level        
+
+    def level(self):
+        return self._level    
+
+class rf2dbug(ResultVisitor):
+    """
+    This class traverses a Robot Framework output.xml file and prints a DBUG log file.
+
+    A list of libraries to exclude from reporting is constructed. By default
+    the standard Robot Framework libraries are excluded since we will not
+    really profile them.
+
+    See also:
+    - https://robot-framework.readthedocs.io/en/master/autodoc/robot.model.html#robot.model.visitor.SuiteVisitor
+    - https://robot-framework.readthedocs.io/en/master/autodoc/robot.result.html#module-robot.result.model
+
+    """
+    # List of Robot Framework standard libraries    
+    libraries_to_ignore = [ 'BuiltIn',         # Contains generic often needed keywords. Imported automatically and thus always available.
+                            'Collections',     # Contains keywords for handling lists and dictionaries.
+                            'DateTime',        # Supports creating and verifying date and time values as well as calculations between them.
+                            'Dialogs',         # Supports pausing the test execution and getting input from users.
+                            'OperatingSystem', # Enables performing various operating system related tasks.
+                            'Process',         # Supports executing processes in the system.
+                            'Remote',          # Part of the remote library interface. Does not have any keywords of its own.
+                            'Screenshot',      # Provides keywords to capture and store screenshots of the desktop.
+                            'String',          # Library for manipulating strings and verifying their contents.
+                            'Telnet',          # Supports connecting to Telnet servers and executing commands on the opened connections.
+                            'XML',             # Library for verifying and modifying XML documents.
+                            ]
+    def __init__(self, ignore_library, include_loops, include_standard_libraries):
+        self._dbug = dbug()
+        self._include_loops = include_loops
+        if include_standard_libraries:
+            self.libraries_to_ignore = []
+        # Add non empty libraries to libraries_to_ignore
+        if ignore_library:
+            for library in ignore_library:
+                if library:
+                    self.libraries_to_ignore.append(library)
+
+    def start_keyword(self, keyword):
+        if keyword.libname in self.libraries_to_ignore or (not(self._include_loops) and keyword.type != 'kw'):
+            return False
+        self._dbug.enter(self.time_string(keyword.starttime), keyword.libname, 'KW ' + keyword.name)
+        
+    def end_keyword(self, keyword):
+        self._dbug.leave(self.time_string(keyword.endtime), keyword.libname, 'KW ' + keyword.name, keyword.elapsedtime)
+
+    def start_test(self, test):
+        self._dbug.enter(self.time_string(test.starttime), self.parent_path(test.longname), 'TC ' + test.longname)
+        
+    def end_test(self, test):
+        self._dbug.leave(self.time_string(test.endtime), self.parent_path(test.longname), 'TC ' + test.longname, test.elapsedtime)
+
+    def start_suite(self, suite):
+        if suite.id == 's1':
+            self._dbug.init(self.time_string(suite.starttime), 'TS ' + suite.name)
+        self._dbug.enter(self.time_string(suite.starttime), self.parent_path(suite.longname), 'TS ' + suite.longname)
+        
+    def end_suite(self, suite):
+        self._dbug.leave(self.time_string(suite.endtime), self.parent_path(suite.longname), 'TS ' + suite.longname, suite.elapsedtime)
+        if suite.id == 's1':
+            self._dbug.done(self.time_string(suite.endtime), 'TS ' + suite.name)
+
+#    def start_message(self, msg):
+#        self._dbug.print(self.time_string(msg.timestamp), msg.parent.libname if msg.parent else '', msg.parent.name if msg.parent else '', msg.message, msg.level)
+            
+    def time_string(self, time, timespec='seconds'):
+        s = datetime.strptime(time, '%Y%m%d %H:%M:%S.%f').isoformat(' ', timespec)
+        for r in (("-", ""), (":", ""), (" ", "")):
+            s = s.replace(*r)
+        return s
+
+    def parent_path(self, longname):
+        parts = longname.split('.')
+        if parts:
+            parts = parts[0:len(parts)-1]
+        return '.'.join(parts)
+
+def main(output_xml, ignore_library, include_loops, include_standard_libraries):
+    result = ExecutionResult(output_xml)
+    result.visit(rf2dbug(ignore_library, include_loops, include_standard_libraries))
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Convert a Robot Framework output.xml file to DBUG log output')
+    parser.add_argument('--ignore-library', action='append', help='Robot Framework library to ignore (case sensitive)')
+    parser.add_argument('--include-standard-libraries', action='store_true', default=False, help='Ignore standard Robot Framework libraries')
+    parser.add_argument('--include-loops', action='store_true', default=False, help='Include Robot Framework loops')
+    parser.add_argument('output_xml', metavar="output-xml")
+    args = parser.parse_args()
+    print(args)
+    main(args.output_xml, args.ignore_library, args.include_loops, args.include_standard_libraries)

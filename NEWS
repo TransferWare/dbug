@@ -6,6 +6,12 @@ See the end for copying conditions.
 Please send DBUG bug reports to gert.jan.paulissen@gmail.com
 
 
+Release 5.1.0
+
+* Added rf2dbug utility for creating dbug log file from Robot Framework
+  output.xml files.
+
+
 Release 5.0.0
 
 * Solved issues with Perl dbug not well distributed

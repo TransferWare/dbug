@@ -17,6 +17,6 @@
 
 MAINTAINERCLEANFILES = Makefile.in
 
-bin_SCRIPTS          = dbugrpt
+bin_SCRIPTS          = dbugrpt rf2dbug
 
-EXTRA_DIST           = dbugrpt.in
+EXTRA_DIST           = dbugrpt.in rf2dbug.in 
