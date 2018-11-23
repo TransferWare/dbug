@@ -215,5 +215,4 @@ if __name__ == '__main__':
     parser.add_argument('--include-loops', action='store_true', default=False, help='Include Robot Framework loops')
     parser.add_argument('output_xml', metavar="output-xml")
     args = parser.parse_args()
-    print(args)
     main(args.output_xml, args.ignore_library, args.include_loops, args.include_standard_libraries)
