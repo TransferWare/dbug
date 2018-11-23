@@ -1,7 +1,7 @@
 # -*-fundamental-*-
 # Process this file with autoconf to produce a configure script.
 
-# Copyright (C) 2002 G.J. Paulissen
+# Copyright (C) 2002-2018 G.J. Paulissen
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -18,7 +18,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 AC_REVISION([$Revision$])
-AC_INIT([dbug],[5.0.0],[gert.jan.paulissen@gmail.com])
+AC_INIT([dbug],[5.1.0],[gert.jan.paulissen@gmail.com])
 
 # version check
 if test -f "$srcdir/VERSION"
@@ -74,6 +74,16 @@ x)
 	;;
 esac
 dnl AC_ARG_VAR(PERL,[The program name of Perl.])
+
+# Checks for programs.
+AC_PATH_PROG([PYTHON],[python])
+case x$PYTHON in
+x)
+	# No Python avaliable: stop
+	AC_MSG_ERROR([Python must be available in \$PATH.])
+	;;
+esac
+dnl AC_ARG_VAR(PYTHON,[The program name of Python.])
 
 AC_PROG_CC
 
@@ -135,7 +145,7 @@ AC_ARG_ENABLE([pdbug],
 
 AM_CONDITIONAL([PDBUG], [test x$acx_cv_use_pdbug = xtrue])
 
-AC_CONFIG_FILES([Makefile doc/Makefile src/Makefile src/lib/Makefile src/pdbug/Makefile src/prog/Makefile src/prog/dbugrpt test/Makefile])
+AC_CONFIG_FILES([Makefile doc/Makefile src/Makefile src/lib/Makefile src/pdbug/Makefile src/prog/Makefile src/prog/dbugrpt src/prog/rf2dbug test/Makefile])
 
 AC_OUTPUT
 
