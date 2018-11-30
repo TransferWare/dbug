@@ -70,6 +70,7 @@ my ($version, $dbug_uid, $date, $name, $dbug_ctx, $pid, $flags, $maxcount,
     $stack_usage);
 my ($file, $function, $line, $level, $break_point, $str, $time);
 my $old_dbug_uid = '';
+my $nr_done = 0;
 
 #
 # GJP 6-4-2000
@@ -128,6 +129,7 @@ while (<STDIN>) {
 
         if ( defined( $dbug_uid_list{ $dbug_uid } ) ) {
             $dbug_uid_list{ $dbug_uid }->done( $maxcount, $stack_usage );
+            $nr_done++;
             undef $dbug_uid_list{ $dbug_uid };
         } else {
             carp "Debugging context $dbug_uid not defined.";
@@ -193,9 +195,10 @@ while (<STDIN>) {
     }
 }
 
-# print totals
+# print totals unless done has never been called
 
-$dbug_uid_tot->done(0, 0);
+$dbug_uid_tot->done(0, 0)
+    unless ($nr_done <= 1);
 
 # end of main
 
@@ -649,6 +652,7 @@ $total_line1 . "\n" .
 
         $^L = "\n"; # no form feed on a new page but a new line
 
+        $= = 100000; # a very large page size
         $- = 0; # force a new page
 
         foreach $function (sort(keys %{$obj->{CALLS}})) {

@@ -154,9 +154,10 @@ class rf2dbug(ResultVisitor):
                             'Telnet',          # Supports connecting to Telnet servers and executing commands on the opened connections.
                             'XML',             # Library for verifying and modifying XML documents.
                             ]
-    def __init__(self, ignore_library, include_loops, include_standard_libraries):
+    def __init__(self, ignore_library, include_loops, include_standard_libraries, debug):
         self._dbug = dbug()
         self._include_loops = include_loops
+        self._debug = debug
         if include_standard_libraries:
             self.libraries_to_ignore = []
         # Add non empty libraries to libraries_to_ignore
@@ -166,25 +167,37 @@ class rf2dbug(ResultVisitor):
                     self.libraries_to_ignore.append(library)
 
     def start_keyword(self, keyword):
+        if self._debug:
+            print('start_keyword(%s)' % (keyword))
         if keyword.libname in self.libraries_to_ignore or (not(self._include_loops) and keyword.type != 'kw'):
             return False
         self._dbug.enter(self.time_string(keyword.starttime), keyword.libname, 'KW ' + keyword.name)
         
     def end_keyword(self, keyword):
+        if self._debug:
+            print('end_keyword(%s)' % (keyword))
         self._dbug.leave(self.time_string(keyword.endtime), keyword.libname, 'KW ' + keyword.name, keyword.elapsedtime)
 
     def start_test(self, test):
+        if self._debug:
+            print('start_test(%s)' % (test))
         self._dbug.enter(self.time_string(test.starttime), self.parent_path(test.longname), 'TC ' + test.longname)
         
     def end_test(self, test):
+        if self._debug:
+            print('end_test(%s)' % (test))
         self._dbug.leave(self.time_string(test.endtime), self.parent_path(test.longname), 'TC ' + test.longname, test.elapsedtime)
 
     def start_suite(self, suite):
+        if self._debug:
+            print('start_suite(%s)' % (suite))
         if suite.id == 's1':
             self._dbug.init(self.time_string(suite.starttime), 'TS ' + suite.name)
         self._dbug.enter(self.time_string(suite.starttime), self.parent_path(suite.longname), 'TS ' + suite.longname)
         
     def end_suite(self, suite):
+        if self._debug:
+            print('end_suite(%s)' % (suite))
         self._dbug.leave(self.time_string(suite.endtime), self.parent_path(suite.longname), 'TS ' + suite.longname, suite.elapsedtime)
         if suite.id == 's1':
             self._dbug.done(self.time_string(suite.endtime), 'TS ' + suite.name)
@@ -204,15 +217,16 @@ class rf2dbug(ResultVisitor):
             parts = parts[0:len(parts)-1]
         return '.'.join(parts)
 
-def main(output_xml, ignore_library, include_loops, include_standard_libraries):
+def main(output_xml, ignore_library, include_loops, include_standard_libraries, debug):
     result = ExecutionResult(output_xml)
-    result.visit(rf2dbug(ignore_library, include_loops, include_standard_libraries))
+    result.visit(rf2dbug(ignore_library, include_loops, include_standard_libraries, debug))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Convert a Robot Framework output.xml file to DBUG log output')
     parser.add_argument('--ignore-library', action='append', help='Robot Framework library to ignore (case sensitive)')
     parser.add_argument('--include-standard-libraries', action='store_true', default=False, help='Ignore standard Robot Framework libraries')
     parser.add_argument('--include-loops', action='store_true', default=False, help='Include Robot Framework loops')
+    parser.add_argument('--debug', action='store_true', default=False, help='Add debugging')
     parser.add_argument('output_xml', metavar="output-xml")
     args = parser.parse_args()
-    main(args.output_xml, args.ignore_library, args.include_loops, args.include_standard_libraries)
+    main(args.output_xml, args.ignore_library, args.include_loops, args.include_standard_libraries, args.debug)
