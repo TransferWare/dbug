@@ -3,65 +3,65 @@
 #define DBUG_H
 
 /******************************************************************************
- *									      *
- *	                           N O T I C E				      *
- *									      *
- *	              Copyright Abandoned, 1987, Fred Fish		      *
- *									      *
- *									      *
- *	This previously copyrighted work has been placed into the  public     *
- *	domain  by  the  author  and  may be freely used for any purpose,     *
- *	private or commercial.						      *
- *									      *
- *	Because of the number of inquiries I was receiving about the  use     *
- *	of this product in commercially developed works I have decided to     *
- *	simply make it public domain to further its unrestricted use.   I     *
- *	specifically  would  be  most happy to see this material become a     *
- *	part of the standard Unix distributions by AT&T and the  Berkeley     *
- *	Computer  Science  Research Group, and a standard part of the GNU     *
- *	system from the Free Software Foundation.			      *
- *									      *
- *	I would appreciate it, as a courtesy, if this notice is  left  in     *
- *	all copies and derivative works.  Thank you.			      *
- *									      *
- *	The author makes no warranty of any kind  with  respect  to  this     *
- *	product  and  explicitly disclaims any implied warranties of mer-     *
- *	chantability or fitness for any particular purpose.		      *
- *									      *
+ *                                                                            *
+ *                             N O T I C E                                    *
+ *                                                                            *
+ *                Copyright Abandoned, 1987, Fred Fish                        *
+ *                                                                            *
+ *                                                                            *
+ *  This previously copyrighted work has been placed into the  public         *
+ *  domain  by  the  author  and  may be freely used for any purpose,         *
+ *  private or commercial.                                                    *
+ *                                                                            *
+ *  Because of the number of inquiries I was receiving about the  use         *
+ *  of this product in commercially developed works I have decided to         *
+ *  simply make it public domain to further its unrestricted use.   I         *
+ *  specifically  would  be  most happy to see this material become a         *
+ *  part of the standard Unix distributions by AT&T and the  Berkeley         *
+ *  Computer  Science  Research Group, and a standard part of the GNU         *
+ *  system from the Free Software Foundation.                                 *
+ *                                                                            *
+ *  I would appreciate it, as a courtesy, if this notice is  left  in         *
+ *  all copies and derivative works.  Thank you.                              *
+ *                                                                            *
+ *  The author makes no warranty of any kind  with  respect  to  this         *
+ *  product  and  explicitly disclaims any implied warranties of mer-         *
+ *  chantability or fitness for any particular purpose.                       *
+ *                                                                            *
  ******************************************************************************
  */
 
 /*
  *  FILE
  *
- *	dbug.h    user include file for programs using the dbug package
+ *  dbug.h    user include file for programs using the dbug package
  *
  *  SYNOPSIS
  *
- *	#include <dbug.h>
+ *  #include <dbug.h>
  *
  *  RCS ID
  *
- *	@(#)$Header$
+ *  @(#)$Header$
  *
  *  DESCRIPTION
  *
- *	Programs which use the dbug package must include this file.
- *	It contains the appropriate macros to call support routines
- *	in the dbug runtime library.
+ *  Programs which use the dbug package must include this file.
+ *  It contains the appropriate macros to call support routines
+ *  in the dbug runtime library.
  *
- *	To disable compilation of the macro expansions define the
- *	preprocessor symbol "DBUG_OFF".  This will result in null
- *	macros expansions so that the resulting code will be smaller
- *	and faster.  (The difference may be smaller than you think
- *	so this step is recommended only when absolutely necessary).
- *	In general, tradeoffs between space and efficiency are
- *	decided in favor of efficiency since space is seldom a
- *	problem on the new machines).
+ *  To disable compilation of the macro expansions define the
+ *  preprocessor symbol "DBUG_OFF".  This will result in null
+ *  macros expansions so that the resulting code will be smaller
+ *  and faster.  (The difference may be smaller than you think
+ *  so this step is recommended only when absolutely necessary).
+ *  In general, tradeoffs between space and efficiency are
+ *  decided in favor of efficiency since space is seldom a
+ *  problem on the new machines).
  *
  *  AUTHOR
  *
- *	Fred Fish
+ *  Fred Fish
  *
  */
 
@@ -137,35 +137,35 @@ extern
 dbug_errno_t
 dbug_print_end( const char *format, ... );
 
-extern	
+extern  
 dbug_errno_t
 dbug_dump_ctx( const dbug_ctx_t dbug_ctx,
-	       const int line,
-	       const char *break_point,
-	       const void *memory,
-	       const unsigned int len );
+               const int line,
+               const char *break_point,
+               const void *memory,
+               const unsigned int len );
 
-extern	
+extern  
 dbug_errno_t
 dbug_dump( const int line,
-	   const char *break_point,
-	   const void *memory,
-	   const unsigned int len );
+           const char *break_point,
+           const void *memory,
+           const unsigned int len );
 
 /*@-exportlocal@*/
 
 /*
- *	These macros provide a user interface into functions in the
- *	dbug runtime support library.  They isolate users from changes
- *	in the MACROS and/or runtime support.
+ *  These macros provide a user interface into functions in the
+ *  dbug runtime support library.  They isolate users from changes
+ *  in the MACROS and/or runtime support.
  *
- *	The symbols "__LINE__" and "__FILE__" are expanded by the
- *	preprocessor to the current source file line number and file
- *	name respectively.
+ *  The symbols "__LINE__" and "__FILE__" are expanded by the
+ *  preprocessor to the current source file line number and file
+ *  name respectively.
  *
- *	WARNING ---  Because the DBUG_ENTER macro allocates space on
- *	the user function's stack, it must precede any executable
- *	statements in the user function.
+ *  WARNING ---  Because the DBUG_ENTER macro allocates space on
+ *  the user function's stack, it must precede any executable
+ *  statements in the user function.
  *
  */
 
@@ -209,18 +209,18 @@ extern
 void
 DBUG_LEAVE( void );
 
-extern	
+extern  
 void
 DBUG_DUMP_CTX( const dbug_ctx_t dbug_ctx,
-	       const char *break_point,
-	       const void *memory,
-	       const unsigned int len );
-
-extern	
+               const char *break_point,
+               const void *memory,
+               const unsigned int len );
+  
+extern  
 void
 DBUG_DUMP( const char *break_point,
-	   const void *memory,
-	   const unsigned int len );
+           const void *memory,
+           const unsigned int len );
 
 /*@=exportlocal@*/
 
@@ -253,13 +253,13 @@ DBUG_DUMP( const char *break_point,
 #    define DBUG_DONE() (void)dbug_done()
 #    define DBUG_POP() (void)dbug_done()
 #    define DBUG_ENTER_CTX(dbug_ctx, function) \
-	{ \
-          int dbug_level; \
-	  (void)dbug_enter_ctx(dbug_ctx, __FILE__, function, __LINE__, &dbug_level)
+  { \
+    int dbug_level; \
+    (void)dbug_enter_ctx(dbug_ctx, __FILE__, function, __LINE__, &dbug_level)
 #    define DBUG_ENTER(function) \
-	{ \
-          int dbug_level; \
-	  (void)dbug_enter(__FILE__, function, __LINE__, &dbug_level)
+  { \
+    int dbug_level; \
+    (void)dbug_enter(__FILE__, function, __LINE__, &dbug_level)
 #    define DBUG_LEAVE_CTX(dbug_ctx) (void)dbug_leave_ctx(dbug_ctx, __LINE__, &dbug_level); }
 #    define DBUG_LEAVE() (void)dbug_leave(__LINE__, &dbug_level); }
 #    define DBUG_RETURN(a1) DBUG_LEAVE(); return (a1)
