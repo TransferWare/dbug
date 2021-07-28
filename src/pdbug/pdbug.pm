@@ -13,13 +13,13 @@ require AutoLoader;
 # names by default without a very good reason. Use EXPORT_OK instead.
 # Do not simply export all your public functions/methods/constants.
 @EXPORT = qw(
-	
+  
 );
 @EXPORT_OK = qw(
 
 );
 
-( $VERSION ) = '$Revision$' =~ /\$Revision:\s+([^\s]+)/;
+( $VERSION ) = '2021-07-28';
 
 sub AUTOLOAD {
     # This AUTOLOAD is used to 'autoload' constants from the constant()
@@ -31,13 +31,13 @@ sub AUTOLOAD {
     croak "& not defined" if $constname eq 'constant';
     my $val = constant($constname, @_ ? $_[0] : 0);
     if ($! != 0) {
-	if ($! =~ /Invalid/) {
-	    $AutoLoader::AUTOLOAD = $AUTOLOAD;
-	    goto &AutoLoader::AUTOLOAD;
-	}
-	else {
-		croak "Your vendor has not defined pdbug macro $constname";
-	}
+  if ($! =~ /Invalid/) {
+      $AutoLoader::AUTOLOAD = $AUTOLOAD;
+      goto &AutoLoader::AUTOLOAD;
+  }
+  else {
+    croak "Your vendor has not defined pdbug macro $constname";
+  }
     }
     no strict 'refs';
     *$AUTOLOAD = sub () { $val };
@@ -134,13 +134,13 @@ sub enter {
     my $status;
 
     if (ref($_[0]) && ref($_[0]) ne 'SCALAR') {
-	my ($r_dbug_ctx, $r_dbug_level) = @_;
+  my ($r_dbug_ctx, $r_dbug_level) = @_;
 
-	$status = &pdbug::_enter_ctx($$r_dbug_ctx, $filename, $subroutine, $line, $$r_dbug_level);
+  $status = &pdbug::_enter_ctx($$r_dbug_ctx, $filename, $subroutine, $line, $$r_dbug_level);
     } else {
-	my ($r_dbug_level) = @_;
+  my ($r_dbug_level) = @_;
 
-	$status = &pdbug::_enter($filename, $subroutine, $line, $$r_dbug_level);
+  $status = &pdbug::_enter($filename, $subroutine, $line, $$r_dbug_level);
     }
 
     return $status;
@@ -169,13 +169,13 @@ sub leave {
     my $status;
 
     if (ref($_[0])) {
-	my ($r_dbug_ctx, $dbug_level) = @_;
+  my ($r_dbug_ctx, $dbug_level) = @_;
 
-	$status = &pdbug::_leave_ctx($$r_dbug_ctx, $line, $dbug_level);
+  $status = &pdbug::_leave_ctx($$r_dbug_ctx, $line, $dbug_level);
     } else {
-	my ($dbug_level) = @_;
+  my ($dbug_level) = @_;
 
-	$status = &pdbug::_leave($line, $dbug_level);
+  $status = &pdbug::_leave($line, $dbug_level);
     }
     return $status;
 }
@@ -203,13 +203,13 @@ sub print {
     my $status;
 
     if (ref($_[0])) {
-	my ($r_dbug_ctx, $break_point, $str) = @_;
+  my ($r_dbug_ctx, $break_point, $str) = @_;
 
-	$status = &pdbug::_print_ctx($$r_dbug_ctx, $line, $break_point, $str);
+  $status = &pdbug::_print_ctx($$r_dbug_ctx, $line, $break_point, $str);
     } else {
-	my ($break_point, $str) = @_;
+  my ($break_point, $str) = @_;
 
-	$status = &pdbug::_print($line, $break_point, $str);
+  $status = &pdbug::_print($line, $break_point, $str);
     }
 
     return $status;
@@ -238,13 +238,13 @@ sub dump {
     my $status;
 
     if (ref($_[0])) {
-	my ($r_dbug_ctx, $break_point, $memory, $len) = @_;
+  my ($r_dbug_ctx, $break_point, $memory, $len) = @_;
 
-	$status = &pdbug::_dump($$r_dbug_ctx, $line, $break_point, $memory, $len);
+  $status = &pdbug::_dump($$r_dbug_ctx, $line, $break_point, $memory, $len);
     } else {
-	my ($break_point, $memory, $len) = @_;
+  my ($break_point, $memory, $len) = @_;
 
-	$status = &pdbug::_dump($line, $break_point, $memory, $len);
+  $status = &pdbug::_dump($line, $break_point, $memory, $len);
     }
 
     return $status;

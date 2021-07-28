@@ -1,258 +1,1 @@
-DBUG NEWS - History of user visible changes.		-*- indented-text -*-
-Copyright (C) 2002-2018  G.J. Paulissen 
-
-See the end for copying conditions.
-
-Please send DBUG bug reports to gert.jan.paulissen@gmail.com
-
-
-Release 5.1.0
-
-* Added rf2dbug utility for creating dbug log file from Robot Framework
-  output.xml files.
-
-
-Release 5.0.0
-
-* Solved issues with Perl dbug not well distributed
-* Solved compiler warnings
-
-
-Release 4.8.0
-
-* Added support for Cygwin 2.5.1 64 bit.
-
-
-Release 4.7.0
-
-* Added support for Cygwin 1.7.x
-
-
-Release 4.6.1
-
-* Autoconf upgrade.
-* make check fixed.
-
-
-Release 4.6.0
-
-* make distcheck now works with or without the Perl pdbug library.
-* added M4 configuration file config/dbug.m4 to be used by projects
-  which depend on dbug.
-* the installation for Cygwin will set CC to "gcc -mno-cygwin" (if
-  not set already).
-
-
-Release 4.5.0
-
-* Installing the Perl pdbug library can be disabled by using 
-
-  $ configure --disable-pdbug
-
-
-Release 4.4.0
-
-* The Perl pdbug library is added to the distribution.
-
-
-Release 4.3.0
-
-* Solved build problems due to new versions of autoconf/automake/libtool.
-
-
-Release 4.2.0
-
-* [ 1174400 ] average is displayed wrongly by dbugrpt
-
-
-Release 4.1.0
-
-* [ 1061551 ] Timing incorrect error
-
-
-Release 4.0.0
-
-* imake support obsoleted.
-* LGPL license applied instead of GPL license.
-
-
-Release 3.1.0
-
-* Build DBUG in separate build environment.
-* GNU Programming Standards enforced (ChangeLog, NEWS, etc.).
-* make dist for imake and Autoconf separated.
-
-
-Release 3.0.0
-
-* Negative numbers for timing info solved. 
-  Sourceforge Request ID 679212.
-* Implement GNU build system.
-
-
-Release 2.0.4
-
-* Oracle Universal Installer support added.
-
-
-Release 2.0.3 
-
-* Ability to save log files with the process id by using %p in the
-  output file name, e.g. dbug options is "d,t,o=dbug.%p.log".
-
-
-Release 2.0.2 
-
-* Vanderlande Industries ProPro 051270-5222 solved.  This happens when
-  linking on a Solaris platform when the GNU compiler is used to compile
-  the DBUG library:
-  Undefined first referenced symbol in file __eprintf
-   /usr/local/src/dbug/lib/libdbug.a(dbug.o)
-
-   This bug shows up on Solaris when assert() is used and define NDEBUG
-   (which ignores assertions) is not defined.  Solution: either go to
-   $DBUG_HOME/src/lib and execute
-   
-   make EXTRA_DEFINES=-DNDEBUG clean depend all install
-
-   as the last installation step.  The other solution is to specify
-   -lgcc on the link command line (make EXTRA_LIBRARIES=-lgcc ...), because
-   __eprintf is part of libgcc.a.
-
-
-Release 2.0.1 
-
-* Vanderlande Industries ProPro 051270-5204 solved:
-  calling dbug_print_start_ctx() (in DBUG_PRINT()) without a valid context resulted in a core dump. 
-
-
-Release 2.0.0 
-
-* Memory leak solved. Showed up when the last reference for an output file was deleted (during dbug_done). 
-
-
-Release 1.6.7 
-
-* Solved BUS error core dump due to incorrect movement within a large
-  array. Bug appeared when more than 100 functions were called in a session. 
-
-
-Release 1.6.6 
-
-* Library build configuration bug solved. 
-* Opening a different file for another dbug thread caused an error. Solved now. 
-
-
-Release 1.6.5 
-
-* Solved configuration bug. 
-
-
-Release 1.6.4 
-
-* Added support for Oracle Installer. 
-
-
-Release 1.6.3 
-
-* The function dbug_done and its variants unwind the call stack.  This is useful when
-  a thread is cancelled and the thread cleanup routine does not know how
-  large the debug stack was.
-* The dbug output printed the init line (containing #I#) twice when
-  Posix threads was not used.
-
-
-Release 1.6.2 
-
-* Bug solved in dbugrpt (user defined strings containing #D# are filtered well now). 
-  dbugrpt tool prints an empty line when debug context changes. 
-
-
-Release 1.6.1 
-
-* DBUG_PRINT can be used without a function context (i.e. not within DBUG_ENTER/DBUG_LEAVE) 
-
-
-Release 1.6 
-
-* Enable sharing of files between threads.
-  The file is opened only once and locked when one thread tries to write to it. 
-  Configuration support enhanced for (shared) libraries. 
-
-
-Release 1.5.2 
-
-* Various bugfixes 
-* Allow threads to inherit from the parent debugging context by using DBUG_INIT( NULL, ... ) 
-
-
-Release 1.5 
-
-* The DBUG output contains now the GMT date/time and a sequence number. 
-  This allows for sorting the output file. 
-* The command sort <logfile> will sort a file in the following order: 
-  by thread creation (unique between several runs), by date/time, by sequence. 
-  Thus sort makes it easy to get a clear picture of all threads.
-
-
-Release 1.4 
-
-* DBUG_PRINT is now compatible with the original version, i.e. interface
-  before 1.3 is restored.
-* DBUG_RETURN and DBUG_VOID_RETURN are now available for backwards compatibility. 
-
-
-Release 1.3.1 
-
-* The command make World does not clean anymore, so html files will not be deleted. 
-* Long function names are displayed correctly now in profiling report (Perl reporting tool). 
-* Debug options strings uses options separated by comma's and arguments separated by an equal sign. 
-* Arguments of an option are (optionally) separated by an equal sign (e.g. -#d,t,D=1000 or -#d,t,D1000). 
-* Value of make variable DBUGLIB now uses the $(DBUG_HOME)/lib path.
-  Previously it used $(USRLIBDIR) or $(SHLIBDIR).
-  The last values are project specific and cause errors for other projects depending on DBUG. 
-
-
-Release 1.3.0 
-
-* Configuration file dbug.cf created for using DBUG in other imake projects. 
-* Interface changed. 
-* Posix pthread support. 
-* Separate Perl reporting tool. 
-
-
-Release 1.2 
-
-* Solved bug when printing floats/doubles in Windows. 
-
-
-Release 1.1 
-
-* Documentation updated. 
-* Library updated with external C functions. 
-* README updated. 
-
-
-Release 1.0
-
-* First release. 
-
-
-----------------------------------------------------------------------
-Copyright information:
-
-Copyright (C) 1992, 1993, 1996 Free Software Foundation, Inc.
-
-   Permission is granted to anyone to make or distribute verbatim copies
-   of this document as received, in any medium, provided that the
-   copyright notice and this permission notice are preserved,
-   thus giving the recipient permission to redistribute in turn.
-
-   Permission is granted to distribute modified versions
-   of this document, or of portions of it,
-   under the above conditions, provided also that they
-   carry prominent notices stating who last changed them.
-
-Local Variables:
-fill-column: 72
-End:
+See the markdown document CHANGELOG.md

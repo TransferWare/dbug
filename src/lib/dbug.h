@@ -1,4 +1,3 @@
-/* $Header$ */
 #ifndef DBUG_H
 #define DBUG_H
 
@@ -39,10 +38,6 @@
  *  SYNOPSIS
  *
  *  #include <dbug.h>
- *
- *  RCS ID
- *
- *  @(#)$Header$
  *
  *  DESCRIPTION
  *

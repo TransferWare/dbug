@@ -1,8 +1,3 @@
-#ifndef lint
-/*@unused@*/
-static char vcid[] = "$Header$";
-#endif /* lint */
-
 /* to be removed */
 
 /*@-usedef@*/

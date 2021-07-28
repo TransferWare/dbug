@@ -1,7 +1,5 @@
 #!@PERL@ -w
 #
-# $Header$
-#
 # Description: Print output of the DBUG library in a human readable format.
 #
 # Usage:       dbugrpt [ options ]

@@ -1,5 +1,3 @@
-/* $Header$ */
-
 #ifndef SLEEPMSEC_H
 #define SLEEPMSEC_H
 
