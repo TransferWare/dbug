@@ -94,3 +94,5 @@ aux_links_new_tab: false
 #
 # GitHub Metadata: No GitHub API authentication could be found. Some fields may be missing or have incorrect data.
 github: [metadata]
+
+theme: jekyll-theme-cayman
