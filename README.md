@@ -47,4 +47,4 @@ See file `INSTALL` for further installation instructions.
 
 ## DOCUMENTATION
 
-[DBUG GitHub Pages](https://TransferWare.github.io/dbug/)
+See [DBUG GitHub Pages](https://TransferWare.github.io/dbug/) or the file `doc/dbug.html` in the build directory.
