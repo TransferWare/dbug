@@ -1,15 +1,13 @@
-<?xml version="1.0" ?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml">
-<head>
-<title>dbug - C Program Debugging Package</title>
-<meta http-equiv="content-type" content="text/html; charset=utf-8" />
-<link rev="made" href="mailto:gpaulissen@macbook-pro-van-gert-jan.home" />
-</head>
+---
+layout: default
+title: Manual page
+nav_order: 1
+---
 
-<body>
+# Manual page
+{: .no_toc }
 
-
+---
 
 <ul id="index">
   <li><a href="#NAME">NAME</a></li>
@@ -1097,10 +1095,5 @@
 <h1 id="HISTORY">HISTORY</h1>
 
 <p>Originally, this library has been written by Fred Fish in the 80&#39;s. In 1999 Gert-Jan Paulissen modified the source to make it portable using ANSI C and an imake configuration. The documentation is now in Perl&#39;s pod format.</p>
-
-
-</body>
-
-</html>
 
 

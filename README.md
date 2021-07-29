@@ -4,8 +4,8 @@ This is DBUG, a Posix-threads debugging library.
 
 DBUG itself consists of:
 - the library (-ldbug)
-- reporting tool dbugrpt
-- the header dbug.h
+- the reporting tool dbugrpt
+- the C header dbug.h
 - a Perl module pdbug.pm
 
 ## INSTALL FROM SOURCE

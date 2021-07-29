@@ -6,10 +6,10 @@ description: "DBUG - C Program Debugging Package"
 permalink: /
 ---
 
-# Quick but not dirty
+# Debugging all over the world
 {: .fs-9 }
 
-This package can be used in C, Java and Perl programs as well in Oracle PL/SQL tools thanks to the integration with (https://github.com/TransferWare/plsdbug).
+This package can be used in C, Java and Perl programs and in Oracle PL/SQL too thanks to the integration with (https://github.com/TransferWare/plsdbug).
 {: .fs-6 .fw-300 }
 
 [Get started now](https://github.com/TransferWare/dbug){: .btn .btn-primary .fs-5 .mb-4 .mb-md-0 .mr-2 }
@@ -21,7 +21,7 @@ DBUG is &copy; 1999-{{ "now" | date: "%Y" }} by G.J. Paulissen.
 
 ### License
 
-DBUG is distributed by a [GNU Lesser General Public License](https://github.com/TransferWare/dbug/master/COPYING).
+DBUG is distributed by a [GNU Lesser General Public License](https://github.com/TransferWare/dbug/raw/master/COPYING).
 
 ### Contributing
 
