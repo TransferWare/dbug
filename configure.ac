@@ -76,7 +76,7 @@ esac
 dnl AC_ARG_VAR(PERL,[The program name of Perl.])
 
 # Checks for programs.
-AC_PATH_PROG([PYTHON],[python])
+AC_PATH_PROG([PYTHON],[python3 python])
 case x$PYTHON in
 x)
 	# No Python avaliable: stop
