@@ -6,26 +6,45 @@ DBUG itself consists of:
 - the library (-ldbug)
 - reporting tool dbugrpt
 - the header dbug.h
+- a Perl module pdbug.pm
 
-See INSTALL for installation instructions.
+## INSTALL FROM SOURCE
 
-## MAINTAINER BUILD
+Also called the MAINTAINER BUILD. You just need the sources either cloned from [DBUG on GitHub](https://github.com/TransferWare/dbug) or from a source archive.
 
-This section is for maintainers only.
-1. First download the code from the internet.
-2. Install the following programs (if necessary):
-   - automake
-   - autoconf
-   - libtool
-3. On Cygwin also install
-   - dos2unix
-   - diffutils
-   - libcrypt-dev
-   - g++
-4. Next on Cygwin issue: `$ dos2unix bootstrap`
-5. Next the following command will generate all the machinery: `$ ./bootstrap`
+You need a Unix shell which is available on Mac OS X, Linux and Unix of course.
+On Windows you can use the Windows Subsystem for Linux (WSL), Cygwin or Git Bash.
+
+You need the following programs:
+- automake
+- autoconf
+- libtool (on a Mac OS X glibtool)
+
+On Cygwin you need also:
+- diffutils
+- libcrypt-dev
+- g++
+
+Next the following command will generate the Autotools `configure` script:
+
+```
+$ ./bootstrap
+```
+
+## INSTALL
+
+Here you need either a distribution archive with the `configure` script or you must have bootstrapped your environment.
+
+In order to have an out-of-source build create a `build` directory first and configure from that directory:
+
+```
+$ mkdir build
+$ cd build
+$ ../configure
+```
+
+See file `INSTALL` for further installation instructions.
 
 ## DOCUMENTATION
 
-- doc/dbug.html
-
+[DBUG GitHub Pages](https://TransferWare.github.io/dbug/)
