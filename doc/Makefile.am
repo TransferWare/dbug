@@ -27,6 +27,7 @@ AM_CPPFLAGS          = -I$(top_srcdir)/src/lib
 EXTRA_DIST           = test1.ref test2.ref test3.ref test4.ref test5.ref test6.ref dbug.pod dbug.html
 
 ## DOCUMENTATION section
+html: dbug.html
 
 dbug.html: dbug.pod
 	@PERL@ -S pod2html --infile=$? --outfile=$@

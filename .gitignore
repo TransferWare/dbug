@@ -13,4 +13,14 @@ build/
 config/
 configure
 VERSION
+Makefile
+config.h
+config.status
+.deps/
+libtool
+dbugrpt
+rf2dbug
+stamp-h1
 
+# Perl pod2html
+pod2htmd.tmp

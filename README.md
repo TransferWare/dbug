@@ -38,6 +38,12 @@ See file `INSTALL` for further installation instructions.
 
 ## DOCUMENTATION
 
+You can generate HTML documentation by:
+
+```
+$ make html
+```
+
 You will find the documentation here:
 - [doc/dbug.html](doc/dbug.html), the DBUG manual page
 
