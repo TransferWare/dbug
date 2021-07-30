@@ -3,9 +3,8 @@
 This is DBUG, a Posix-threads debugging library.
 
 DBUG itself consists of:
-- the library (-ldbug)
+- the C library (-ldbug) and header dbug.h
 - the reporting tool dbugrpt
-- the C header dbug.h
 - a Perl module pdbug.pm
 
 ## INSTALL FROM SOURCE
@@ -35,16 +34,11 @@ $ ./bootstrap
 
 Here you need either a distribution archive with the `configure` script or you must have bootstrapped your environment.
 
-In order to have an out-of-source build create a `build` directory first and configure from that directory:
-
-```
-$ mkdir build
-$ cd build
-$ ../configure
-```
-
 See file `INSTALL` for further installation instructions.
 
 ## DOCUMENTATION
 
-See [DBUG GitHub Pages](https://TransferWare.github.io/dbug/) or the file `doc/dbug.html` in the build directory.
+You will find the documentation here:
+- [doc/dbug.html](doc/dbug.html), the DBUG manual page
+
+You can also have a look at [the DBUG GitHub Pages](https://TransferWare.github.io/dbug/).

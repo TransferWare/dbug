@@ -1,8 +1,16 @@
+# Generic
+*.log
+*.lis
+
+# Emacs
+*~
+
+# Autotools
 aclocal.m4
 autom4te.cache/
 build/
 *.in
 config/
-*~
 configure
 VERSION
+
