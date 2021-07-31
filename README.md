@@ -68,7 +68,7 @@ $ make html
 ```
 
 You will find the documentation here:
-- `doc/dbug.html`, the DBUG manual page
+- [`doc/dbug.html`](doc/dbug.html), the DBUG manual page
 
 You can also have a look at [the DBUG GitHub Pages](https://TransferWare.github.io/dbug/).
 
