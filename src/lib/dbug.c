@@ -77,7 +77,11 @@
 #define HAVE_PTHREAD_H 0
 #endif
 
-#if HAVE_PTHREAD_H
+#ifndef USE_POSIX_THREADS
+#define USE_POSIX_THREADS HAVE_PTHREAD_H
+#endif
+
+#if USE_POSIX_THREADS
 #include <pthread.h>
 #endif
 
@@ -185,7 +189,7 @@ typedef /*@null@*/ /*@only@*/ struct files_tag {
   name_t fname;
   char mode[3+1]; /* file open mode: allows for r+t */
   /*@dependent@*/ FILE *fptr;
-#if HAVE_PTHREAD_H
+#if USE_POSIX_THREADS
   pthread_mutex_t mutex;
 #endif
 } * files_t;
@@ -313,7 +317,7 @@ typedef struct {
   /*@null@*/ char *break_point;
 } dbug_print_info_t;
 
-#if HAVE_PTHREAD_H
+#if USE_POSIX_THREADS
 
   /* struct to allow creation/deletion of pthread_key_t */
 typedef struct {
@@ -325,7 +329,7 @@ typedef struct {
   pthread_key_t key;
 } dbug_key_t;
 
-#endif /* #if HAVE_PTHREAD_H */
+#endif /* #if USE_POSIX_THREADS */
 
 #include "dbug.h" /* self-test */
 
@@ -648,7 +652,7 @@ static
 dbug_errno_t
 dbug_file_close( files_t *file );
 
-#if HAVE_PTHREAD_H
+#if USE_POSIX_THREADS
 
 static
 void
@@ -698,7 +702,7 @@ static /*@null@*/ /*@only@*/ char *first_dbug_options = NULL;
 
 static /*@null@*/ files_t dbug_files = NULL;
 
-#if HAVE_PTHREAD_H
+#if USE_POSIX_THREADS
 /* synchronize access to ctx_cnt/ctx_tot/dbug_files */
 static pthread_mutex_t dbug_adm_mutex = PTHREAD_MUTEX_INITIALIZER; 
 
@@ -1933,7 +1937,7 @@ dbug_files_print( void )
 
   for ( curr = dbug_files, idx = 0; curr != NULL;  )
     {
-#if HAVE_PTHREAD_H
+#if USE_POSIX_THREADS
       files_t tmp = curr;
 
       (void) pthread_mutex_lock( &tmp->mutex );
@@ -1951,7 +1955,7 @@ dbug_files_print( void )
       curr = curr->next;
       idx++;
 
-#if HAVE_PTHREAD_H
+#if USE_POSIX_THREADS
       (void) pthread_mutex_unlock( &tmp->mutex );
 #endif
     }
@@ -2000,7 +2004,7 @@ dbug_file_open( const char *name, const char *mode, files_t *result )
                           PTR_STR(dbug_files), name, PTR_STR(result) ) );
 #endif
 
-#if HAVE_PTHREAD_H
+#if USE_POSIX_THREADS
   status = pthread_mutex_lock( &dbug_adm_mutex );
 #endif
 
@@ -2016,7 +2020,7 @@ dbug_file_open( const char *name, const char *mode, files_t *result )
       switch( status = dbug_file_fnd( name, result ) )
         {
         case 0:
-#if HAVE_PTHREAD_H
+#if USE_POSIX_THREADS
           (void) pthread_mutex_lock( &(*result)->mutex );
 #endif
           if ( strcmp( (*result)->mode, mode ) != 0 )
@@ -2029,7 +2033,7 @@ dbug_file_open( const char *name, const char *mode, files_t *result )
             {
               (*result)->fname.ref_count++;
             }
-#if HAVE_PTHREAD_H
+#if USE_POSIX_THREADS
           (void) pthread_mutex_unlock( &(*result)->mutex );
 #endif
           break;
@@ -2076,7 +2080,7 @@ dbug_file_open( const char *name, const char *mode, files_t *result )
         {
           assert( new->fname.name != NULL );
 
-#if HAVE_PTHREAD_H
+#if USE_POSIX_THREADS
           if ( (status = pthread_mutex_init( &new->mutex, NULL )) != 0 )
             {
               if ( strcmp( name, STDERR_FILE_NAME ) != 0 &&
@@ -2102,12 +2106,12 @@ dbug_file_open( const char *name, const char *mode, files_t *result )
               else
                 {
                   new->prev = *result;
-#if HAVE_PTHREAD_H
+#if USE_POSIX_THREADS
                   (void) pthread_mutex_lock( &(*result)->mutex );
 #endif
                   assert( *result != NULL );
                   (*result)->next = new;
-#if HAVE_PTHREAD_H
+#if USE_POSIX_THREADS
                   (void) pthread_mutex_unlock( &(*result)->mutex );
 #endif
                 }
@@ -2131,7 +2135,7 @@ dbug_file_open( const char *name, const char *mode, files_t *result )
   /* first in line */
   assert( dbug_files == NULL || dbug_files->prev == NULL );
 
-#if HAVE_PTHREAD_H
+#if USE_POSIX_THREADS
   if ( status == 0 )
     status = pthread_mutex_unlock( &dbug_adm_mutex );
   else
@@ -2199,7 +2203,7 @@ dbug_file_fnd( const char *name, files_t *result )
 
   for ( curr = dbug_files; status != 0 && curr != NULL; )
     {
-#if HAVE_PTHREAD_H
+#if USE_POSIX_THREADS
       files_t tmp = curr;
 
       (void) pthread_mutex_lock( &tmp->mutex );
@@ -2211,7 +2215,7 @@ dbug_file_fnd( const char *name, files_t *result )
 
       curr = curr->next;
 
-#if HAVE_PTHREAD_H
+#if USE_POSIX_THREADS
       (void) pthread_mutex_unlock( &tmp->mutex );
 #endif
     }
@@ -2259,7 +2263,7 @@ dbug_file_close( files_t *file )
   _DBUG_PRINT( "input", ( "files: %s; file: %s", PTR_STR(dbug_files), file ) );
 #endif
 
-#if HAVE_PTHREAD_H
+#if USE_POSIX_THREADS
   status = pthread_mutex_lock( &dbug_adm_mutex );
 #endif
 
@@ -2267,7 +2271,7 @@ dbug_file_close( files_t *file )
     status = EINVAL;
   else
     {
-#if HAVE_PTHREAD_H
+#if USE_POSIX_THREADS
       status = pthread_mutex_lock( &(*file)->mutex );
 #endif
       /* GJP 16-02-2001
@@ -2275,7 +2279,7 @@ dbug_file_close( files_t *file )
       */ 
       ref_count = --(*file)->fname.ref_count;
 
-#if HAVE_PTHREAD_H
+#if USE_POSIX_THREADS
       status = pthread_mutex_unlock( &(*file)->mutex );
 #endif
 
@@ -2295,7 +2299,7 @@ dbug_file_close( files_t *file )
             (*file)->next->prev = (*file)->prev;
           if ( (*file) == dbug_files )
             dbug_files = (*file)->next;
-#if HAVE_PTHREAD_H
+#if USE_POSIX_THREADS
           (void) pthread_mutex_destroy( &(*file)->mutex );
 #endif
           FREE( *file );
@@ -2308,7 +2312,7 @@ dbug_file_close( files_t *file )
   /* first in line */
   assert( dbug_files == NULL || dbug_files->prev == NULL );
 
-#if HAVE_PTHREAD_H
+#if USE_POSIX_THREADS
   if ( status == 0 )
     status = pthread_mutex_unlock( &dbug_adm_mutex );
   else
@@ -2324,7 +2328,7 @@ dbug_file_close( files_t *file )
   return status;
 }
 
-#if HAVE_PTHREAD_H
+#if USE_POSIX_THREADS
 
 static
 void
@@ -2499,7 +2503,7 @@ static
 dbug_ctx_t
 dbug_ctx_get( void )
 {
-#if HAVE_PTHREAD_H
+#if USE_POSIX_THREADS
   return (dbug_ctx_t) ( dbug_ctx_key.ref_count > 0 ? pthread_getspecific( dbug_ctx_key.key ) : NULL );
 #else
   return g_dbug_ctx;
@@ -2510,7 +2514,7 @@ static
 dbug_errno_t
 dbug_ctx_set( const dbug_ctx_t dbug_ctx )
 {
-#if HAVE_PTHREAD_H
+#if USE_POSIX_THREADS
   /*@-unrecog@*/
   return ( dbug_ctx_key.ref_count > 0
            ? pthread_setspecific( dbug_ctx_key.key, dbug_ctx )
@@ -2526,7 +2530,7 @@ static
 dbug_print_info_t*
 dbug_print_info_get( void )
 {
-#if HAVE_PTHREAD_H
+#if USE_POSIX_THREADS
   return (dbug_print_info_t*) ( dbug_print_info_key.ref_count > 0 ? pthread_getspecific( dbug_print_info_key.key ) : NULL );
 #else
   return &g_dbug_print_info;
@@ -2537,7 +2541,7 @@ static
 dbug_errno_t
 dbug_print_info_set( const dbug_print_info_t *dbug_print_info )
 {
-#if HAVE_PTHREAD_H
+#if USE_POSIX_THREADS
   /*@-unrecog@*/
   return ( dbug_print_info_key.ref_count > 0
            ? pthread_setspecific( dbug_print_info_key.key, dbug_print_info )
@@ -2697,7 +2701,7 @@ dbug_init_ctx( const char * options, const char *name, dbug_ctx_t* dbug_ctx )
           break;
 
         case MUTEX_LOCK_STEP:
-#if HAVE_PTHREAD_H
+#if USE_POSIX_THREADS
           status = pthread_mutex_lock( &dbug_adm_mutex );
 
           _DBUG_PRINT( "info", ( "pthread_mutex_lock = %d", status ) );
@@ -2738,7 +2742,7 @@ dbug_init_ctx( const char * options, const char *name, dbug_ctx_t* dbug_ctx )
           break;
 
         case MUTEX_UNLOCK_STEP:
-#if HAVE_PTHREAD_H
+#if USE_POSIX_THREADS
           status = pthread_mutex_unlock( &dbug_adm_mutex );
 
           _DBUG_PRINT( "info", ( "pthread_mutex_unlock = %d", status ) );
@@ -2774,13 +2778,13 @@ dbug_init_ctx( const char * options, const char *name, dbug_ctx_t* dbug_ctx )
           break;
 
         case DBUG_KEY_STEP:
-#if HAVE_PTHREAD_H
+#if USE_POSIX_THREADS
           status = dbug_key_init( &dbug_print_info_key );
 #endif
           break;
         
         case DBUG_PRINT_INFO_STEP:
-#if HAVE_PTHREAD_H
+#if USE_POSIX_THREADS
           if ( dbug_print_info_get() == NULL ) /* no dbug print info set */
             {
               dbug_print_info_t *dbug_print_info = 
@@ -2878,7 +2882,7 @@ dbug_init_ctx( const char * options, const char *name, dbug_ctx_t* dbug_ctx )
               /*-casebreak*/
 
             case MUTEX_UNLOCK_STEP:
-#if HAVE_PTHREAD_H
+#if USE_POSIX_THREADS
               (void) pthread_mutex_lock( &dbug_adm_mutex );
 #endif
               /*-casebreak*/
@@ -2897,7 +2901,7 @@ dbug_init_ctx( const char * options, const char *name, dbug_ctx_t* dbug_ctx )
               /*-casebreak*/
 
             case MUTEX_LOCK_STEP:
-#if HAVE_PTHREAD_H
+#if USE_POSIX_THREADS
               (void) pthread_mutex_unlock( &dbug_adm_mutex );
 #endif
               /*-casebreak*/
@@ -2972,7 +2976,7 @@ dbug_init( const char * options, const char *name )
 #if DEBUG_DBUG
   const char *procname = "dbug_init";
 #endif
-#if HAVE_PTHREAD_H
+#if USE_POSIX_THREADS
   dbug_ctx_t dbug_ctx; /* local dbug_ctx */
   enum {
     DBUG_KEY_INIT_STEP,
@@ -3021,7 +3025,7 @@ dbug_init( const char * options, const char *name )
 
 #else
   status = dbug_init_ctx( options, name, &g_dbug_ctx ); /* global dbug_ctx */
-#endif /* #if HAVE_PTHREAD_H */
+#endif /* #if USE_POSIX_THREADS */
 
   _DBUG_PRINT( "output", ( "status: %d", status ) );
   _DBUG_LEAVE();
@@ -3178,7 +3182,7 @@ dbug_done_ctx( dbug_ctx_t* dbug_ctx )
 #endif
       (void) dbug_stack_done( &(*dbug_ctx)->stack );
 
-#if HAVE_PTHREAD_H
+#if USE_POSIX_THREADS
       {
         dbug_print_info_t *dbug_print_info = dbug_print_info_get();
 
@@ -3192,7 +3196,7 @@ dbug_done_ctx( dbug_ctx_t* dbug_ctx )
       (void) dbug_key_done( &dbug_print_info_key );
 #endif
 
-#if HAVE_PTHREAD_H
+#if USE_POSIX_THREADS
       (void) pthread_mutex_lock( &dbug_adm_mutex );
 #endif
       if ( ctx_cnt > 0 )
@@ -3204,7 +3208,7 @@ dbug_done_ctx( dbug_ctx_t* dbug_ctx )
           first_dbug_options = NULL;
         }
 
-#if HAVE_PTHREAD_H
+#if USE_POSIX_THREADS
       (void) pthread_mutex_unlock( &dbug_adm_mutex );
 #endif
         
@@ -3244,7 +3248,7 @@ dbug_done( void )
 
   (void) dbug_ctx_set( dbug_ctx );
 
-#if HAVE_PTHREAD_H
+#if USE_POSIX_THREADS
   status = dbug_key_done( &dbug_ctx_key );
 #endif
 

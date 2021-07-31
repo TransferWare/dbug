@@ -16,16 +16,23 @@
 ## Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 AUTOMAKE_OPTIONS          = 
-SUBDIRS 		  = src test doc
-MAINTAINERCLEANFILES 	  = Makefile.in aclocal.m4 configure config-h.in \
-			    stamp-h.in $(AUX_DIST)
-EXTRA_DIST                = VERSION BUGS README.md CHANGELOG.md
+SUBDIRS                   = src test doc
+MAINTAINERCLEANFILES      = Makefile.in aclocal.m4 configure config-h.in \
+                            stamp-h.in $(AUX_DIST)
+EXTRA_DIST                = VERSION BUGS README.md CHANGELOG.md lint.am
 ACLOCAL_AMFLAGS           = -I config
 
 DISTCHECK_CONFIGURE_FLAGS = CC=gcc --enable-pdbug
 
 ## @start 2
-docdir			  = $(top_builddir)/doc
+lintdirs                  = $(top_builddir)/src/lib
+docdir                    = $(top_builddir)/doc
+
+dist: lint
+
+lint:
+	@echo Making $@ in $(lintdirs)
+	@for d in $(lintdirs); do (cd $$d && make $@); done
 
 html:
 	@echo Making $@ in $(docdir)

@@ -104,7 +104,15 @@
 # endif /* __LCLINT__ */
 #endif
 
-#if defined(HAVE_PTHREAD_H) && HAVE_PTHREAD_H
+#ifndef HAVE_PTHREAD_H
+#define HAVE_PTHREAD_H 0
+#endif
+
+#ifndef USE_POSIX_THREADS
+#define USE_POSIX_THREADS HAVE_PTHREAD_H
+#endif
+
+#if USE_POSIX_THREADS
 
 #include <pthread.h>
 
@@ -119,7 +127,7 @@ Gmtime( struct tm *tm )
   time_t time_tmp; 
   struct tm *tm_tmp;
 
-#if defined(HAVE_PTHREAD_H) && HAVE_PTHREAD_H
+#if USE_POSIX_THREADS
   (void) pthread_mutex_lock( &mutex );
 #endif
 
@@ -129,7 +137,7 @@ Gmtime( struct tm *tm )
   if ( tm_tmp != NULL && tm != NULL )
     *tm = *tm_tmp;
 
-#if defined(HAVE_PTHREAD_H) && HAVE_PTHREAD_H
+#if USE_POSIX_THREADS
   (void) pthread_mutex_unlock( &mutex );
 #endif
 }
