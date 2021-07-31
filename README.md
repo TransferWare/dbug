@@ -74,10 +74,10 @@ You can also have a look at [the DBUG GitHub Pages](https://TransferWare.github.
 
 ## UTILITIES
 
-There files may be useful:
-- `src/perl/pdbug.pm`, a Perl debugging module
-- `src/prog/dbugrpt` to process DBUG log files (see also the DOCUMENTATION)
-- `src/prog/rf2dbug` to read Robot Framework test execution result from an output XML file and output it to a DBUG log file
+These files (all but the first created by `make`) may be useful:
+1. `src/pdbug/pdbug.pm`, a Perl debugging module
+2. `src/prog/dbugrpt` to process DBUG log files (see also the DOCUMENTATION)
+3. `src/prog/rf2dbug` to read Robot Framework test execution result from an output XML file and output it to a DBUG log file
 
 ## DEVELOPMENT
 
