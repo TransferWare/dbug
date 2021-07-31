@@ -6,6 +6,11 @@ DBUG itself consists of:
 - the C library (-ldbug) and header dbug.h
 - the reporting tool dbugrpt
 - a Perl module pdbug.pm
+- a Robot Framework test execution result converter
+
+## CHANGELOG
+
+See the file [`CHANGELOG.md`](CHANGELOG.md).
 
 ## INSTALL FROM SOURCE
 
@@ -34,6 +39,24 @@ $ ./bootstrap
 
 Here you need either a distribution archive with the `configure` script or you must have bootstrapped your environment.
 
+This help (`./confgure --help`) will show the following non-standard optional features:
+
+```
+  --enable-pdbug          install dbug for perl [default=no]
+``` 
+
+On the Mac you may need to invoke `configure` like this:
+
+```
+CFLAGS="-mmacosx-version-min=11.0" ./configure
+```
+
+to get rid of such a warning;
+
+```
+ld: warning: object file (../lib/.libs/libdbug.a(dbug.o)) was built for newer macOS version (11.0) than being linked (10.15)
+```
+
 See file `INSTALL` for further installation instructions.
 
 ## DOCUMENTATION
@@ -45,6 +68,18 @@ $ make html
 ```
 
 You will find the documentation here:
-- [doc/dbug.html](doc/dbug.html), the DBUG manual page
+- `doc/dbug.html`, the DBUG manual page
 
 You can also have a look at [the DBUG GitHub Pages](https://TransferWare.github.io/dbug/).
+
+## UTILITIES
+
+There files may be useful:
+- [`src/perl/pdbug.pm`](src/perl/pdbug.pm), a Perl debugging module
+- [`src/prog/dbugrpt`](src/prog/dbugrpt) to process DBUG log files (see also the DOCUMENTATION)
+- [`src/prog/rf2dbug`](src/prog/rf2dbug) to read Robot Framework test execution result from an output XML file and output it to a DBUG log file
+
+## DEVELOPMENT
+
+The following tools can be installed for development:
+- splint for `make lint`

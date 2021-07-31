@@ -1,7 +1,7 @@
 # -*-fundamental-*-
 # Process this file with autoconf to produce a configure script.
 
-# Copyright (C) 2002-2018 G.J. Paulissen
+# Copyright (C) 2002-2021 G.J. Paulissen
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -18,7 +18,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 AC_REVISION([$Revision$])
-AC_INIT([dbug],[5.2.0],[gert.jan.paulissen@gmail.com])
+AC_INIT([dbug],[6.0.0],[gert.jan.paulissen@gmail.com])
 
 # version check
 if test -f "$srcdir/VERSION"
@@ -48,6 +48,8 @@ AC_CONFIG_HEADERS([config.h])
 
 AC_CANONICAL_HOST
 
+darwin=false
+
 case ${host} in
 *-cygwin)
   if gcc --version | grep -E "gcc \(GCC\) [1-3]\." 1>/dev/null 2>&1
@@ -56,10 +58,17 @@ case ${host} in
     test "$CC" = "" && CC="gcc -mno-cygwin" && export CC
   fi
   ;;
-?*)	;;
-*)	AC_MSG_ERROR([Host not set])
+*darwin*)
+  darwin=true
+  ;;
+?*)
+  ;;
+*)
+  AC_MSG_ERROR([Host not set])
 	;;
 esac
+
+AM_CONDITIONAL([DARWIN], [test x$darwin = xtrue])
 
 AM_INIT_AUTOMAKE([subdir-objects])
 
@@ -111,9 +120,9 @@ AC_CHECK_FUNCS(
   ,
   [AC_MSG_ERROR([Functions vfprintf(), memcmp(), memset(), strchr() and strpbrk() must be available.])]
 )
-# Check for time related functions. One of them must be available.
+# Check for time related functions. One of them must be available (check clock first since t conforms to ISO C90)
 AC_CHECK_FUNCS(
-  [ftime getrusage clock],
+  [clock ftime getrusage],
   [break]
 )
 # Check the Posix threads pthread_key_create() and flockfile() function.

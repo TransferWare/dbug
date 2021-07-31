@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Please see the [DBUG issue queue](https://github.com/TransferWare/dbug/issues) for issues.
 
-## [5.2.0] -  2021-07-30
+## [6.0.0] -  2021-07-31
 
 A new version on GitHub.
 
@@ -19,6 +19,7 @@ A new version on GitHub.
 - GitHub Pages support
 - README.md describes up to date installation instructions
 - CHANGELOG.md describes releases found on [DBUG releases](https://sourceforge.net/projects/transferware/files/dbug/) and in files ChangeLog and NEWS
+- Lint support
 
 ### Changed
 
@@ -26,6 +27,7 @@ A new version on GitHub.
 - ChangeLog now refers to CHANGELOG.md
 - NEWS now refers to CHANGELOG.md
 - src/prog/dbugrpt.in does not have RCS keyword $Header$ anymore
+- test for clock() first to conform to ISO C90
 
 ## [5.1.0]
 
