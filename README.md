@@ -9,7 +9,7 @@ DBUG itself consists of:
 
 ## CHANGELOG
 
-See the file [`CHANGELOG.md`](CHANGELOG.md).
+See the file [CHANGELOG.md](CHANGELOG.md).
 
 ## INSTALL FROM SOURCE
 
