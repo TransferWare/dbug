@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Please see the [DBUG issue queue](https://github.com/TransferWare/dbug/issues) for issues.
 
-## [6.0.0] -  2021-07-31
+## [6.0.0] -  2021-08-01
 
 A new version on GitHub.
 
@@ -27,7 +27,12 @@ A new version on GitHub.
 - ChangeLog now refers to CHANGELOG.md
 - NEWS now refers to CHANGELOG.md
 - src/prog/dbugrpt.in does not have RCS keyword $Header$ anymore
-- test for clock() first to conform to ISO C90
+- configure test for clock() first to conform to ISO C90
+- Comparing test log file with a regular expression file used for test6 in doc
+
+### Removed
+
+- Support for Perl module pdbug de-activated
 
 ## [5.1.0]
 

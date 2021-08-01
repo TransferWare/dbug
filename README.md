@@ -5,7 +5,6 @@ This is DBUG, a Posix-threads debugging library.
 DBUG itself consists of:
 - the C library (-ldbug) and header dbug.h
 - the reporting tool dbugrpt
-- a Perl module pdbug.pm
 - a Robot Framework test execution result converter
 
 ## CHANGELOG
@@ -39,47 +38,22 @@ $ ./bootstrap
 
 Here you need either a distribution archive with the `configure` script or you must have bootstrapped your environment.
 
-This help (`./confgure --help`) will show the following non-standard optional features:
-
-```
-  --enable-pdbug          install dbug for perl [default=no]
-``` 
-
-On the Mac you may need to invoke `configure` like this:
-
-```
-CFLAGS="-mmacosx-version-min=11.0" ./configure
-```
-
-to get rid of such a warning;
-
-```
-ld: warning: object file (../lib/.libs/libdbug.a(dbug.o)) was built for newer macOS version (11.0) than being linked (10.15)
-```
-
 See file `INSTALL` for further installation instructions.
 
 ## DOCUMENTATION
 
-You can generate HTML documentation by:
-
-```
-$ make html
-```
-
-You will find the documentation here:
+You can generate HTML documentation by `$ make html` and then you will find this documentation:
 - [doc/dbug.html](doc/dbug.html), the DBUG manual page
 
 You can also have a look at [the DBUG GitHub Pages](https://TransferWare.github.io/dbug/).
 
 ## UTILITIES
 
-These files (all but the first created by `make`) may be useful:
-1. `src/pdbug/pdbug.pm`, a Perl debugging module
-2. `src/prog/dbugrpt` to process DBUG log files (see also the DOCUMENTATION)
-3. `src/prog/rf2dbug` to read Robot Framework test execution result from an output XML file and output it to a DBUG log file
+These utilities will be installed by `$ make install`:
+1. `dbugrpt` to process DBUG log files (see also the DOCUMENTATION)
+2. `rf2dbug` to process a Robot Framework test execution result XML file and convert it to a DBUG log file
 
 ## DEVELOPMENT
 
 The following tools can be installed for development:
-- splint for `make lint`
+- splint for `$ make lint`

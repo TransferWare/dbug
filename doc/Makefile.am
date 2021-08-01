@@ -24,7 +24,7 @@ factorial_SOURCES    = main.c factorial.c
 factorial_LDADD      = $(top_builddir)/src/lib/libdbug.la
 AM_CPPFLAGS          = -I$(top_srcdir)/src/lib
 
-EXTRA_DIST           = test1.ref test2.ref test3.ref test4.ref test5.ref test6.ref dbug.pod dbug.html
+EXTRA_DIST           = test1.ref test2.ref test3.ref test4.ref test5.ref test6.ref dbug.pod dbug.html diffrex.pl
 
 ## DOCUMENTATION section
 html: dbug.html
@@ -99,10 +99,6 @@ test5:  $(DBUGRPT)
 
 test6:  $(DBUGRPT)
 	$(FACTORIAL) -#t,D=1000,g 3 | @PERL@ $(DBUGRPT) > $@.log
-# .ref file may be a DOS file, hence remove ^M
-	sed "s/^M//g" $(doc_srcdir)/$@.ref > tmp.ref
-	$(FGREP) tmp.ref $@.log >$@.lis
-	-@rm -f tmp.ref
-	test "`cat $@.lis | wc -l`" -eq "`cat $@.log | wc -l`"
+	@PERL@ $(srcdir)/diffrex.pl $(srcdir)/test6.ref $@.log
 	@echo : > $@
 	@chmod +x $@

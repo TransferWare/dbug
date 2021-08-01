@@ -2,39 +2,23 @@
 |   >factorial
 |   |   >factorial
 |   |   |   >factorial
-|   |   |   <factorial;  elapsed time:   ..... (incl.),   ..... (excl.)
-|   |   <factorial;  elapsed time:   ..... (incl.),   ..... (excl.)
-|   <factorial;  elapsed time:   ..... (incl.),   ..... (excl.)
+|   |   |   <factorial;  elapsed time: \s*[.0-9]+ \(incl.\), \s*[.0-9]+ \(excl.\)
+|   |   <factorial;  elapsed time: \s*[.0-9]+ \(incl.\), \s*[.0-9]+ \(excl.\)
+|   <factorial;  elapsed time: \s*[.0-9]+ \(incl.\), \s*[.0-9]+ \(excl.\)
 6
-<main;  elapsed time:   ..... (incl.),   ..... (excl.)
+<main;  elapsed time: \s*[.0-9]+ \(incl\.\), \s*[.0-9]+ \(excl\.\)
 
 -------------------------------------------------------------------------------------------------------
 Profile of execution for debug context 'factorial'
-Stack usage: 136 bytes
+Stack usage: \d+ bytes
 Execution times are in seconds
 
-                         Calls           Time               Time/call (excluding callees)
+                         Calls           Time               Time/call \(excluding callees\)
                          -----           ----               -----------------------------
 function                 # calls % calls        time % time         avg         min         max  weight
 ======================== ======= ======= =========== ====== =========== =========== =========== =======
-factorial                      3   75.00       .....  .....       .....       .....       .....    ....
-main                           1   25.00       .....  .....       .....       .....       .....     ...
+factorial                      3   75.00 \s*[.0-9]+ \s*[.0-9]+ \s*[.0-9]+ \s*[.0-9]+ \s*[.0-9]+ \s*[.0-9]+
+main                           1   25.00 \s*[.0-9]+ \s*[.0-9]+ \s*[.0-9]+ \s*[.0-9]+ \s*[.0-9]+ \s*[.0-9]+
                          ======= ======= =========== ======                    
-Totals                         4  100.00       ..... 100.00
--------------------------------------------------------------------------------------------------------
-
-
--------------------------------------------------------------------------------------------------------
-Profile of execution for debug context 'total'
-Stack usage: 0 bytes
-Execution times are in seconds
-
-                         Calls           Time               Time/call (excluding callees)
-                         -----           ----               -----------------------------
-function                 # calls % calls        time % time         avg         min         max  weight
-======================== ======= ======= =========== ====== =========== =========== =========== =======
-factorial                      3   75.00       .....  .....       .....       .....       .....    ....
-main                           1   25.00       .....  .....       .....       .....       .....     ...
-                         ======= ======= =========== ======                    
-Totals                         4  100.00       ..... 100.00
+Totals                         4  100.00     \s*[.0-9]+ 100.00
 -------------------------------------------------------------------------------------------------------
