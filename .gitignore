@@ -1,6 +1,7 @@
 # Generic
 *.log
 *.lis
+*.bak
 
 # Emacs
 *~
@@ -24,3 +25,12 @@ stamp-h1
 
 # Perl pod2html
 pod2htmd.tmp
+
+# Build
+*.o
+*.lo
+*.la
+\.libs/
+doc/factorial
+doc/test[123456]
+doc/*.trs
