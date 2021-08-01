@@ -142,15 +142,18 @@ AC_SUBST(LTLIBOBJS)
 
 AC_SUBST(ac_aux_dir)
 
-AC_ARG_ENABLE([pdbug],
-              AS_HELP_STRING([--enable-pdbug],
-                             [install dbug for perl [default=no]]),
-              [case "$enableval" in
-                 yes) acx_cv_use_pdbug=true ;;
-                 no)  acx_cv_use_pdbug=false ;;
-                 *)   AC_MSG_ERROR([bad value ${enableval} for --enable-pdbug]) ;;
-               esac],
-              [acx_cv_use_pdbug=no])
+#AC_ARG_ENABLE([pdbug],
+#              AS_HELP_STRING([--enable-pdbug],
+#                             [install dbug for perl [default=no]]),
+#              [case "$enableval" in
+#                 yes) acx_cv_use_pdbug=true ;;
+#                 no)  acx_cv_use_pdbug=false ;;
+#                 *)   AC_MSG_ERROR([bad value ${enableval} for --enable-pdbug]) ;;
+#               esac],
+#              [acx_cv_use_pdbug=no])
+
+# https://github.com/TransferWare/dbug/issues/2 - The perl module can not be built. 
+acx_cv_use_pdbug=no
 
 AM_CONDITIONAL([PDBUG], [test x$acx_cv_use_pdbug = xtrue])
 
