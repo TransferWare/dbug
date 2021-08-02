@@ -17,7 +17,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-AC_REVISION([$Revision$])
+AC_REVISION([2021-08-02])
 AC_INIT([dbug],[6.0.0],[gert.jan.paulissen@gmail.com])
 
 # version check
