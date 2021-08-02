@@ -16,7 +16,7 @@
 ## Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 MAINTAINERCLEANFILES = Makefile.in
-
+DISTCLEANFILES       = pdbug.html
 EXTRA_DIST           = Makefile.PL pdbug.html pdbug.pm pdbug.xs test.pl
 
 ## Call the perl Makefile from this makefile but in another directory at the same level 
