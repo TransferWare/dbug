@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Please see the [DBUG issue queue](https://github.com/TransferWare/dbug/issues) for issues.
 
-## [6.0.0] -  2021-08-01
+## [6.0.0] -  2021-08-02
 
 A new version on GitHub.
 
