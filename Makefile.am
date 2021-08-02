@@ -19,6 +19,8 @@ AUTOMAKE_OPTIONS          =
 SUBDIRS                   = src test doc
 MAINTAINERCLEANFILES      = Makefile.in aclocal.m4 configure config-h.in \
                             stamp-h.in $(AUX_DIST)
+DISTCLEANFILES            = $(distdir).tar.gz
+
 EXTRA_DIST                = VERSION BUGS README.md CHANGELOG.md lint.am
 ACLOCAL_AMFLAGS           = -I config
 
