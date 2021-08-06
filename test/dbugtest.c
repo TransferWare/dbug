@@ -22,7 +22,7 @@
 #include <assert.h>
 #endif
 
-#include "dbug.h"
+#include <dbug.h>
 
 /* assert(FALSE) must abort */
 

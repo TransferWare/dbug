@@ -1,19 +1,25 @@
-
-########### next target ###############
-
-SET(dbugtest_SRCS
-   dbugtest.c
-)
+set(dbugtest_SRCS dbugtest.c)
 
 add_executable(dbugtest ${dbugtest_SRCS})
 
 target_link_libraries(dbugtest dbug)
 
+target_include_directories(dbugtest PUBLIC "${PROJECT_SOURCE_DIR}/src/lib")
+                          
+enable_testing()
 
-########### install files ###############
+# define a function to simplify adding tests
+function(dbugtest nr arg1 arg2 arg3 arg4 arg5 arg6)
+  add_test(NAME dbugtest_${nr} COMMAND ./dbugtest test${nr} ${arg1} ${arg2} ${arg3} ${arg4} ${arg5} ${arg6})
+  set_tests_properties(dbugtest_${nr} PROPERTIES PASS_REGULAR_EXPRESSION "test${nr} passed")
+endfunction(dbugtest)
 
-
-
+dbugtest(1 "" "" "" "" "" "")
+dbugtest(2 "" "" "" "" "" "")
+dbugtest(3 "" "" "" "" "" "")
+dbugtest(4 "" "" "" "" "" "")
+dbugtest(5 "" "" "" "" "" "")
+dbugtest(6 d,t,g,D=1000 d:t:g:D,1000 b c a d)
 
 #original Makefile.am contents follow:
 
@@ -77,19 +83,19 @@ target_link_libraries(dbugtest dbug)
 ## is the actual test. Ensure the test scripts are made executable (chmod +x).
 #
 #test1 test2 test3 test4 test5:
-#	$(DBUGTEST) $@ 1>$(STDOUT) 2>$(STDERR)
-#	@echo : > $@
-#	@chmod +x $@
+# $(DBUGTEST) $@ 1>$(STDOUT) 2>$(STDERR)
+# @echo : > $@
+# @chmod +x $@
 #
 #test6:
-#	$(DBUGTEST) $@ d,t,g,D=1000 d:t:g:D,1000 b c a d 1>$(STDOUT) 2>$(STDERR)
-#	@echo : > $@
-#	@chmod +x $@
+# $(DBUGTEST) $@ d,t,g,D=1000 d:t:g:D,1000 b c a d 1>$(STDOUT) 2>$(STDERR)
+# @echo : > $@
+# @chmod +x $@
 #
 #dist-hook:
-#	-@rm -f dbugtest.log
+# -@rm -f dbugtest.log
 ## GJP 2007-08-07 Do not where they come from
-#	-@test $(top_builddir) = $(top_srcdir) || rm -f $(top_builddir)/src/lib/Clock.c $(top_builddir)/src/lib/dbug.c $(top_builddir)/src/lib/SleepMsec.c
+# -@test $(top_builddir) = $(top_srcdir) || rm -f $(top_builddir)/src/lib/Clock.c $(top_builddir)/src/lib/dbug.c $(top_builddir)/src/lib/SleepMsec.c
 #
 #$(top_builddir)/src/lib/libdbug.la:
-#	cd $(top_builddir)/src/lib && $(MAKE) all
+# cd $(top_builddir)/src/lib && $(MAKE) all
