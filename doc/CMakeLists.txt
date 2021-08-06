@@ -1,20 +1,12 @@
-
-########### next target ###############
-
-SET(factorial_SRCS
-   main.c
-   factorial.c
-)
+set(factorial_SRCS main.c factorial.c)
 
 add_executable(factorial ${factorial_SRCS})
 
 target_link_libraries(factorial dbug)
 
-
-########### install files ###############
-
-
-
+target_include_directories(factorial PUBLIC "${PROJECT_SOURCE_DIR}/src/lib")
+                          
+enable_testing()
 
 #original Makefile.am contents follow:
 
@@ -50,7 +42,7 @@ target_link_libraries(factorial dbug)
 #html: dbug.html
 #
 #dbug.html: dbug.pod
-#	@PERL@ -S pod2html --infile=$? --outfile=$@
+# @PERL@ -S pod2html --infile=$? --outfile=$@
 #
 #CLEANFILES = dbug.html pod2htm*
 #
@@ -87,38 +79,38 @@ target_link_libraries(factorial dbug)
 #CLEANFILES += $(TESTS) $(TESTS:=.log) test6.lis
 #
 #test1:
-#	$(FACTORIAL) 1 2 3 4 5 > $@.log
-#	$(DIFF) $@.log $(doc_srcdir)/$@.ref
-#	@echo : > $@
-#	@chmod +x $@
+# $(FACTORIAL) 1 2 3 4 5 > $@.log
+# $(DIFF) $@.log $(doc_srcdir)/$@.ref
+# @echo : > $@
+# @chmod +x $@
 #
-#test2:	$(DBUGRPT)
-#	$(FACTORIAL) -#t 3 2 | @PERL@ $(DBUGRPT) > $@.log
-#	$(DIFF) $@.log $(doc_srcdir)/$@.ref
-#	@echo : > $@
-#	@chmod +x $@
+#test2: $(DBUGRPT)
+# $(FACTORIAL) -#t 3 2 | @PERL@ $(DBUGRPT) > $@.log
+# $(DIFF) $@.log $(doc_srcdir)/$@.ref
+# @echo : > $@
+# @chmod +x $@
 #
 #test3:  $(DBUGRPT)
-#	$(FACTORIAL) -#d,t 3 | @PERL@ $(DBUGRPT) > $@.log
-#	$(DIFF) $@.log $(doc_srcdir)/$@.ref
-#	@echo : > $@
-#	@chmod +x $@
+# $(FACTORIAL) -#d,t 3 | @PERL@ $(DBUGRPT) > $@.log
+# $(DIFF) $@.log $(doc_srcdir)/$@.ref
+# @echo : > $@
+# @chmod +x $@
 #
 #test4:  $(DBUGRPT)
-#	$(FACTORIAL) -#d 4 | @PERL@ $(DBUGRPT) -d result > $@.log
-#	$(DIFF) $@.log $(doc_srcdir)/$@.ref
-#	@echo : > $@
-#	@chmod +x $@
+# $(FACTORIAL) -#d 4 | @PERL@ $(DBUGRPT) -d result > $@.log
+# $(DIFF) $@.log $(doc_srcdir)/$@.ref
+# @echo : > $@
+# @chmod +x $@
 #
 #test5:  $(DBUGRPT)
 ## GJP 19-3-2003 Ignore changes due to differences between source and build locations.
-#	$(FACTORIAL) -#d 3 | @PERL@ $(DBUGRPT) -t factorial -FL | sed -e 's!$(top_srcdir)/doc/!!g' > $@.log
-#	$(DIFF) $@.log $(doc_srcdir)/$@.ref
-#	@echo : > $@
-#	@chmod +x $@
+# $(FACTORIAL) -#d 3 | @PERL@ $(DBUGRPT) -t factorial -FL | sed -e 's!$(top_srcdir)/doc/!!g' > $@.log
+# $(DIFF) $@.log $(doc_srcdir)/$@.ref
+# @echo : > $@
+# @chmod +x $@
 #
 #test6:  $(DBUGRPT)
-#	$(FACTORIAL) -#t,D=1000,g 3 | @PERL@ $(DBUGRPT) > $@.log
-#	@PERL@ $(srcdir)/diffrex.pl $(srcdir)/test6.ref $@.log
-#	@echo : > $@
-#	@chmod +x $@
+# $(FACTORIAL) -#t,D=1000,g 3 | @PERL@ $(DBUGRPT) > $@.log
+# @PERL@ $(srcdir)/diffrex.pl $(srcdir)/test6.ref $@.log
+# @echo : > $@
+# @chmod +x $@

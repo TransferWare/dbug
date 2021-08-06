@@ -33,4 +33,4 @@ configure_file(config.h.in config.h)
 
 add_subdirectory(src)
 add_subdirectory(test)
-#add_subdirectory(doc)
+add_subdirectory(doc)
