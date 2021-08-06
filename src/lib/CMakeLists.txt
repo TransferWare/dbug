@@ -16,7 +16,12 @@ target_include_directories(dbug PUBLIC "${PROJECT_BINARY_DIR}")
 
 target_link_libraries(dbug)
 
-set_target_properties(dbug PROPERTIES VERSION 4.2.0 SOVERSION 4)
+###
+### History of interface versions:
+### - 0:0:0 start
+### - 1:0:0 due to different format of timing info (in seconds) in the dbug output file
+
+set_target_properties(dbug PROPERTIES VERSION 1.0.0 SOVERSION 1)
 install(TARGETS dbug DESTINATION lib)
 
 
@@ -58,10 +63,6 @@ install(FILES  dbug.h DESTINATION include)
 #lib_LTLIBRARIES       = libdbug.la
 #libdbug_la_SOURCES   = dbug.c Clock.c SleepMsec.c Clock.h SleepMsec.h vargs.h
 #
-###
-### History of interface versions:
-### - 0:0:0 start
-### - 1:0:0 due to different format of timing info (in seconds) in the dbug output file
 #
 #libdbug_la_LDFLAGS   = -no-undefined -version-info 1:0:0
 #

@@ -29,6 +29,12 @@ check_include_file(time.h HAVE_TIME_H)
 check_include_file(unistd.h HAVE_UNISTD_H)
 check_include_file(varargs.h HAVE_VARARGS_H)
 
+
+# dbugrpt.in:9:#              - @PERL@
+# dbugrpt.in:10:#              - @DBUGRPT_PREFIX_SEPARATOR@
+#!@PYTHON@
+# rf2dbug.in:35:        return '@PACKAGE_VERSION@'
+
 configure_file(config.h.in config.h)
 
 add_subdirectory(src)

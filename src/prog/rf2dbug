@@ -1,4 +1,4 @@
-#!@PYTHON@
+#!/usr/bin/env python
 
 """Usage: rf2dbug.py inpath
 
@@ -6,7 +6,7 @@ Reads Robot Framework test execution result from an output XML file and output t
 
 That DBUG log file (name dbug.log in the following example) can then be used by the dbug report utility like this:
 
-  $ perl dbugrpt < dbug.log > dbug.txt
+  $ dbugrpt < dbug.log > dbug.txt
 
 The main reason for this is that the dbugrpt utility can show an intelligent profiler report.
 
@@ -32,7 +32,7 @@ class dbug(object):
         return self._seq
 
     def version(self):
-        return '@PACKAGE_VERSION@'
+        return '2021-08-06'
 
     def now(self):
         return datetime.datetime.now().strftime("%Y%m%d%H%M%S")

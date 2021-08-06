@@ -1,20 +1,15 @@
-#!@PERL@ -w
+#!/usr/bin/env perl
 #
 # Description: Print output of the DBUG library in a human readable format.
 #
 # Usage:       dbugrpt [ options ]
 #
-# Notes:       The file dbugrpt is generated from dbugrpt.in by the m4 macro 
-#              preprocessor. The following macro's are expanded:
-#              - @PERL@
-#              - @DBUGRPT_PREFIX_SEPARATOR@
-#
-#              Please do not modify dbugrpt but dbugrpt.in instead.
-#
 
 use Getopt::Std;
 use strict;
 use Carp qw(carp);
+
+use constant VERSION => '2021-08-06';
 
 getopts('d:FhiLnNPt:Tv');
 
@@ -249,7 +244,7 @@ _EOT_
 }
 
 sub version {
-    print STDOUT "dbugrpt version: @PACKAGE_VERSION@\n";
+    print STDOUT "dbugrpt version: ", VERSION, "\n";
 }
 
 package dbug_uid;
@@ -259,6 +254,7 @@ use Carp qw(carp);
 
 use constant TIME_FMT => '%7.3f';
 use constant PERC_FMT => '%3.2f';
+use constant DBUGRPT_PREFIX_SEPARATOR => ': ';
 
 sub init {
     my ($pkg, $version, $name, $dbug_ctx, $pid, $flags) = @_;
@@ -755,16 +751,17 @@ sub totals {
 sub prefix {
     my ($obj, $file, $line, $level, $date) = @_;
     
-    print( sprintf ("%04d-%02d-%02d %02d:%02d:%02d@DBUGRPT_PREFIX_SEPARATOR@ ",
+    print( sprintf ("%04d-%02d-%02d %02d:%02d:%02d%s",
                     substr($date, 0, 4), substr($date, 4, 2), substr($date, 6, 2),
-                    substr($date, 8, 2), substr($date, 10, 2), substr($date, 12, 2)))
+                    substr($date, 8, 2), substr($date, 10, 2), substr($date, 12, 2),
+										DBUGRPT_PREFIX_SEPARATOR))
         if ($print_date);
-    print ($obj->pid(), "@DBUGRPT_PREFIX_SEPARATOR@ ") if ($print_process_id);
-    print ($obj->lineno($obj->lineno()+1), "@DBUGRPT_PREFIX_SEPARATOR@ ") if ($print_sequence);
-    print ($obj->name, "@DBUGRPT_PREFIX_SEPARATOR@ ") if ($print_name);
-    print ($file, "@DBUGRPT_PREFIX_SEPARATOR@ ") if ($print_source_file);
-    print ($line, "@DBUGRPT_PREFIX_SEPARATOR@ ") if ($print_source_line);
-    print ($level, "@DBUGRPT_PREFIX_SEPARATOR@ ") if ($print_level);
+    print ($obj->pid(), DBUGRPT_PREFIX_SEPARATOR) if ($print_process_id);
+    print ($obj->lineno($obj->lineno()+1), DBUGRPT_PREFIX_SEPARATOR) if ($print_sequence);
+    print ($obj->name, DBUGRPT_PREFIX_SEPARATOR) if ($print_name);
+    print ($file, DBUGRPT_PREFIX_SEPARATOR) if ($print_source_file);
+    print ($line, DBUGRPT_PREFIX_SEPARATOR) if ($print_source_line);
+    print ($level, DBUGRPT_PREFIX_SEPARATOR) if ($print_level);
 }
 
 sub indent {
@@ -830,9 +827,9 @@ sub print {
         if ($obj->tracing()) {
             $obj->indent($level+1);
         } else {
-            print ("$function@DBUGRPT_PREFIX_SEPARATOR@ ");
+            print ("$function" . DBUGRPT_PREFIX_SEPARATOR);
         }
-        print ("$break_point@DBUGRPT_PREFIX_SEPARATOR@ $str\n");
+        print ("$break_point" . DBUGRPT_PREFIX_SEPARATOR . "$str\n");
     }
 }
 
