@@ -8,7 +8,10 @@ target_include_directories(factorial PUBLIC "${CMAKE_SOURCE_DIR}/src/lib")
 
 find_program(PERL perl REQUIRED)
 
-add_custom_command(TARGET factorial POST_BUILD COMMAND ${PERL} -S pod2html --infile=${CMAKE_CURRENT_SOURCE_DIR}/dbug.pod --outfile=dbug.html VERBATIM)
+add_custom_target(doc ALL COMMAND ${PERL} -S pod2html --infile=${CMAKE_CURRENT_SOURCE_DIR}/dbug.pod --outfile=${CMAKE_CURRENT_BINARY_DIR}/dbug.html VERBATIM)
+
+include(GNUInstallDirs)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/dbug.html TYPE DOC)
 
 enable_testing()
 
