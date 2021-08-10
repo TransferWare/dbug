@@ -6,6 +6,7 @@ project(dbug VERSION 6.0.0)
 # specify the C++ standard
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED True)
+set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 
 include(CheckSymbolExists)
 include(CheckIncludeFile)

@@ -2260,7 +2260,7 @@ dbug_file_close( files_t *file )
   const char *procname = "dbug_file_close";
 
   _DBUG_ENTER( procname );
-  _DBUG_PRINT( "input", ( "files: %s; file: %s", PTR_STR(dbug_files), file ) );
+  _DBUG_PRINT( "input", ( "files: %s; file: %p", PTR_STR(dbug_files), file ) );
 #endif
 
 #if USE_POSIX_THREADS

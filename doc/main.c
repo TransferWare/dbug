@@ -12,11 +12,12 @@ int main (int argc, char *argv[])
   for (ix = 1; ix < argc && argv[ix][0] == '-'; ix++) 
     {
       switch (argv[ix][1]) 
-	{
-	case '#':
-	  options = &(argv[ix][2]);
-	  break;
-	}
+        {
+        case '#':
+        case 'D':
+          options = &(argv[ix][2]);
+          break;
+        }
     }
 
   DBUG_INIT( options, "factorial" );
@@ -24,10 +25,10 @@ int main (int argc, char *argv[])
     DBUG_ENTER("main");
     for (; ix < argc; ix++) 
       {
-	DBUG_PRINT("args", ("argv[%d] = %s", ix, argv[ix]));
-	result = factorial (atoi (argv[ix]));
-	printf ("%d\n", result);
-	fflush( stdout );
+        DBUG_PRINT("args", ("argv[%d] = %s", ix, argv[ix]));
+        result = factorial (atoi (argv[ix]));
+        printf ("%d\n", result);
+        fflush( stdout );
       }
     DBUG_LEAVE();
   }

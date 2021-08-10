@@ -26,13 +26,16 @@
 
 /* assert(FALSE) must abort */
 
-#ifndef NDEBUG
-#define NDEBUG 0
+#ifdef  NDEBUG
+#undef  NDEBUG
 #endif
+
+#define NDEBUG 0
+
 
 #if NDEBUG != 0
 
-Define NDEBUG should be off!
+#error Define NDEBUG should be off!
 
 #endif
 
