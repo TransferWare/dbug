@@ -91,7 +91,9 @@ $| = 1; # auto flush
 
 select STDOUT;
 
-while (<STDIN>) {
+my $in = ( scalar(@ARGV) == 0 ? \*STDIN : \*ARGV );
+
+while (<$in>) {
     s/(\n|\r)+//go; # remove linefeed and carriage return
 
     $dbug_uid = '';
@@ -677,7 +679,7 @@ $total_line1 . "\n" .
             } else {
                 $g_perc_calls = ($g_tot_calls != 0 ? sprintf( PERC_FMT, ($g_calls * 100) / $g_tot_calls ): 0);
                 $g_weight = int($g_perc_time * $g_perc_calls);
-		# Sourceforge issue 1174400
+    # Sourceforge issue 1174400
                 $g_avg_time_per_call = sprintf( TIME_FMT, $g_time / ( $g_calls * 1000 ) );
                 $g_min_time_per_call = ( defined($min_time) ? sprintf( TIME_FMT, $min_time / 1000 ) : 0 );
                 $g_max_time_per_call = ( defined($max_time) ? sprintf( TIME_FMT, $max_time / 1000 ) : 0 );
@@ -754,7 +756,7 @@ sub prefix {
     print( sprintf ("%04d-%02d-%02d %02d:%02d:%02d%s",
                     substr($date, 0, 4), substr($date, 4, 2), substr($date, 6, 2),
                     substr($date, 8, 2), substr($date, 10, 2), substr($date, 12, 2),
-										DBUGRPT_PREFIX_SEPARATOR))
+                    DBUGRPT_PREFIX_SEPARATOR))
         if ($print_date);
     print ($obj->pid(), DBUGRPT_PREFIX_SEPARATOR) if ($print_process_id);
     print ($obj->lineno($obj->lineno()+1), DBUGRPT_PREFIX_SEPARATOR) if ($print_sequence);

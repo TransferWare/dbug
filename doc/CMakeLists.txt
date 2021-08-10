@@ -14,18 +14,18 @@ add_custom_target(doc ALL COMMAND ${PERL} -S pod2html --infile=${CMAKE_CURRENT_S
 add_custom_command(
     TARGET factorial
     POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E echo "Running $<TARGET_FILE_NAME:factorial> ..."
-    COMMAND ${CMAKE_CURRENT_BINARY_DIR}/factorial 1 2 3 4 5 > test1.log
-    COMMAND ${CMAKE_CURRENT_BINARY_DIR}/factorial -Dt 3 2 > test2.out
-    COMMAND ${PERL} ${PROJECT_SOURCE_DIR}/src/prog/dbugrpt test2.out > test2.log
-    COMMAND ${CMAKE_CURRENT_BINARY_DIR}/factorial -Dd,t 3 > test3.out
-    COMMAND ${PERL} ${PROJECT_SOURCE_DIR}/src/prog/dbugrpt test3.out > test3.log
-    COMMAND ${CMAKE_CURRENT_BINARY_DIR}/factorial -Dd 4 > test4.out
-    COMMAND ${PERL} ${PROJECT_SOURCE_DIR}/src/prog/dbugrpt -d result test4.out > test4.log
-    COMMAND ${CMAKE_CURRENT_BINARY_DIR}/factorial -Dd 3 > test5.out
-    COMMAND ${PERL} ${PROJECT_SOURCE_DIR}/src/prog/dbugrpt -t factorial -FL test5.out > test5.log
-    COMMAND ${CMAKE_CURRENT_BINARY_DIR}/factorial -Dt,D=1000,g 3 > test6.out
-    COMMAND ${PERL} ${PROJECT_SOURCE_DIR}/src/prog/dbugrpt test6.out > test6.log
+    COMMAND ${CMAKE_COMMAND} -E echo "Running $<TARGET_FILE:factorial> ..."
+    COMMAND $<TARGET_FILE:factorial> 1 2 3 4 5 > ${CMAKE_CURRENT_BINARY_DIR}/test1.log
+    COMMAND $<TARGET_FILE:factorial> -Dt 3 2 > ${CMAKE_CURRENT_BINARY_DIR}/test2.out
+    COMMAND ${PERL} ${PROJECT_SOURCE_DIR}/src/prog/dbugrpt ${CMAKE_CURRENT_BINARY_DIR}/test2.out > ${CMAKE_CURRENT_BINARY_DIR}/test2.log
+    COMMAND $<TARGET_FILE:factorial> -Dd,t 3 > ${CMAKE_CURRENT_BINARY_DIR}/test3.out
+    COMMAND ${PERL} ${PROJECT_SOURCE_DIR}/src/prog/dbugrpt ${CMAKE_CURRENT_BINARY_DIR}/test3.out > ${CMAKE_CURRENT_BINARY_DIR}/test3.log
+    COMMAND $<TARGET_FILE:factorial> -Dd 4 > ${CMAKE_CURRENT_BINARY_DIR}/test4.out
+    COMMAND ${PERL} ${PROJECT_SOURCE_DIR}/src/prog/dbugrpt -d result ${CMAKE_CURRENT_BINARY_DIR}/test4.out > ${CMAKE_CURRENT_BINARY_DIR}/test4.log
+    COMMAND $<TARGET_FILE:factorial> -Dd 3 > ${CMAKE_CURRENT_BINARY_DIR}/test5.out
+    COMMAND ${PERL} ${PROJECT_SOURCE_DIR}/src/prog/dbugrpt -t factorial -FL ${CMAKE_CURRENT_BINARY_DIR}/test5.out > ${CMAKE_CURRENT_BINARY_DIR}/test5.log
+    COMMAND $<TARGET_FILE:factorial> -Dt,D=1000,g 3 > ${CMAKE_CURRENT_BINARY_DIR}/test6.out
+    COMMAND ${PERL} ${PROJECT_SOURCE_DIR}/src/prog/dbugrpt ${CMAKE_CURRENT_BINARY_DIR}/test6.out > ${CMAKE_CURRENT_BINARY_DIR}/test6.log
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/src/lib
 )
 
@@ -36,7 +36,7 @@ enable_testing()
 
 # Define a function to simplify adding tests.
 function(factorial nr)
-  add_test(NAME factorial_${nr} COMMAND ${CMAKE_COMMAND} -E compare_files test${nr}.log test${nr}.ref )
+  add_test(NAME factorial_${nr} COMMAND ${CMAKE_COMMAND} -E compare_files --ignore-eol ${CMAKE_CURRENT_SOURCE_DIR}/test${nr}.ref test${nr}.log)
 endfunction(factorial)
 
 foreach(I RANGE 1 4)
