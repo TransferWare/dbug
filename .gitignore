@@ -24,3 +24,6 @@ stamp-h1
 
 # Perl pod2html
 pod2htmd.tmp
+
+# CMake
+b/
