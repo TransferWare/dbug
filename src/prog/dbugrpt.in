@@ -8,6 +8,7 @@
 #              preprocessor. The following macro's are expanded:
 #              - @PERL@
 #              - @DBUGRPT_PREFIX_SEPARATOR@
+#              - @PACKAGE_VERSION@
 #
 #              Please do not modify dbugrpt but dbugrpt.in instead.
 #
@@ -681,7 +682,7 @@ $total_line1 . "\n" .
             } else {
                 $g_perc_calls = ($g_tot_calls != 0 ? sprintf( PERC_FMT, ($g_calls * 100) / $g_tot_calls ): 0);
                 $g_weight = int($g_perc_time * $g_perc_calls);
-		# Sourceforge issue 1174400
+    # Sourceforge issue 1174400
                 $g_avg_time_per_call = sprintf( TIME_FMT, $g_time / ( $g_calls * 1000 ) );
                 $g_min_time_per_call = ( defined($min_time) ? sprintf( TIME_FMT, $min_time / 1000 ) : 0 );
                 $g_max_time_per_call = ( defined($max_time) ? sprintf( TIME_FMT, $max_time / 1000 ) : 0 );
