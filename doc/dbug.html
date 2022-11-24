@@ -4,7 +4,7 @@
 <head>
 <title>dbug - C Program Debugging Package</title>
 <meta http-equiv="content-type" content="text/html; charset=utf-8" />
-<link rev="made" href="mailto:ASSI@cygwinpro.fritz.box" />
+<link rev="made" href="mailto:root@4dgh7.p1s.plx.sd.apple.com" />
 </head>
 
 <body>
@@ -180,19 +180,19 @@
 
 <p>The procedure is iterative, with each iteration yielding more and more output, and hopefully the source of the problem is discovered before the output becomes too large to deal with or previously inserted statements need to be removed. Figure 1 is an example of this type of primitive debugging technique.</p>
 
-<pre><code>        #include &lt;stdio.h&gt;
+<pre><code>  #include &lt;stdio.h&gt;
 
-        int main (int argc, char **argv)
-        {
-            printf (&quot;argv[0] = %d\n&quot;, argv[0]);
-            /*
-             *  Rest of program
-             */
-            printf (&quot;== done ==\n&quot;);
-        }
+  int main (int argc, char **argv)
+  {
+      printf (&quot;argv[0] = %d\n&quot;, argv[0]);
+      /*
+       *  Rest of program
+       */
+      printf (&quot;== done ==\n&quot;);
+  }
 
-        Figure 1
-        Primitive Debugging Technique</code></pre>
+  Figure 1
+  Primitive Debugging Technique</code></pre>
 
 <p>Eventually, and usually after at least several iterations, the problem will be found and corrected. At this point, the newly inserted print statements must be dealt with. One obvious solution is to simply delete them all.</p>
 
@@ -200,24 +200,24 @@
 
 <p>Beginners usually do this a few times until they have to repeat the entire process every time a new bug pops up. The second most obvious solution is to somehow disable the output, either through the source code comment facility, creation of a debug variable to be switched on or off, or by using the C preprocessor. Figure 2 is an example of all three techniques.</p>
 
-<pre><code>        #include &lt;stdio.h&gt;
+<pre><code>  #include &lt;stdio.h&gt;
 
-        int debug = 0;
+  int debug = 0;
 
-        int main (int argc, char **argv)
-        {
-            /* printf (&quot;argv = %x\n&quot;, argv) */
-            if (debug) printf (&quot;argv[0] = %d\n&quot;, argv[0]);
-            /*
-             *  Rest of program
-             */
-        #ifdef DEBUG
-            printf (&quot;== done ==\n&quot;);
-        #endif
-        }
+  int main (int argc, char **argv)
+  {
+      /* printf (&quot;argv = %x\n&quot;, argv) */
+      if (debug) printf (&quot;argv[0] = %d\n&quot;, argv[0]);
+      /*
+       *  Rest of program
+       */
+  #ifdef DEBUG
+      printf (&quot;== done ==\n&quot;);
+  #endif
+  }
       
-        Figure 2
-        Debug Disable Techniques</code></pre>
+  Figure 2
+  Debug Disable Techniques</code></pre>
 
 <p>Each technique has its advantages and disadvantages with respect to dynamic vs static activation, source code overhead, recompilation requirements, ease of use, program readability, etc. Overuse of the preprocessor solution quickly leads to problems with source code readability and maintainability when multiple <b>#ifdef</b> symbols are to be defined or undefined based on specific types of debug desired.</p>
 
@@ -227,23 +227,23 @@
 
 <p>The only requirement for the standard <b>UNIX</b> C preprocessor is for the &#39;#&#39; character to appear in the first column, but even this seems like an arbitrary and unreasonable restriction. Figure 3 is an example of this usage.</p>
 
-<pre><code>        #include &lt;stdio.h&gt;
+<pre><code>  #include &lt;stdio.h&gt;
 
-        int main (int argc, char **argv)
-        {
-        #   ifdef DEBUG
-            printf (&quot;argv[0] = %d\n&quot;, argv[0]);
-        #   endif
-            /*
-             *  Rest of program
-             */
-        #   ifdef DEBUG
-            printf (&quot;== done ==\n&quot;);
-        #   endif
-        }
+  int main (int argc, char **argv)
+  {
+  #   ifdef DEBUG
+      printf (&quot;argv[0] = %d\n&quot;, argv[0]);
+  #   endif
+      /*
+       *  Rest of program
+       */
+  #   ifdef DEBUG
+      printf (&quot;== done ==\n&quot;);
+  #   endif
+  }
 
-        Figure 3
-        More Readable Preprocessor Usage</code></pre>
+  Figure 3
+  More Readable Preprocessor Usage</code></pre>
 
 <h1 id="OPTIONS">OPTIONS</h1>
 
@@ -663,6 +663,12 @@
 <p>Enable output from DBUG_PRINT macros which have a break point which is in the list of specified break points (separated by comma&#39;s). A null list means all break points are enabled.</p>
 
 </dd>
+<dt id="D">D</dt>
+<dd>
+
+<p>Emulate a done() call (if missing) at the end of each debugging context in order to print totals.</p>
+
+</dd>
 <dt id="F">F</dt>
 <dd>
 
@@ -731,46 +737,46 @@
 
 <h2 id="Main-function-for-factorial-program">Main function for factorial program</h2>
 
-<pre><code>        #include &lt;stdio.h&gt;
-        #include &lt;stdlib.h&gt;
-        #include &quot;dbug.h&quot;
+<pre><code>  #include &lt;stdio.h&gt;
+  #include &lt;stdlib.h&gt;
+  #include &quot;dbug.h&quot;
 
-        extern int factorial (int value);
+  extern int factorial (int value);
 
-        int main (int argc, char *argv[])
+  int main (int argc, char *argv[])
+  {
+    int result, ix;
+    char *options = &quot;&quot;;
+
+    for (ix = 1; ix &lt; argc &amp;&amp; argv[ix][0] == &#39;-&#39;; ix++) 
+      {
+        switch (argv[ix][1]) 
+    {
+    case &#39;#&#39;:
+      options = &amp;(argv[ix][2]);
+      break;
+    }
+      }
+
+    DBUG_INIT( options, &quot;factorial&quot; );
+    {
+      DBUG_ENTER(&quot;main&quot;);
+      for (; ix &lt; argc; ix++) 
         {
-          int result, ix;
-          char *options = &quot;&quot;;
-
-          for (ix = 1; ix &lt; argc &amp;&amp; argv[ix][0] == &#39;-&#39;; ix++) 
-            {
-              switch (argv[ix][1]) 
-                {
-                case &#39;#&#39;:
-                  options = &amp;(argv[ix][2]);
-                  break;
-                }
-            }
-
-          DBUG_INIT( options, &quot;factorial&quot; );
-          {
-            DBUG_ENTER(&quot;main&quot;);
-            for (; ix &lt; argc; ix++) 
-              {
-                DBUG_PRINT(&quot;args&quot;, (&quot;argv[%d] = %s&quot;, ix, argv[ix]));
-                result = factorial (atoi (argv[ix]));
-                printf (&quot;%d\n&quot;, result);
-                fflush( stdout );
-              }
-            DBUG_LEAVE();
-          }
-          DBUG_DONE();
-
-          return (0);
+    DBUG_PRINT(&quot;args&quot;, (&quot;argv[%d] = %s&quot;, ix, argv[ix]));
+    result = factorial (atoi (argv[ix]));
+    printf (&quot;%d\n&quot;, result);
+    fflush( stdout );
         }
+      DBUG_LEAVE();
+    }
+    DBUG_DONE();
 
-        Figure 4
-        Factorial Program Mainline</code></pre>
+    return (0);
+  }
+
+  Figure 4
+  Factorial Program Mainline</code></pre>
 
 <p>The <b>main</b> function is responsible for processing any command line option arguments and then computing and printing the factorial of each non-option argument.</p>
 
@@ -782,7 +788,7 @@
 
 <p>To use the debugger, the factorial program is invoked with a command line of the form:</p>
 
-<pre><code>        factorial -#d,t 1 2 3 | perl -S dbugrpt</code></pre>
+<pre><code>  factorial -#d,t 1 2 3 | perl -S dbugrpt</code></pre>
 
 <p>The <b>main</b> function recognizes the &quot;-#d,t&quot; string as a debugger control string, and passes the debugger arguments (&quot;d,t&quot;) to the <i>dbug</i> runtime support routines via the <code>DBUG_INIT</code> macro. This particular string enables output from the <code>DBUG_PRINT</code> macro with the &#39;d&#39; flag and enables function tracing with the &#39;t&#39; flag. The factorial function is then called three times, with the arguments &quot;1&quot;, &quot;2&quot;, and &quot;3&quot;.</p>
 
@@ -794,40 +800,40 @@
 
 <p>Some examples are:</p>
 
-<pre><code>        -#d,t,o
-        -#d,o=dbug.log</code></pre>
+<pre><code>  -#d,t,o
+  -#d,o=dbug.log</code></pre>
 
 <p>The definition of the factorial function, symbolized as &quot;N!&quot;, is given by:</p>
 
-<pre><code>        N! = N * N-1 * ... 2 * 1</code></pre>
+<pre><code>  N! = N * N-1 * ... 2 * 1</code></pre>
 
 <h2 id="Factorial-function">Factorial function</h2>
 
 <p>Figure 5 is the factorial function which implements this algorithm recursively. Note that this is not necessarily the best way to do factorials and error conditions are ignored completely.</p>
 
-<pre><code>        #include &lt;stdio.h&gt;
-        #include &quot;dbug.h&quot;
+<pre><code>  #include &lt;stdio.h&gt;
+  #include &quot;dbug.h&quot;
 
-        int factorial(int value)
-        {
-          DBUG_ENTER(&quot;factorial&quot;);
-          DBUG_PRINT(&quot;find&quot;, (&quot;find %d factorial&quot;, value));
-          if (value &gt; 1) {
-            value *= factorial (value - 1);
-          }
-          DBUG_PRINT(&quot;result&quot;, (&quot;result is %d&quot;, value));
-          DBUG_LEAVE();
-          return (value);
-        }
+  int factorial(int value)
+  {
+    DBUG_ENTER(&quot;factorial&quot;);
+    DBUG_PRINT(&quot;find&quot;, (&quot;find %d factorial&quot;, value));
+    if (value &gt; 1) {
+      value *= factorial (value - 1);
+    }
+    DBUG_PRINT(&quot;result&quot;, (&quot;result is %d&quot;, value));
+    DBUG_LEAVE();
+    return (value);
+  }
 
-        Figure 5
-        Factorial Function</code></pre>
+  Figure 5
+  Factorial Function</code></pre>
 
 <p>One advantage (some may not consider it so) to using the <i>dbug</i> package is that it strongly encourages fully structured coding with only one entry and one exit point in each function. Multiple exit points, such as early returns to escape a loop, may be used, but each such point requires the use of an appropriate <code>DBUG_LEAVE</code> macro.</p>
 
 <p>To build the factorial program on a <b>UNIX</b> system, compile and link with the command:</p>
 
-<pre><code>        cc -o factorial main.c factorial.c -ldbug</code></pre>
+<pre><code>  cc -o factorial main.c factorial.c -ldbug</code></pre>
 
 <p>The &quot;-ldbug&quot; argument tells the loader to link in the runtime support modules for the <i>dbug</i> package.</p>
 
@@ -835,40 +841,40 @@
 
 <p>Executing the factorial program with a command of the form:</p>
 
-<pre><code>        factorial 1 2 3 4 5</code></pre>
+<pre><code>  factorial 1 2 3 4 5</code></pre>
 
 <p>generates the output shown in figure 6.</p>
 
-<pre><code>        1
-        2
-        6
-        24
-        120
-        
-        Figure 6
-        factorial 1 2 3 4 5</code></pre>
+<pre><code>  1
+  2
+  6
+  24
+  120
+  
+  Figure 6
+  factorial 1 2 3 4 5</code></pre>
 
 <h2 id="Function-level-tracing">Function level tracing</h2>
 
 <p>Function level tracing is enabled by passing the debugger the &#39;t&#39; flag in the debug control string. Figure 7 is the output resulting from the command &quot;factorial -#t 3 2 | perl -S dbugrpt&quot;.</p>
 
-<pre><code>        &gt;main
-        |   &gt;factorial
-        |   |   &gt;factorial
-        |   |   |   &gt;factorial
-        |   |   |   &lt;factorial
-        |   |   &lt;factorial
-        |   &lt;factorial
-        6
-        |   &gt;factorial
-        |   |   &gt;factorial
-        |   |   &lt;factorial
-        |   &lt;factorial
-        2
-        &lt;main
-        
-        Figure 7
-        factorial -#t 3 2 | perl -S dbugrpt</code></pre>
+<pre><code>  &gt;main
+  |   &gt;factorial
+  |   |   &gt;factorial
+  |   |   |   &gt;factorial
+  |   |   |   &lt;factorial
+  |   |   &lt;factorial
+  |   &lt;factorial
+  6
+  |   &gt;factorial
+  |   |   &gt;factorial
+  |   |   &lt;factorial
+  |   &lt;factorial
+  2
+  &lt;main
+  
+  Figure 7
+  factorial -#t 3 2 | perl -S dbugrpt</code></pre>
 
 <p>Each entry to or return from a function is indicated by &#39;&gt;&#39; for the entry point and &#39;&lt;&#39; for the exit point, connected by vertical bars to allow matching points to be easily found when separated by large distances.</p>
 
@@ -888,25 +894,25 @@
 
 <p>Figure 8 shows the output for default tracing and debug.</p>
 
-<pre><code>        &gt;main
-        |   args: argv[2] = 3
-        |   &gt;factorial
-        |   |   find: find 3 factorial
-        |   |   &gt;factorial
-        |   |   |   find: find 2 factorial
-        |   |   |   &gt;factorial
-        |   |   |   |   find: find 1 factorial
-        |   |   |   |   result: result is 1
-        |   |   |   &lt;factorial
-        |   |   |   result: result is 2
-        |   |   &lt;factorial
-        |   |   result: result is 6
-        |   &lt;factorial
-        6
-        &lt;main
-        
-        Figure 8
-        factorial -#d,t 3 | perl -S dbugrpt</code></pre>
+<pre><code>  &gt;main
+  |   args: argv[2] = 3
+  |   &gt;factorial
+  |   |   find: find 3 factorial
+  |   |   &gt;factorial
+  |   |   |   find: find 2 factorial
+  |   |   |   &gt;factorial
+  |   |   |   |   find: find 1 factorial
+  |   |   |   |   result: result is 1
+  |   |   |   &lt;factorial
+  |   |   |   result: result is 2
+  |   |   &lt;factorial
+  |   |   result: result is 6
+  |   &lt;factorial
+  6
+  &lt;main
+  
+  Figure 8
+  factorial -#d,t 3 | perl -S dbugrpt</code></pre>
 
 <p>The output from the <code>DBUG_PRINT</code> macro is indented to match the trace output for the function in which the macro occurs. When debugging is enabled, but not trace, the output starts at the left margin, without indentation.</p>
 
@@ -914,14 +920,14 @@
 
 <p>To demonstrate selection of specific macros for output, figure 9 shows the result when the report program is invoked with the debug report option &quot;-d result&quot;.</p>
 
-<pre><code>        factorial: result: result is 1
-        factorial: result: result is 2
-        factorial: result: result is 6
-        factorial: result: result is 24
-        24
-        
-        Figure 9
-        factorial -#d 4 | perl -S dbugrpt -d result</code></pre>
+<pre><code>  factorial: result: result is 1
+  factorial: result: result is 2
+  factorial: result: result is 6
+  factorial: result: result is 24
+  24
+  
+  Figure 9
+  factorial -#d 4 | perl -S dbugrpt -d result</code></pre>
 
 <h2 id="Debugging-a-function">Debugging a function</h2>
 
@@ -929,16 +935,16 @@
 
 <p>This is accomplished with the &#39;f&#39; debug report option. Figure 10 is the output of the factorial program when run with the debug control string &quot;-#d&quot; and the report options &quot;-t factorial -FL&quot;. The &#39;F&#39; flag enables printing of the source file name and the &#39;L&#39; flag enables printing of the source file line number.</p>
 
-<pre><code>        factorial.c: 7: factorial: find: find 3 factorial
-        factorial.c: 7: factorial: find: find 2 factorial
-        factorial.c: 7: factorial: find: find 1 factorial
-        factorial.c: 11: factorial: result: result is 1
-        factorial.c: 11: factorial: result: result is 2
-        factorial.c: 11: factorial: result: result is 6
-        6
-        
-        Figure 10
-        factorial -#d 3 | perl -S dbugrpt -t factorial -FL</code></pre>
+<pre><code>  factorial.c: 7: factorial: find: find 3 factorial
+  factorial.c: 7: factorial: find: find 2 factorial
+  factorial.c: 7: factorial: find: find 1 factorial
+  factorial.c: 11: factorial: result: result is 1
+  factorial.c: 11: factorial: result: result is 2
+  factorial.c: 11: factorial: result: result is 6
+  6
+  
+  Figure 10
+  factorial -#d 3 | perl -S dbugrpt -t factorial -FL</code></pre>
 
 <p>The output in figure 10 shows that the &quot;find&quot; macro is in file &quot;factorial.c&quot; at source line 7 and the &quot;result&quot; macro is in the same file at source line 11.</p>
 
@@ -946,49 +952,49 @@
 
 <p>It is sometimes desirable to profile your program. The option &#39;g&#39; provides support for profiling. The debug reporting tool is able to print a profile report for each debugging context encountered as well as a total. Besides displaying timing results, also stack usage is printed. The stack usage is only determined for functions which have a dbug_enter/dbug_leave pair. Figure 11 is the output of the factorial program for determining the factorial of 3 when run with the debug control string &quot;-#t,D=1000,g&quot;.</p>
 
-<pre><code>        &gt;main
-        |   &gt;factorial
-        |   |   &gt;factorial
-        |   |   |   &gt;factorial
-        |   |   |   &lt;factorial
-        |   |   &lt;factorial
-        |   &lt;factorial
-        6
-        &lt;main
+<pre><code>  &gt;main
+  |   &gt;factorial
+  |   |   &gt;factorial
+  |   |   |   &gt;factorial
+  |   |   |   &lt;factorial
+  |   |   &lt;factorial
+  |   &lt;factorial
+  6
+  &lt;main
 
-        -------------------------------------------------------------------------------
-        Profile of execution for debug context &#39;factorial&#39;
-        Stack usage: 40 bytes
-        Execution times are in seconds
+  -------------------------------------------------------------------------------
+  Profile of execution for debug context &#39;factorial&#39;
+  Stack usage: 40 bytes
+  Execution times are in seconds
 
-                                 Calls           Time
-                                 -----           ----
-        function                 # calls % calls        time % time   time/call  weight
-        ======================== ======= ======= =========== ====== =========== =======
-        factorial                      3   75.00       5.000  71.74       1.667    5380
-        main                           1   25.00       1.970  28.26       1.970     706
-                                 ======= ======= =========== ======                    
-        Totals                         4  100.00       6.970 100.00
-        -------------------------------------------------------------------------------
+         Calls           Time
+         -----           ----
+  function                 # calls % calls        time % time   time/call  weight
+  ======================== ======= ======= =========== ====== =========== =======
+  factorial                      3   75.00       5.000  71.74       1.667    5380
+  main                           1   25.00       1.970  28.26       1.970     706
+         ======= ======= =========== ======                    
+  Totals                         4  100.00       6.970 100.00
+  -------------------------------------------------------------------------------
 
 
-        -------------------------------------------------------------------------------
-        Profile of execution for debug context &#39;total&#39;
-        Stack usage: 0 bytes
-        Execution times are in seconds
+  -------------------------------------------------------------------------------
+  Profile of execution for debug context &#39;total&#39;
+  Stack usage: 0 bytes
+  Execution times are in seconds
 
-                                 Calls           Time
-                                 -----           ----
-        function                 # calls % calls        time % time   time/call  weight
-        ======================== ======= ======= =========== ====== =========== =======
-        factorial                      3   75.00       5.000  71.74       1.667    5380
-        main                           1   25.00       1.970  28.26       1.970     706
-                                 ======= ======= =========== ======                    
-        Totals                         4  100.00       6.970 100.00
-        -------------------------------------------------------------------------------
+         Calls           Time
+         -----           ----
+  function                 # calls % calls        time % time   time/call  weight
+  ======================== ======= ======= =========== ====== =========== =======
+  factorial                      3   75.00       5.000  71.74       1.667    5380
+  main                           1   25.00       1.970  28.26       1.970     706
+         ======= ======= =========== ======                    
+  Totals                         4  100.00       6.970 100.00
+  -------------------------------------------------------------------------------
 
-        Figure 11
-        factorial -#t,D=1000,g 3 | perl -S dbugrpt</code></pre>
+  Figure 11
+  factorial -#t,D=1000,g 3 | perl -S dbugrpt</code></pre>
 
 <p>As you can see, it&#39;s quite self-evident. The &#39;weight&#39; column is a metric obtained by multiplying the percentage of the calls and the percentage of the time. Functions with higher &#39;weight&#39; benefit the most from being sped up.</p>
 
