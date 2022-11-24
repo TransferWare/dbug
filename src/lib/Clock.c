@@ -43,9 +43,13 @@
  *
  *      The <config.h> is needed for definitions of 
  *      
- *      - HAVE_CLOCK     Use clock()
- *      - HAVE_FTIME     Use ftime()
- *      - HAVE_GETRUSAGE Use getrusage()
+ *      - HAVE_CLOCK_GETTIME  Use clock_gettime()
+ *      - HAVE_GETTIMEOFDAY   Use gettimeofday()
+ *      - HAVE_CLOCK          Use clock()
+ *      - HAVE_FTIME          Use ftime()
+ *      - HAVE_GETRUSAGE      Use getrusage()
+ *
+ * See also https://levelup.gitconnected.com/8-ways-to-measure-execution-time-in-c-c-48634458d0f9
  *
  *  AUTHOR(S)
  *
@@ -76,6 +80,18 @@
 
 #if HAVE_STDIO_H
 # include <stdio.h>
+#endif
+
+#if HAVE_CLOCK_GETTIME
+# if HAVE_TIME_H
+#  include <time.h>
+# endif
+#endif
+
+#if HAVE_GETTIMEOFDAY
+# if HAVE_SYS_TIME_H
+#  include <sys/time.h>
+# endif
 #endif
 
 #if HAVE_CLOCK
@@ -147,7 +163,35 @@ Gmtime( struct tm *tm )
  * own for whatever system that you have.
  */
 
-#if HAVE_CLOCK
+#if HAVE_CLOCK_GETTIME
+
+double
+Clock(void)
+{
+  struct timespec tm;
+
+  (void) clock_gettime(CLOCK_REALTIME, &tm);
+
+  return (double) tm.tv_sec + (((double) tm.tv_nsec) * 1e-9);
+}
+
+#else /*  HAVE_CLOCK_GETTIME */
+
+# if HAVE_GETTIMEOFDAY
+
+double
+Clock(void)
+{
+  struct timeval tm;
+
+  (void) gettimeofday(&tm, NULL);
+
+  return (double) tm.tv_sec + (((double) tm.tv_usec) * 1e-6);
+}
+
+# else
+
+#  if HAVE_CLOCK
 
 double
 Clock(void)
@@ -155,9 +199,9 @@ Clock(void)
   return ((double) clock()) / ((double) CLOCKS_PER_SEC);
 }
 
-#else /* HAVE_CLOCK */
+#  else /* HAVE_CLOCK */
 
-# if HAVE_FTIME
+#   if HAVE_FTIME
 
 double
 Clock(void)
@@ -168,9 +212,9 @@ Clock(void)
   return ((double) tmp.time) + ((double) tmp.millitm) / 1000.000;
 }
 
-# else /* HAVE_FTIME */
+#   else /* HAVE_FTIME */
 
-#  if HAVE_GETRUSAGE
+#    if HAVE_GETRUSAGE
 
 /*
  * Definition of the Clock() routine for 4.3 BSD.
@@ -190,7 +234,7 @@ Clock(void)
   return ((double) ru.ru_utime.tv_sec) + ((double) ru.ru_utime.tv_usec) / 1000000;
 }
 
-#   else
+#     else
 
 double
 Clock(void)
@@ -198,8 +242,12 @@ Clock(void)
   return 0;
 }
 
-#  endif        /* HAVE_GETRUSAGE */
+#    endif /* HAVE_GETRUSAGE */
 
-# endif /* HAVE_FTIME */
+#   endif /* HAVE_FTIME */
 
-#endif /* HAVE_CLOCK */
+#  endif /* HAVE_CLOCK */
+
+# endif /* HAVE_GETTIMEOFDAY */
+
+#endif /* HAVE_CLOCK_GETTIME */

@@ -16,14 +16,16 @@
 use Getopt::Std;
 use strict;
 use Carp qw(carp);
+use warnings;
 
-getopts('d:FhiLnNPt:Tv');
+getopts('d:DFhiLnNPt:Tv');
 
 my %break_points_allowed = ();
 for (split( /,/, ( defined($::opt_d) ? $::opt_d : "" ) )) { 
     $break_points_allowed{$_} = 1; 
 }
 my $nr_break_points_allowed = keys %break_points_allowed;
+my $force_done = $::opt_D;
 my $print_source_file = $::opt_F;
 my $print_help = $::opt_h;
 my $print_process_id = $::opt_i;
@@ -48,6 +50,7 @@ if ( $print_help ) {
 }
 
 undef $::opt_d;
+undef $::opt_D;
 undef $::opt_F;
 undef $::opt_h;
 undef $::opt_i;
@@ -194,6 +197,19 @@ while (<STDIN>) {
     }
 }
 
+# GJP 2022-11-24  The Perl script dbugrpt does not run.
+# https://github.com/TransferWare/dbug/issues/3
+
+if (defined($force_done) && $force_done) {
+    foreach my $dbug_uid (keys %dbug_uid_list) {
+        if ( defined( $dbug_uid_list{ $dbug_uid } ) ) {
+            $dbug_uid_list{ $dbug_uid }->done( 0, 0 );
+            $nr_done++;
+            undef $dbug_uid_list{ $dbug_uid };
+        }
+    }
+}
+
 # print totals unless done has never been called
 
 $dbug_uid_tot->done(0, 0)
@@ -213,6 +229,9 @@ Usage: dbugrpt <options>
                        break point which is in the list of specified
                        break points (separated by a comma).
                        A null list means all break points are enabled.
+
+  -D                   Emulate a done() call (if missing) at the end of each
+                       debugging context in order to print totals.
 
   -F                   Mark each debugger output line with the name of the
                        source file containing the macro causing the output.

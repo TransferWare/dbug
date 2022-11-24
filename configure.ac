@@ -17,8 +17,8 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-AC_REVISION([2021-08-02])
-AC_INIT([dbug],[6.0.0],[gert.jan.paulissen@gmail.com])
+AC_REVISION([2022-11-24])
+AC_INIT([dbug],[6.1.0],[gert.jan.paulissen@gmail.com])
 
 # version check
 if test -f "$srcdir/VERSION"
@@ -120,9 +120,9 @@ AC_CHECK_FUNCS(
   ,
   [AC_MSG_ERROR([Functions vfprintf(), memcmp(), memset(), strchr() and strpbrk() must be available.])]
 )
-# Check for time related functions. One of them must be available (check clock first since t conforms to ISO C90)
+# Check for time related functions. One of them must be available (check clock first since it conforms to ISO C90)
 AC_CHECK_FUNCS(
-  [clock ftime getrusage],
+  [clock_gettime gettimeofday clock ftime getrusage],
   [break]
 )
 # Check the Posix threads pthread_key_create() and flockfile() function.

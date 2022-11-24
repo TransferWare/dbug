@@ -1,6 +1,6 @@
 # Changelog
 
-Copyright (C) 1999-2021 G.J. Paulissen 
+Copyright (C) 1999-2022 G.J. Paulissen 
 
 
 All notable changes to this project will be documented in this file.
@@ -8,7 +8,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+Types of changes:
+- *Added* for new features.
+- *Changed* for changes in existing functionality.
+- *Deprecated* for soon-to-be removed features.
+- *Removed* for now removed features.
+- *Fixed* for any bug fixes.
+- *Security* in case of vulnerabilities.
+
 Please see the [DBUG issue queue](https://github.com/TransferWare/dbug/issues) for issues.
+
+## [6.1.0] -  2022-11-24
+
+### Fixed
+
+- [The Perl script dbugrpt does not run.](https://github.com/TransferWare/dbug/issues/3)
+- [The Unix clock function calculates the CPU time, not the wall clock time.](https://github.com/TransferWare/dbug/issues/4)
 
 ## [6.0.0] -  2021-08-02
 
