@@ -18,6 +18,12 @@ Types of changes:
 
 Please see the [DBUG issue queue](https://github.com/TransferWare/dbug/issues) for issues.
 
+## [6.1.1] -  2022-11-25
+
+### Fixed
+
+- [The number of digits after the radix for a timestamp is not correct.](https://github.com/TransferWare/dbug/issues/5)
+
 ## [6.1.0] -  2022-11-24
 
 ### Fixed

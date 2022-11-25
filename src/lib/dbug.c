@@ -411,7 +411,7 @@ typedef struct {
 /* GMT in YYYYMMDDhhmmss format */
 #define DATE_FMT "%04d%02d%02d%02d%02d%02d"
 #define SEQ_FMT "%05hu"
-#define TIME_FMT "%015.3f"
+#define TIME_FMT "%015.*f"
 #define FILE_FMT "%s"
 #define FUNCTION_FMT "%s"
 #define LINE_FMT "%ld"
@@ -3408,6 +3408,7 @@ dbug_enter_ctx( const dbug_ctx_t dbug_ctx, const char *file, const char *functio
                               dbug_ctx->separator,
                               (long)dbug_ctx->stack.count,
                               dbug_ctx->separator,
+                              NR_DIGITS_AFTER_RADIX,
                               time );
               FFLUSH( dbug_ctx->file->fptr );
               DBUGUNLOCKFILE( dbug_ctx->file );
@@ -3581,6 +3582,7 @@ dbug_leave_ctx( const dbug_ctx_t dbug_ctx, const int line, int *dbug_level )
                               dbug_ctx->separator,
                               (long)dbug_ctx->stack.count,
                               dbug_ctx->separator,
+                              NR_DIGITS_AFTER_RADIX,
                               time );
               FFLUSH(dbug_ctx->file->fptr);
               DBUGUNLOCKFILE( dbug_ctx->file );

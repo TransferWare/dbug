@@ -67,38 +67,43 @@ $(TESTS): Makefile
 CLEANFILES += $(TESTS) $(TESTS:=.log) test6.lis
 
 test1:
-	$(FACTORIAL) 1 2 3 4 5 > $@.log
-	$(DIFF) $@.log $(doc_srcdir)/$@.ref
+	$(FACTORIAL) 1 2 3 4 5 > $@.txt
+	$(DIFF) $@.txt $(doc_srcdir)/$@.ref
 	@echo : > $@
 	@chmod +x $@
 
 test2:	$(DBUGRPT)
-	$(FACTORIAL) -#t 3 2 | @PERL@ $(DBUGRPT) > $@.log
-	$(DIFF) $@.log $(doc_srcdir)/$@.ref
+	$(FACTORIAL) -#t 3 2 > $@.log
+	@PERL@ $(DBUGRPT) < $@.log > $@.txt
+	$(DIFF) $@.txt $(doc_srcdir)/$@.ref
 	@echo : > $@
 	@chmod +x $@
 
 test3:  $(DBUGRPT)
-	$(FACTORIAL) -#d,t 3 | @PERL@ $(DBUGRPT) > $@.log
-	$(DIFF) $@.log $(doc_srcdir)/$@.ref
+	$(FACTORIAL) -#d,t 3 > $@.log
+	@PERL@ $(DBUGRPT) < $@.log > $@.txt
+	$(DIFF) $@.txt $(doc_srcdir)/$@.ref
 	@echo : > $@
 	@chmod +x $@
 
 test4:  $(DBUGRPT)
-	$(FACTORIAL) -#d 4 | @PERL@ $(DBUGRPT) -d result > $@.log
-	$(DIFF) $@.log $(doc_srcdir)/$@.ref
+	$(FACTORIAL) -#d 4 > $@.log
+	@PERL@ $(DBUGRPT) -d result < $@.log > $@.txt
+	$(DIFF) $@.txt $(doc_srcdir)/$@.ref
 	@echo : > $@
 	@chmod +x $@
 
 test5:  $(DBUGRPT)
 # GJP 19-3-2003 Ignore changes due to differences between source and build locations.
-	$(FACTORIAL) -#d 3 | @PERL@ $(DBUGRPT) -t factorial -FL | sed -e 's!$(top_srcdir)/doc/!!g' > $@.log
-	$(DIFF) $@.log $(doc_srcdir)/$@.ref
+	$(FACTORIAL) -#d 3 > $@.log
+	cat $@.log | @PERL@ $(DBUGRPT) -t factorial -FL | sed -e 's!$(top_srcdir)/doc/!!g' > $@.txt
+	$(DIFF) $@.txt $(doc_srcdir)/$@.ref
 	@echo : > $@
 	@chmod +x $@
 
 test6:  $(DBUGRPT)
-	$(FACTORIAL) -#t,D=1000,g 3 | @PERL@ $(DBUGRPT) > $@.log
-	@PERL@ $(srcdir)/diffrex.pl $(srcdir)/test6.ref $@.log
+	$(FACTORIAL) -#t,D=1000,g 3 > $@.log
+	@PERL@ $(DBUGRPT) < $@.log > $@.txt
+	@PERL@ $(srcdir)/diffrex.pl $(srcdir)/test6.ref $@.txt
 	@echo : > $@
 	@chmod +x $@

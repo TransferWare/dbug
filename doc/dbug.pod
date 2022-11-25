@@ -329,7 +329,7 @@ EX: #define DBUG_OFF
 
 =item DBUG_INIT and DBUG_INIT_CTX
 
-Initialises a debugger context using the debug control string passed as the
+Initializes a debugger context using the debug control string passed as the
 macro argument. The name supplied may be NULL. In that case a name for the
 debugging context is generated. DBUG_INIT uses an internal debugging
 context. In a multi-threaded environment (POSIX threads), thread specific data
@@ -350,7 +350,7 @@ EX: DBUG_PUSH ("O,dbug.log:d:t");
 
 =item DBUG_DONE and DBUG_DONE_CTX
 
-Destroys the debugging context as initialised by DBUG_INIT. The DBUG_DONE
+Destroys the debugging context as initialized by DBUG_INIT. The DBUG_DONE
 macro has no arguments. The DBUG_DONE_CTX has the debugging context as parameter.
 
 EX: DBUG_DONE ();
@@ -363,17 +363,17 @@ Is the same as C<DBUG_DONE>.
 
 =item DBUG_ENTER and DBUG_ENTER_CTX
 
-Used to tell the runtime support module the name of the function being
+Used to tell the run-time support module the name of the function being
 entered. The DBUG_ENTER must be supplied the name of the function entered. The
 DBUG_INIT_CTX needs a debugging context. The DBUG_ENTER macro must precede all
 executable lines in the function just entered, and must come after all local
 declarations. Each DBUG_ENTER macro must have a matching DBUG_LEAVE macro at
 the function exit points. DBUG_ENTER macros used without a matching DBUG_LEAVE
-macro will cause warning messages from the I<dbug> package runtime support
+macro will cause warning messages from the I<dbug> package run-time support
 module.
 
 Before a DBUG_ENTER call can be executed, the (internal) debugging context
-must have been initialised via C<DBUG_INIT>.
+must have been initialized via C<DBUG_INIT>.
 
 EX: DBUG_ENTER ("main");
 
@@ -416,7 +416,7 @@ EX: char buf[] = "abcde"; DBUG_DUMP("type", buf, strlen(buf) );
 
 =item DBUG_EXECUTE(break_point, a1)
 
-This macro is preserved for backwards compability. It does nothing. 
+This macro is preserved for backwards compatibility. It does nothing. 
 
 =item DBUG_PROCESS(a1)
 
@@ -425,15 +425,15 @@ context. Use C<DBUG_INIT> to specify the name.
 
 =item DBUG_FILE
 
-Same as stderr. This macro is preserved for backwards compability.
+Same as stderr. This macro is preserved for backwards compatibility.
 
 =item DBUG_RETURN(a1)
 
-Performs a C<DBUG_LEAVE> and returns parameter I<a1>. This macro is preserved for backwards compability.
+Performs a C<DBUG_LEAVE> and returns parameter I<a1>. This macro is preserved for backwards compatibility.
 
 =item DBUG_VOID_RETURN
 
-Performs a C<DBUG_LEAVE> and returns. This macro is preserved for backwards compability.
+Performs a C<DBUG_LEAVE> and returns. This macro is preserved for backwards compatibility.
 
 =back
 
@@ -460,7 +460,7 @@ See C<DBUG_DONE>.
 
 =item dbug_enter_ctx and dbug_enter
 
-Used to tell the runtime support module the name of the function being
+Used to tell the run-time support module the name of the function being
 entered, the name of the file, the line number and a nesting level. The
 nesting level is also used for determining how much stack space is used. See
 also C<DBUG_ENTER>.
@@ -638,7 +638,7 @@ This is the output of the I<DBUG> library.
 
 =item *
 
-Output of DBUG_INIT, DBUG_INIT_CTX, dbug_init and dbug_init_ctx
+Output of DBUG_INIT, DBUG_INIT_CTX, dbug_init and dbug_init_ctx.
 
 A line containing 'DBUG', the UID (unique id) of dbug context, date (in GMT YYYYMMDDhhmmss
 format), a sequence number, 'I', major version, minor version,
@@ -652,7 +652,7 @@ DBUG#<dbug uid>#<date>#<seq>#I#<major version>.<minor version>.<teeny version>#<
 
 =item *
 
-Output of DBUG_DONE, DBUG_DONE_CTX, dbug_done and dbug_done_ctx
+Output of DBUG_DONE, DBUG_DONE_CTX, dbug_done and dbug_done_ctx.
 
 A line containing 'DBUG', the UID of the dbug context, date (in GMT YYYYMMDDhhmmss
 format), a sequence number, 'D', the maximum number of
@@ -664,11 +664,20 @@ DBUG#<dbug uid>#<date>#<seq>#D#<maximum number of functions on the stack>#<stack
 
 =item *
 
-Output of DBUG_ENTER, DBUG_ENTER_CTX, dbug_enter and dbug_enter_ctx
+Output of DBUG_ENTER, DBUG_ENTER_CTX, dbug_enter and dbug_enter_ctx.
 
 A line consisting of 'DBUG', the UID of dbug context, date (in GMT YYYYMMDDhhmmss
 format), a sequence number, 'E', file, function, line, level
-and time (-1 if profiling is off else in milliseconds) is printed.
+and the (wall) time will be printed.
+
+The (wall) time is printed as a double using the "printf" library function
+format "%015.*f" where the start ('*') is for the variable for the number of
+digits after the radix character (.). The number of digits depends on the
+clock library function resolution.  The clock library function is one of the
+library functions "clock_gettime", "gettimeofday", "getrusage", "ftime" or
+"clock".
+
+If profiling is off, the (wall) time equals -1.
 
 This is the line printed: 
 
@@ -676,11 +685,13 @@ DBUG#<dbug uid>#<date>#<seq>#E#<file>#<function>#<line>#<level>#<time>
 
 =item *
 
-Output of DBUG_LEAVE, DBUG_LEAVE_CTX, dbug_leave and dbug_leave_ctx
+Output of DBUG_LEAVE, DBUG_LEAVE_CTX, dbug_leave and dbug_leave_ctx.
 
 A line consisting of 'DBUG', the UID of dbug context, date (in GMT YYYYMMDDhhmmss
 format), a sequence number, 'L', file, function, line, level
-and time (-1 if profiling is off else in milliseconds) is printed.
+and (wall) time will be printed.
+
+See for an explanation of (wall) time above.
 
 This is the line printed: 
 
@@ -688,7 +699,7 @@ DBUG#<dbug uid>#<date>#<seq>#L#<file>#<function>#<line>#<level>#<time>
 
 =item *
 
-Output of DBUG_PRINT, DBUG_PRINT_CTX, dbug_print and dbug_print_ctx
+Output of DBUG_PRINT, DBUG_PRINT_CTX, dbug_print and dbug_print_ctx.
 
 A line consisting of 'DBUG', the UID of dbug context, date (in GMT YYYYMMDDhhmmss
 format), a sequence number, 'P', file, function, line, level,
@@ -866,7 +877,7 @@ line of the form:
   factorial -#d,t 1 2 3 | perl -S dbugrpt
 
 The B<main> function recognizes the "-#d,t" string as a debugger control
-string, and passes the debugger arguments ("d,t") to the I<dbug> runtime
+string, and passes the debugger arguments ("d,t") to the I<dbug> run-time
 support routines via the C<DBUG_INIT> macro. This particular string enables
 output from the C<DBUG_PRINT> macro with the 'd' flag and enables function
 tracing with the 't' flag. The factorial function is then called three times,
@@ -925,7 +936,7 @@ with the command:
 
   cc -o factorial main.c factorial.c -ldbug
 
-The "-ldbug" argument tells the loader to link in the runtime support
+The "-ldbug" argument tells the loader to link in the run-time support
 modules for the I<dbug> package. 
 
 =head2 No debugging and/or tracing
@@ -1155,9 +1166,9 @@ A related usage is regression testing where the execution of a current
 version is compared against executions of previous versions. This is
 most useful when there are only minor changes.
 
-=head2 Compability
+=head2 Compatibility
 
-The orginal I<DBUG> library written by Fred Fish differs from the current
+The original I<DBUG> library written by Fred Fish differs from the current
 library. I tried to keep it code compatible, but I have made some minor
 changes. Keep in mind that the original library has been written in the 80's. 
 
@@ -1169,9 +1180,9 @@ These are the differences:
 
 I have converted the source to ANSI C since this is the standard now.
 
-=item Posix threads
+=item POSIX threads
 
-I have modified the library to make use of Posix threads. All macro's (and
+I have modified the library to make use of POSIX threads. All macro's (and
 functions) have now reentrant functions with the extension _ctx. The standard
 functions (without _ctx) are also thread-safe because they use thread-specific
 data (pthread_getspecific).

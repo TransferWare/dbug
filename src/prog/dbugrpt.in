@@ -41,6 +41,8 @@ for (split( /,/, ( defined($::opt_t) ? $::opt_t : "" ) )) {
 }
 my $nr_functions_allowed = keys %functions_allowed;
 
+my $DEBUG = ( exists($ENV{DEBUG}) && $ENV{DEBUG} > 0 ? 1 : 0 );
+
 if ( $print_help ) {
     &usage;
     exit;
@@ -755,6 +757,9 @@ sub totals {
         # issue 1061551 Timing incorrect error
         # Since not all calls may be measured or the time measurement overhead is not
         # insignificant the missing time is assigned to function UNKNOWN.
+
+        print STDERR "total time (", $tot_time, ") != end time (", $obj->end_time(), ") - start time (", $obj->start_time(), ")"
+              if ($DEBUG);
 
         my ($file, $function, $level, $date) = (undef, '*** UNKNOWN ***', 1, undef);
 
