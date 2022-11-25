@@ -73,37 +73,37 @@ test1:
 	@chmod +x $@
 
 test2:	$(DBUGRPT)
-	$(FACTORIAL) -#t 3 2 > $@.log
-	@PERL@ $(DBUGRPT) < $@.log > $@.txt
+	$(FACTORIAL) -#t 3 2 > $@.out
+	@PERL@ $(DBUGRPT) < $@.out > $@.txt
 	$(DIFF) $@.txt $(doc_srcdir)/$@.ref
 	@echo : > $@
 	@chmod +x $@
 
 test3:  $(DBUGRPT)
-	$(FACTORIAL) -#d,t 3 > $@.log
-	@PERL@ $(DBUGRPT) < $@.log > $@.txt
+	$(FACTORIAL) -#d,t 3 > $@.out
+	@PERL@ $(DBUGRPT) < $@.out > $@.txt
 	$(DIFF) $@.txt $(doc_srcdir)/$@.ref
 	@echo : > $@
 	@chmod +x $@
 
 test4:  $(DBUGRPT)
-	$(FACTORIAL) -#d 4 > $@.log
-	@PERL@ $(DBUGRPT) -d result < $@.log > $@.txt
+	$(FACTORIAL) -#d 4 > $@.out
+	@PERL@ $(DBUGRPT) -d result < $@.out > $@.txt
 	$(DIFF) $@.txt $(doc_srcdir)/$@.ref
 	@echo : > $@
 	@chmod +x $@
 
 test5:  $(DBUGRPT)
 # GJP 19-3-2003 Ignore changes due to differences between source and build locations.
-	$(FACTORIAL) -#d 3 > $@.log
-	cat $@.log | @PERL@ $(DBUGRPT) -t factorial -FL | sed -e 's!$(top_srcdir)/doc/!!g' > $@.txt
+	$(FACTORIAL) -#d 3 > $@.out
+	cat $@.out | @PERL@ $(DBUGRPT) -t factorial -FL | sed -e 's!$(top_srcdir)/doc/!!g' > $@.txt
 	$(DIFF) $@.txt $(doc_srcdir)/$@.ref
 	@echo : > $@
 	@chmod +x $@
 
 test6:  $(DBUGRPT)
-	$(FACTORIAL) -#t,D=1000,g 3 > $@.log
-	@PERL@ $(DBUGRPT) < $@.log > $@.txt
+	$(FACTORIAL) -#t,D=1000,g 3 > $@.out
+	@PERL@ $(DBUGRPT) < $@.out > $@.txt
 	@PERL@ $(srcdir)/diffrex.pl $(srcdir)/test6.ref $@.txt
 	@echo : > $@
 	@chmod +x $@

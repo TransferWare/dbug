@@ -295,11 +295,10 @@ use Carp qw(carp);
 use warnings;
 use bignum;
 
-use constant MAX_PER_SEC => 1; # 1000000000;
 use constant PERC_FMT => '%3.2f';
 
 sub TIME_DIGITS {
-    return int(log($main::resolution) / log(10));
+    return ( $main::resolution > 0 ? int(log($main::resolution) / log(10)) : 0 );
 }
 
 sub TIME_FMT {
@@ -738,11 +737,11 @@ $total_line1 . "\n" .
                 $g_perc_calls = ($g_tot_calls != 0 ? sprintf( PERC_FMT, ($g_calls * 100) / $g_tot_calls ): 0);
                 $g_weight = int($g_perc_time * $g_perc_calls);
     # Sourceforge issue 1174400
-                $g_avg_time_per_call = sprintf( TIME_FMT, $g_time / ( $g_calls * MAX_PER_SEC ) );
-                $g_min_time_per_call = ( defined($min_time) ? sprintf( TIME_FMT, $min_time / MAX_PER_SEC ) : 0 );
-                $g_max_time_per_call = ( defined($max_time) ? sprintf( TIME_FMT, $max_time / MAX_PER_SEC ) : 0 );
+                $g_avg_time_per_call = sprintf( TIME_FMT, $g_time / $g_calls );
+                $g_min_time_per_call = ( defined($min_time) ? sprintf( TIME_FMT, $min_time ) : 0 );
+                $g_max_time_per_call = ( defined($max_time) ? sprintf( TIME_FMT, $max_time ) : 0 );
             }
-            $g_time = sprintf( TIME_FMT, $g_time / MAX_PER_SEC );
+            $g_time = sprintf( TIME_FMT, $g_time );
     
             write;
         }
@@ -756,7 +755,7 @@ $total_line1 . "\n" .
         $g_function = "Totals";
         $g_calls = $g_tot_calls;
         $g_perc_calls = '100.00';
-        $g_time = sprintf( TIME_FMT, $g_tot_time / MAX_PER_SEC );
+        $g_time = sprintf( TIME_FMT, $g_tot_time );
         $g_perc_time = '100.00';
         $g_avg_time_per_call = '';
         $g_min_time_per_call = '';
@@ -841,9 +840,6 @@ sub enter {
     } 
 
     if ($obj->is_profile_function($function)) {
-        if ( $obj->version ge '3.0.0' ) {
-            $time *= MAX_PER_SEC;
-        }
         # set start time only first time
         $obj->start_time($time) unless defined($obj->start_time());
 
@@ -861,9 +857,6 @@ sub leave {
     } 
 
     if ($obj->is_profile_function($function)) {
-        if ( $obj->version ge '3.0.0' ) {
-            $leave_time *= MAX_PER_SEC;
-        }           
         # set end time always
         $obj->end_time($leave_time);
 
@@ -874,7 +867,7 @@ sub leave {
         print("<$function");
         if ( defined($time_incl) ) {
             printf( ';  elapsed time: ' . TIME_FMT . ' (incl.), ' . TIME_FMT . ' (excl.)',
-                    $time_incl / MAX_PER_SEC, $time_excl / MAX_PER_SEC );
+                    $time_incl, $time_excl );
         }
         print("\n");
     }

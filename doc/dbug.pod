@@ -780,10 +780,15 @@ with program output.
 Mark each debugger output line with the name of the debugging context as
 supplied to C<DBUG_INIT>.
 
+=item r[<resolution>]
+
+The time resolution. A value of 1000 (default) means that time is printed in
+milliseconds.
+
 =item t[<functions>] 
 
-Limit debugger and profiling actions to the specified list of comma separated functions. A
-null list of functions implies that all functions are selected.
+Limit debugger and profiling actions to the specified list of comma separated
+functions. A null list of functions implies that all functions are selected.
 
 =item T
 
