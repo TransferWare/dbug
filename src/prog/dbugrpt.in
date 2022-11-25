@@ -791,8 +791,6 @@ sub totals {
         # Since not all calls may be measured or the time measurement overhead is not
         # insignificant the missing time is assigned to function UNKNOWN.
 
-        debug("total time (", $tot_time, ") != end time (", $obj->end_time(), ") - start time (", $obj->start_time(), ")");
-
         my ($file, $function, $level, $date) = (undef, '*** UNKNOWN ***', 1, undef);
 
         $obj->{CALLS}{ $function } = undef;
