@@ -48,7 +48,7 @@
   <li><a href="#NOTES">NOTES</a>
     <ul>
       <li><a href="#Tips">Tips</a></li>
-      <li><a href="#Compability">Compability</a></li>
+      <li><a href="#Compatibility">Compatibility</a></li>
     </ul>
   </li>
   <li><a href="#CAVEATS">CAVEATS</a></li>
@@ -264,7 +264,7 @@
 <dt id="DBUG_INIT-and-DBUG_INIT_CTX">DBUG_INIT and DBUG_INIT_CTX</dt>
 <dd>
 
-<p>Initialises a debugger context using the debug control string passed as the macro argument. The name supplied may be NULL. In that case a name for the debugging context is generated. DBUG_INIT uses an internal debugging context. In a multi-threaded environment (POSIX threads), thread specific data is used for DBUG_INIT.</p>
+<p>Initializes a debugger context using the debug control string passed as the macro argument. The name supplied may be NULL. In that case a name for the debugging context is generated. DBUG_INIT uses an internal debugging context. In a multi-threaded environment (POSIX threads), thread specific data is used for DBUG_INIT.</p>
 
 <p>EX: DBUG_INIT (&quot;Odbug.log,d,t&quot;, NULL);</p>
 
@@ -284,7 +284,7 @@
 <dt id="DBUG_DONE-and-DBUG_DONE_CTX">DBUG_DONE and DBUG_DONE_CTX</dt>
 <dd>
 
-<p>Destroys the debugging context as initialised by DBUG_INIT. The DBUG_DONE macro has no arguments. The DBUG_DONE_CTX has the debugging context as parameter.</p>
+<p>Destroys the debugging context as initialized by DBUG_INIT. The DBUG_DONE macro has no arguments. The DBUG_DONE_CTX has the debugging context as parameter.</p>
 
 <p>EX: DBUG_DONE ();</p>
 
@@ -300,9 +300,9 @@
 <dt id="DBUG_ENTER-and-DBUG_ENTER_CTX">DBUG_ENTER and DBUG_ENTER_CTX</dt>
 <dd>
 
-<p>Used to tell the runtime support module the name of the function being entered. The DBUG_ENTER must be supplied the name of the function entered. The DBUG_INIT_CTX needs a debugging context. The DBUG_ENTER macro must precede all executable lines in the function just entered, and must come after all local declarations. Each DBUG_ENTER macro must have a matching DBUG_LEAVE macro at the function exit points. DBUG_ENTER macros used without a matching DBUG_LEAVE macro will cause warning messages from the <i>dbug</i> package runtime support module.</p>
+<p>Used to tell the run-time support module the name of the function being entered. The DBUG_ENTER must be supplied the name of the function entered. The DBUG_INIT_CTX needs a debugging context. The DBUG_ENTER macro must precede all executable lines in the function just entered, and must come after all local declarations. Each DBUG_ENTER macro must have a matching DBUG_LEAVE macro at the function exit points. DBUG_ENTER macros used without a matching DBUG_LEAVE macro will cause warning messages from the <i>dbug</i> package run-time support module.</p>
 
-<p>Before a DBUG_ENTER call can be executed, the (internal) debugging context must have been initialised via <code>DBUG_INIT</code>.</p>
+<p>Before a DBUG_ENTER call can be executed, the (internal) debugging context must have been initialized via <code>DBUG_INIT</code>.</p>
 
 <p>EX: DBUG_ENTER (&quot;main&quot;);</p>
 
@@ -340,7 +340,7 @@
 <dt id="DBUG_EXECUTE-break_point-a1">DBUG_EXECUTE(break_point, a1)</dt>
 <dd>
 
-<p>This macro is preserved for backwards compability. It does nothing.</p>
+<p>This macro is preserved for backwards compatibility. It does nothing.</p>
 
 </dd>
 <dt id="DBUG_PROCESS-a1">DBUG_PROCESS(a1)</dt>
@@ -352,19 +352,19 @@
 <dt id="DBUG_FILE">DBUG_FILE</dt>
 <dd>
 
-<p>Same as stderr. This macro is preserved for backwards compability.</p>
+<p>Same as stderr. This macro is preserved for backwards compatibility.</p>
 
 </dd>
 <dt id="DBUG_RETURN-a1">DBUG_RETURN(a1)</dt>
 <dd>
 
-<p>Performs a <code>DBUG_LEAVE</code> and returns parameter <i>a1</i>. This macro is preserved for backwards compability.</p>
+<p>Performs a <code>DBUG_LEAVE</code> and returns parameter <i>a1</i>. This macro is preserved for backwards compatibility.</p>
 
 </dd>
 <dt id="DBUG_VOID_RETURN">DBUG_VOID_RETURN</dt>
 <dd>
 
-<p>Performs a <code>DBUG_LEAVE</code> and returns. This macro is preserved for backwards compability.</p>
+<p>Performs a <code>DBUG_LEAVE</code> and returns. This macro is preserved for backwards compatibility.</p>
 
 </dd>
 </dl>
@@ -396,7 +396,7 @@
 <dt id="dbug_enter_ctx-and-dbug_enter">dbug_enter_ctx and dbug_enter</dt>
 <dd>
 
-<p>Used to tell the runtime support module the name of the function being entered, the name of the file, the line number and a nesting level. The nesting level is also used for determining how much stack space is used. See also <code>DBUG_ENTER</code>.</p>
+<p>Used to tell the run-time support module the name of the function being entered, the name of the file, the line number and a nesting level. The nesting level is also used for determining how much stack space is used. See also <code>DBUG_ENTER</code>.</p>
 
 <p>EX: dbug_enter( __FILE__, &quot;main&quot;, __LINE__, &amp;dbug_level );</p>
 
@@ -593,7 +593,7 @@
 
 <ul>
 
-<li><p>Output of DBUG_INIT, DBUG_INIT_CTX, dbug_init and dbug_init_ctx</p>
+<li><p>Output of DBUG_INIT, DBUG_INIT_CTX, dbug_init and dbug_init_ctx.</p>
 
 <p>A line containing &#39;DBUG&#39;, the UID (unique id) of dbug context, date (in GMT YYYYMMDDhhmmss format), a sequence number, &#39;I&#39;, major version, minor version, teeny version, name, address of dbug context, process id and the flags will be printed. Flags is a bit masked integer where tracing equals 1 (see <code>t</code>), debugging equals 2 (see <code>d</code>) and profiling equals 4 (see <code>g</code>).</p>
 
@@ -602,7 +602,7 @@
 <p>DBUG#&lt;dbug uid&gt;#&lt;date&gt;#&lt;seq&gt;#I#&lt;major version&gt;.&lt;minor version&gt;.&lt;teeny version&gt;#&lt;name&gt;#&lt;dbug context&gt;#&lt;process id&gt;#&lt;flags&gt;</p>
 
 </li>
-<li><p>Output of DBUG_DONE, DBUG_DONE_CTX, dbug_done and dbug_done_ctx</p>
+<li><p>Output of DBUG_DONE, DBUG_DONE_CTX, dbug_done and dbug_done_ctx.</p>
 
 <p>A line containing &#39;DBUG&#39;, the UID of the dbug context, date (in GMT YYYYMMDDhhmmss format), a sequence number, &#39;D&#39;, the maximum number of functions on the stack and the stack usage will be printed.</p>
 
@@ -611,25 +611,31 @@
 <p>DBUG#&lt;dbug uid&gt;#&lt;date&gt;#&lt;seq&gt;#D#&lt;maximum number of functions on the stack&gt;#&lt;stack usage&gt;</p>
 
 </li>
-<li><p>Output of DBUG_ENTER, DBUG_ENTER_CTX, dbug_enter and dbug_enter_ctx</p>
+<li><p>Output of DBUG_ENTER, DBUG_ENTER_CTX, dbug_enter and dbug_enter_ctx.</p>
 
-<p>A line consisting of &#39;DBUG&#39;, the UID of dbug context, date (in GMT YYYYMMDDhhmmss format), a sequence number, &#39;E&#39;, file, function, line, level and time (-1 if profiling is off else in milliseconds) is printed.</p>
+<p>A line consisting of &#39;DBUG&#39;, the UID of dbug context, date (in GMT YYYYMMDDhhmmss format), a sequence number, &#39;E&#39;, file, function, line, level and the (wall) time will be printed.</p>
+
+<p>The (wall) time is printed as a double using the &quot;printf&quot; library function format &quot;%015.*f&quot; where the start (&#39;*&#39;) is for the variable for the number of digits after the radix character (.). The number of digits depends on the clock library function resolution. The clock library function is one of the library functions &quot;clock_gettime&quot;, &quot;gettimeofday&quot;, &quot;getrusage&quot;, &quot;ftime&quot; or &quot;clock&quot;.</p>
+
+<p>If profiling is off, the (wall) time equals -1.</p>
 
 <p>This is the line printed:</p>
 
 <p>DBUG#&lt;dbug uid&gt;#&lt;date&gt;#&lt;seq&gt;#E#&lt;file&gt;#&lt;function&gt;#&lt;line&gt;#&lt;level&gt;#&lt;time&gt;</p>
 
 </li>
-<li><p>Output of DBUG_LEAVE, DBUG_LEAVE_CTX, dbug_leave and dbug_leave_ctx</p>
+<li><p>Output of DBUG_LEAVE, DBUG_LEAVE_CTX, dbug_leave and dbug_leave_ctx.</p>
 
-<p>A line consisting of &#39;DBUG&#39;, the UID of dbug context, date (in GMT YYYYMMDDhhmmss format), a sequence number, &#39;L&#39;, file, function, line, level and time (-1 if profiling is off else in milliseconds) is printed.</p>
+<p>A line consisting of &#39;DBUG&#39;, the UID of dbug context, date (in GMT YYYYMMDDhhmmss format), a sequence number, &#39;L&#39;, file, function, line, level and (wall) time will be printed.</p>
+
+<p>See for an explanation of (wall) time above.</p>
 
 <p>This is the line printed:</p>
 
 <p>DBUG#&lt;dbug uid&gt;#&lt;date&gt;#&lt;seq&gt;#L#&lt;file&gt;#&lt;function&gt;#&lt;line&gt;#&lt;level&gt;#&lt;time&gt;</p>
 
 </li>
-<li><p>Output of DBUG_PRINT, DBUG_PRINT_CTX, dbug_print and dbug_print_ctx</p>
+<li><p>Output of DBUG_PRINT, DBUG_PRINT_CTX, dbug_print and dbug_print_ctx.</p>
 
 <p>A line consisting of &#39;DBUG&#39;, the UID of dbug context, date (in GMT YYYYMMDDhhmmss format), a sequence number, &#39;P&#39;, file, function, line, level, break point and user supplied parameters is printed. File and function may be empty when there is no active function context.</p>
 
@@ -711,6 +717,12 @@
 <p>Mark each debugger output line with the name of the debugging context as supplied to <code>DBUG_INIT</code>.</p>
 
 </dd>
+<dt id="r-resolution">r[&lt;resolution&gt;]</dt>
+<dd>
+
+<p>The time resolution. A value of 1000 (default) means that time is printed in milliseconds.</p>
+
+</dd>
 <dt id="t-functions">t[&lt;functions&gt;]</dt>
 <dd>
 
@@ -790,7 +802,7 @@
 
 <pre><code>  factorial -#d,t 1 2 3 | perl -S dbugrpt</code></pre>
 
-<p>The <b>main</b> function recognizes the &quot;-#d,t&quot; string as a debugger control string, and passes the debugger arguments (&quot;d,t&quot;) to the <i>dbug</i> runtime support routines via the <code>DBUG_INIT</code> macro. This particular string enables output from the <code>DBUG_PRINT</code> macro with the &#39;d&#39; flag and enables function tracing with the &#39;t&#39; flag. The factorial function is then called three times, with the arguments &quot;1&quot;, &quot;2&quot;, and &quot;3&quot;.</p>
+<p>The <b>main</b> function recognizes the &quot;-#d,t&quot; string as a debugger control string, and passes the debugger arguments (&quot;d,t&quot;) to the <i>dbug</i> run-time support routines via the <code>DBUG_INIT</code> macro. This particular string enables output from the <code>DBUG_PRINT</code> macro with the &#39;d&#39; flag and enables function tracing with the &#39;t&#39; flag. The factorial function is then called three times, with the arguments &quot;1&quot;, &quot;2&quot;, and &quot;3&quot;.</p>
 
 <p>Note that the DBUG_PRINT takes exactly <b>one</b> arguments enclosed in parentheses.</p>
 
@@ -835,7 +847,7 @@
 
 <pre><code>  cc -o factorial main.c factorial.c -ldbug</code></pre>
 
-<p>The &quot;-ldbug&quot; argument tells the loader to link in the runtime support modules for the <i>dbug</i> package.</p>
+<p>The &quot;-ldbug&quot; argument tells the loader to link in the run-time support modules for the <i>dbug</i> package.</p>
 
 <h2 id="No-debugging-and-or-tracing">No debugging and/or tracing</h2>
 
@@ -1006,9 +1018,9 @@
 
 <p>A related usage is regression testing where the execution of a current version is compared against executions of previous versions. This is most useful when there are only minor changes.</p>
 
-<h2 id="Compability">Compability</h2>
+<h2 id="Compatibility">Compatibility</h2>
 
-<p>The orginal <i>DBUG</i> library written by Fred Fish differs from the current library. I tried to keep it code compatible, but I have made some minor changes. Keep in mind that the original library has been written in the 80&#39;s.</p>
+<p>The original <i>DBUG</i> library written by Fred Fish differs from the current library. I tried to keep it code compatible, but I have made some minor changes. Keep in mind that the original library has been written in the 80&#39;s.</p>
 
 <p>These are the differences:</p>
 
@@ -1020,10 +1032,10 @@
 <p>I have converted the source to ANSI C since this is the standard now.</p>
 
 </dd>
-<dt id="Posix-threads">Posix threads</dt>
+<dt id="POSIX-threads">POSIX threads</dt>
 <dd>
 
-<p>I have modified the library to make use of Posix threads. All macro&#39;s (and functions) have now reentrant functions with the extension _ctx. The standard functions (without _ctx) are also thread-safe because they use thread-specific data (pthread_getspecific).</p>
+<p>I have modified the library to make use of POSIX threads. All macro&#39;s (and functions) have now reentrant functions with the extension _ctx. The standard functions (without _ctx) are also thread-safe because they use thread-specific data (pthread_getspecific).</p>
 
 </dd>
 <dt id="Delay">Delay</dt>
