@@ -86,27 +86,11 @@
 # if HAVE_TIME_H
 #  include <time.h>
 # endif
-#endif
-
-#if HAVE_GETTIMEOFDAY
+#elif HAVE_GETTIMEOFDAY
 # if HAVE_SYS_TIME_H
 #  include <sys/time.h>
 # endif
-#endif
-
-#if HAVE_CLOCK
-# if HAVE_TIME_H
-#  include <time.h>
-# endif
-#endif
-
-#if HAVE_FTIME
-# if HAVE_SYS_TIMEB_H
-#  include <sys/timeb.h>
-# endif
-#endif
-
-#if HAVE_GETRUSAGE
+#elif HAVE_GETRUSAGE
 # if HAVE_SYS_PARAM_H
 #  include <sys/param.h>
 # endif
@@ -118,6 +102,14 @@
 #   include <sys/resource.h>
 #  endif
 # endif /* __LCLINT__ */
+#elif HAVE_FTIME
+# if HAVE_SYS_TIMEB_H
+#  include <sys/timeb.h>
+# endif
+#elif HAVE_CLOCK
+# if HAVE_TIME_H
+#  include <time.h>
+# endif
 #endif
 
 #ifndef HAVE_PTHREAD_H
@@ -158,96 +150,102 @@ Gmtime( struct tm *tm )
 #endif
 }
 
-/*
- * Here we need the definitions of the clock routine.  Add your
- * own for whatever system that you have.
- */
+static int nr_digits( unsigned long nr )
+{
+  int count = 1;
+
+  while ( nr >= 10 )
+    {
+      count++;
+      nr = nr / 10;
+    }
+  return count;
+}
 
 #if HAVE_CLOCK_GETTIME
+ #define MAX_PER_SEC 1000000000
+#elif HAVE_GETTIMEOFDAY
+ #define MAX_PER_SEC 1000000
+#elif HAVE_GETRUSAGE
+ #define MAX_PER_SEC 1000000
+#elif HAVE_FTIME
+ #define MAX_PER_SEC 1000
+#elif HAVE_CLOCK
+ #define MAX_PER_SEC CLOCKS_PER_SEC
+#else
+ #error There is no wall time function.
+#endif
 
-double
-Clock(void)
+
+/* If MAX_PER_SEC is 1000 you may get .000 till .999, 
+   so subtract 1 from MAX_PER_SEC to count the number of digits necessary to print all combinations.
+*/
+
+int const NR_DIGITS_AFTER_RADIX = 
+#if   MAX_PER_SEC-1 < 10
+  1
+#elif MAX_PER_SEC-1 < 100
+  2
+#elif MAX_PER_SEC-1 < 1000
+  3
+#elif MAX_PER_SEC-1 < 10000
+  4
+#elif MAX_PER_SEC-1 < 100000
+  5
+#elif MAX_PER_SEC-1 < 1000000
+  6
+#elif MAX_PER_SEC-1 < 10000000
+  7
+#elif MAX_PER_SEC-1 < 100000000
+  8
+#elif MAX_PER_SEC-1 < 1000000000
+  9
+#else
+  0
+#endif
+  ;
+
+double Clock(void)
 {
+#if HAVE_CLOCK_GETTIME
+
   struct timespec tm;
 
-  (void) clock_gettime(CLOCK_REALTIME, &tm);
+  if ( clock_gettime(CLOCK_REALTIME, &tm) == 0 )
+    return ((double) tm.tv_sec) + (((double) tm.tv_nsec) / MAX_PER_SEC);
 
-  return (double) tm.tv_sec + (((double) tm.tv_nsec) * 1e-9);
-}
+#elif HAVE_GETTIMEOFDAY
 
-#else /*  HAVE_CLOCK_GETTIME */
-
-# if HAVE_GETTIMEOFDAY
-
-double
-Clock(void)
-{
   struct timeval tm;
 
-  (void) gettimeofday(&tm, NULL);
+  if ( gettimeofday(&tm, NULL) == 0 )
+    return ((double) tm.tv_sec) + (((double) tm.tv_usec) / MAX_PER_SEC);
 
-  return (double) tm.tv_sec + (((double) tm.tv_usec) * 1e-6);
-}
+#elif HAVE_GETRUSAGE
 
-# else
-
-#  if HAVE_CLOCK
-
-double
-Clock(void)
-{
-  return ((double) clock()) / ((double) CLOCKS_PER_SEC);
-}
-
-#  else /* HAVE_CLOCK */
-
-#   if HAVE_FTIME
-
-double
-Clock(void)
-{
-  struct timeb tmp;
-
-  (void) ftime( &tmp );
-  return ((double) tmp.time) + ((double) tmp.millitm) / 1000.000;
-}
-
-#   else /* HAVE_FTIME */
-
-#    if HAVE_GETRUSAGE
-
-/*
- * Definition of the Clock() routine for 4.3 BSD.
- */
-
-/*
- * Returns the user time in milliseconds used by this process so
- * far.
- */
-
-double
-Clock(void)
-{
   struct rusage ru;
 
-  getrusage(RUSAGE_SELF, &ru);
-  return ((double) ru.ru_utime.tv_sec) + ((double) ru.ru_utime.tv_usec) / 1000000;
+  if ( getrusage(RUSAGE_SELF, &ru) == 0 )
+    /* real (wall) time = user time + system time */
+    return ((double) (ru.ru_utime.tv_sec ru.ru_stime.tv_sec)) + (((double) (ru.ru_utime.tv_usec + ru.ru_stime.tv_usec)) / MAX_PER_SEC);
+
+#elif HAVE_FTIME
+
+  struct timeb tmp;
+
+  if ( ftime( &tmp ) == 0 )
+    return ((double) tmp.time) + (((double) tmp.millitm) / MAX_PER_SEC);
+
+#elif HAVE_CLOCK
+
+  /* On Windows this returns wall time but on Unix only CPU time */
+  clock_t result = clock();
+
+  if (result != -1)
+    return ((double) result) / MAX_PER_SEC;
+
+#endif
+
+  /* as a last resort return -1 to indicate that no timing result could be determined */
+  return -1;
 }
-
-#     else
-
-double
-Clock(void)
-{
-  return 0;
-}
-
-#    endif /* HAVE_GETRUSAGE */
-
-#   endif /* HAVE_FTIME */
-
-#  endif /* HAVE_CLOCK */
-
-# endif /* HAVE_GETTIMEOFDAY */
-
-#endif /* HAVE_CLOCK_GETTIME */

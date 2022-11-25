@@ -7,10 +7,13 @@
 #include <sys/time.h>
 #endif
 
-void
-Gmtime( struct tm *tm );
+extern
+int const NR_DIGITS_AFTER_RADIX;
 
-double
-Clock(void);
+extern
+void Gmtime( struct tm *tm );
+
+extern
+double Clock(void);
 
 #endif

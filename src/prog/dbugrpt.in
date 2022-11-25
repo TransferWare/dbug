@@ -17,8 +17,9 @@ use Getopt::Std;
 use strict;
 use Carp qw(carp);
 use warnings;
+use bignum;
 
-getopts('d:DFhiLnNPt:Tv');
+getopts('d:DFhiLnNPr:t:Tv');
 
 my %break_points_allowed = ();
 for (split( /,/, ( defined($::opt_d) ? $::opt_d : "" ) )) { 
@@ -33,13 +34,17 @@ my $print_source_line = $::opt_L;
 my $print_level = $::opt_n;
 my $print_sequence = $::opt_N;
 my $print_name = $::opt_P;
-my $print_date = $::opt_T;
-my $print_version = $::opt_v;
+# explicit since it will be used in other packages
+$main::resolution = ( defined($::opt_r) ? int($::opt_r) : 1000 );
 my %functions_allowed = ();
 for (split( /,/, ( defined($::opt_t) ? $::opt_t : "" ) )) { 
     $functions_allowed{$_} = 1; 
 }
+my $print_date = $::opt_T;
+my $print_version = $::opt_v;
 my $nr_functions_allowed = keys %functions_allowed;
+
+my $DEBUG = ( exists($ENV{DEBUG}) && $ENV{DEBUG} > 0 ? 1 : 0 );
 
 if ( $print_help ) {
     &usage;
@@ -58,6 +63,7 @@ undef $::opt_L;
 undef $::opt_n;
 undef $::opt_N;
 undef $::opt_P;
+undef $::opt_r;
 undef $::opt_t;
 undef $::opt_T;
 undef $::opt_v;
@@ -103,6 +109,8 @@ select STDOUT;
 while (<STDIN>) {
     s/(\n|\r)+//go; # remove linefeed and carriage return
 
+    debug("line $.:", $_);
+    
     $dbug_uid = '';
 
     if ( m/$dbug_init_fmt/ ) {
@@ -217,6 +225,11 @@ $dbug_uid_tot->done(0, 0)
 
 # end of main
 
+sub debug {
+    print STDERR "@_\n"
+        if ($DEBUG);
+}
+
 sub usage {
 
     printf STDOUT <<"_EOT_";
@@ -254,6 +267,9 @@ Usage: dbugrpt <options>
   -P                   Mark each debugger output line with the name of the
                        debugging context as supplied to DBUG_INIT.
 
+  -r <resolution>      The time resolution. A value of 1000 (default) means that 
+                       time is printed in milliseconds.
+
   -t <functions>       Limit debugger and profiling actions to the specified list
                        of comma separated functions. A null list of functions
                        implies that all functions are selected.
@@ -276,9 +292,18 @@ package dbug_uid;
 
 use strict;
 use Carp qw(carp);
+use warnings;
+use bignum;
 
-use constant TIME_FMT => '%7.3f';
 use constant PERC_FMT => '%3.2f';
+
+sub TIME_DIGITS {
+    return ( $main::resolution > 0 ? int(log($main::resolution) / log(10)) : 0 );
+}
+
+sub TIME_FMT {
+    return "%7." . TIME_DIGITS . "f";
+}
 
 sub init {
     my ($pkg, $version, $name, $dbug_ctx, $pid, $flags) = @_;
@@ -632,14 +657,24 @@ sub done {
 
     if ($obj->profiling())
     {
-        my $max_length;
+        my ($max_length, @time);
 
         ($max_length, $g_tot_calls, $g_tot_time) = $obj->totals;
 
+        $time[0] = "=" x ( 8 + TIME_DIGITS );
+        $time[1] = "-" x ( 8 + TIME_DIGITS );
+        $time[2] = "Time" . ( " " x ( 4 + TIME_DIGITS ) );
+        $time[3] = "----" . ( " " x ( 4 + TIME_DIGITS ) );
+        $time[4] = ( " " x ( 4 + TIME_DIGITS ) ) . "time";
+        $time[5] = ( " " x ( 5 + TIME_DIGITS ) ) . "avg";
+        $time[6] = ( " " x ( 5 + TIME_DIGITS ) ) . "min";
+        $time[7] = ( " " x ( 5 + TIME_DIGITS ) ) . "max";
+        $time[8] = '@>>>>>>>' . ( '>' x TIME_DIGITS );
+        
         my $total_line1 = 
-            ( "=" x $max_length ) . " ======= ======= =========== ====== =========== =========== =========== =======";
+            ( "=" x $max_length )      . " ======= ======= $time[0] ====== $time[0] $time[0] $time[0] =======";
         my $total_line2 = 
-            ( " " x $max_length ) . " ======= ======= =========== ======                    ";
+            ( " " x $max_length )      . " ======= ======= $time[0] ======                    ";
 
         $main::report_no++;
 
@@ -648,13 +683,13 @@ sub done {
 
         my $format_top = 
 "format $^ =\n\n" .
-"-------------------------------------------------------------------------------------------------------\n" .
+( "-" x length( $total_line1 ) ) . "\n" .
 "Profile of execution for debug context '$dbug_name'\n" .
 "Stack usage: $stack_usage bytes\n" .
 "Execution times are in seconds\n\n" .
-( " " x $max_length )                  . " Calls           Time               Time/call (excluding callees)\n" .
-( " " x $max_length )                  . " -----           ----               -----------------------------\n" .
-"function" . (" " x ($max_length - 8)) . " # calls % calls        time % time         avg         min         max  weight\n" .
+( " " x $max_length )                  . " Calls           $time[2]        Time/call (excluding callees)\n" .
+( " " x $max_length )                  . " -----           $time[3]        -----------------------------\n" .
+"function" . (" " x ($max_length - 8)) . " # calls % calls $time[4] % time $time[5] $time[6] $time[7]  weight\n" .
 $total_line1 . "\n" .
 ".\n";
 
@@ -662,7 +697,7 @@ $total_line1 . "\n" .
 
         my $format = 
 "format $~ =\n" .
-"@" . ("<" x ( $max_length - 1 ))      . " @>>>>>> @>>>>>> @>>>>>>>>>> @>>>>> @>>>>>>>>>> @>>>>>>>>>> @>>>>>>>>>> @>>>>>>\n" .
+"@" . ("<" x ( $max_length - 1 ))      . " @>>>>>> @>>>>>> $time[8] @>>>>> $time[8] $time[8] $time[8] @>>>>>>\n" .
 "\$g_function,\$g_calls,\$g_perc_calls,\$g_time,\$g_perc_time,\$g_avg_time_per_call,\$g_min_time_per_call,\$g_max_time_per_call,\$g_weight\n" .
 ".\n";
 
@@ -702,11 +737,11 @@ $total_line1 . "\n" .
                 $g_perc_calls = ($g_tot_calls != 0 ? sprintf( PERC_FMT, ($g_calls * 100) / $g_tot_calls ): 0);
                 $g_weight = int($g_perc_time * $g_perc_calls);
     # Sourceforge issue 1174400
-                $g_avg_time_per_call = sprintf( TIME_FMT, $g_time / ( $g_calls * 1000 ) );
-                $g_min_time_per_call = ( defined($min_time) ? sprintf( TIME_FMT, $min_time / 1000 ) : 0 );
-                $g_max_time_per_call = ( defined($max_time) ? sprintf( TIME_FMT, $max_time / 1000 ) : 0 );
+                $g_avg_time_per_call = sprintf( TIME_FMT, $g_time / $g_calls );
+                $g_min_time_per_call = ( defined($min_time) ? sprintf( TIME_FMT, $min_time ) : 0 );
+                $g_max_time_per_call = ( defined($max_time) ? sprintf( TIME_FMT, $max_time ) : 0 );
             }
-            $g_time = sprintf( TIME_FMT, $g_time / 1000 );
+            $g_time = sprintf( TIME_FMT, $g_time );
     
             write;
         }
@@ -720,7 +755,7 @@ $total_line1 . "\n" .
         $g_function = "Totals";
         $g_calls = $g_tot_calls;
         $g_perc_calls = '100.00';
-        $g_time = sprintf( TIME_FMT, $g_tot_time / 1000 );
+        $g_time = sprintf( TIME_FMT, $g_tot_time );
         $g_perc_time = '100.00';
         $g_avg_time_per_call = '';
         $g_min_time_per_call = '';
@@ -755,6 +790,8 @@ sub totals {
         # issue 1061551 Timing incorrect error
         # Since not all calls may be measured or the time measurement overhead is not
         # insignificant the missing time is assigned to function UNKNOWN.
+
+        debug("total time (", $tot_time, ") != end time (", $obj->end_time(), ") - start time (", $obj->start_time(), ")");
 
         my ($file, $function, $level, $date) = (undef, '*** UNKNOWN ***', 1, undef);
 
@@ -803,9 +840,6 @@ sub enter {
     } 
 
     if ($obj->is_profile_function($function)) {
-        if ( $obj->version ge '3.0.0' ) {
-            $time *= 1000;
-        }
         # set start time only first time
         $obj->start_time($time) unless defined($obj->start_time());
 
@@ -823,9 +857,6 @@ sub leave {
     } 
 
     if ($obj->is_profile_function($function)) {
-        if ( $obj->version ge '3.0.0' ) {
-            $leave_time *= 1000;
-        }           
         # set end time always
         $obj->end_time($leave_time);
 
@@ -836,7 +867,7 @@ sub leave {
         print("<$function");
         if ( defined($time_incl) ) {
             printf( ';  elapsed time: ' . TIME_FMT . ' (incl.), ' . TIME_FMT . ' (excl.)',
-                    $time_incl / 1000, $time_excl / 1000 );
+                    $time_incl, $time_excl );
         }
         print("\n");
     }
