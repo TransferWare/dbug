@@ -139,11 +139,3 @@ DROP TYPE DBUG_LOG4PLSQL_OBJ_T;
 call dbms_application_info.set_action('SQL statement 28');
 DROP TYPE STD_OBJECT;
 
-/* SQL statement 29 (DROP;PUBLIC;SYNONYM;DBUG;EPCAPP;PACKAGE_SPEC;DBUG;;;;;2) */
-call dbms_application_info.set_action('SQL statement 29');
-DROP PUBLIC SYNONYM "DBUG";
-
-/* SQL statement 30 (DROP;PUBLIC;SYNONYM;DBUG_TRIGGER;EPCAPP;PACKAGE_SPEC;DBUG_TRIGGER;;;;;2) */
-call dbms_application_info.set_action('SQL statement 30');
-DROP PUBLIC SYNONYM "DBUG_TRIGGER";
-
