@@ -34,3 +34,9 @@ pod2htmd.tmp
 doc/factorial
 doc/test[123456]
 doc/*.trs
+
+# Maven
+.flattened-pom.xml
+
+# Mac
+\.DS_Store

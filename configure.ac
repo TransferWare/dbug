@@ -17,8 +17,8 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-AC_REVISION([2022-11-25])
-AC_INIT([dbug],[6.1.1],[gert.jan.paulissen@gmail.com])
+AC_REVISION([2022-12-02])
+AC_INIT([dbug],[7.0.0],[gert.jan.paulissen@gmail.com])
 
 # version check
 if test -f "$srcdir/VERSION"
