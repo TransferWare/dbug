@@ -36,6 +36,7 @@ DBUG_PROFILER,
 DBUG_TRIGGER,
 STD_OBJECT,
 STD_OBJECTS,
+STD_OBJECT_MGR,
     </db.object.names>
     <!-- db.object.names.include specifies what to do with db.object.names: empty (no filter), 0 (exclude) or 1 (include) -->
     <db.object.names.include>1</db.object.names.include>

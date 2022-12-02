@@ -22,32 +22,26 @@ begin
   return 'DBUG_LOG4PLSQL';
 end name;
 
-overriding member procedure print(self in dbug_log4plsql_obj_t)
+member procedure serialize(self in std_object, p_json_object in out nocopy json_object_t)
 is
 begin
-  (self as std_object).print; -- Generalized invocation
-  dbms_output.put_line
-  ( utl_lms.format_message
-    ( '%s.%s.%s; use log4j: %s; use logtable: %s; use dbms_output: %s'
-    , $$PLSQL_UNIT_OWNER
-    , $$PLSQL_UNIT
-    , 'PRINT'
-    --, isdefaultinit integer
-    --, llevel number
-    --, lsection varchar2(2000)
-    --, ltext varchar2(2000)
-    , to_char(use_log4j)
-    --, use_out_trans integer
-    , to_char(use_logtable)
-    --, use_alert integer
-    --, use_trace integer
-    , to_char(use_dbms_output)
-    --, init_lsection varchar2(2000)
-    --, init_llevel number
-    --, dbms_output_wrap integer
-    )
-  );
-end print;
+  -- every sub type must first start with (self as <super type>).serialize(p_json_object)
+  (self as std_object).serialize(p_json_object);
+
+  p_json_object.put('ISDEFAULTINIT', isdefaultinit);
+  p_json_object.put('LLEVEL', llevel);
+  p_json_object.put('LSECTION', lsection);
+  p_json_object.put('LTEXT', ltext);
+  p_json_object.put('USE_LOG4J', use_log4j);
+  p_json_object.put('USE_OUT_TRANS', use_out_trans);
+  p_json_object.put('USE_LOGTABLE', use_logtable);
+  p_json_object.put('USE_ALERT', use_alert);
+  p_json_object.put('USE_TRACE', use_trace);
+  p_json_object.put('USE_DBMS_OUTPUT', use_dbms_output);
+  p_json_object.put('INIT_LSECTION', init_lsection);
+  p_json_object.put('INIT_LLEVEL', init_llevel);
+  p_json_object.put('DBMS_OUTPUT_WRAP', dbms_output_wrap);
+end serialize;
 
 end;
 /

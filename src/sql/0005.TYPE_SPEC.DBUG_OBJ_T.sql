@@ -14,7 +14,8 @@ CREATE TYPE "DBUG_OBJ_T" AUTHID DEFINER under std_object (
 , overriding member function name(self in dbug_obj_t)
   return varchar2
 
-, overriding member procedure print(self in dbug_obj_t)
+  -- every sub type must add its attributes (in capital letters)
+, member procedure serialize(self in dbug_obj_t, p_json_object in out nocopy json_object_t)
 
 ) final;
 /

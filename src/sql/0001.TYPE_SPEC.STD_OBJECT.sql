@@ -30,7 +30,27 @@ CREATE TYPE "STD_OBJECT" AUTHID DEFINER AS OBJECT (
 , final
   member procedure remove(self in std_object)
 
-, member procedure print(self in std_object)
+, static
+  procedure deserialize(p_obj_type in varchar2, p_obj in clob)
+  return std_object
+
+, final
+  member function get_type(self in std_object)
+  return varchar2
+
+, final
+  member function serialize(self in std_object)
+  return clob
+
+  -- every sub type must add its attributes (in capital letters)
+, member procedure serialize(self in std_object, p_json_object in out nocopy json_object_t)
+
+  -- this one just calls serialize() but maybe you want another representation, i.e. pretty print the object
+, member function repr(self in std_object)
+  return clob
+  
+, final
+  member procedure print(self in std_object)
 
 ) not instantiable not final;
 /
