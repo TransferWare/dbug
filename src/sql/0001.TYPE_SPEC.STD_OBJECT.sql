@@ -31,7 +31,7 @@ CREATE TYPE "STD_OBJECT" AUTHID DEFINER AS OBJECT (
   member procedure remove(self in std_object)
 
 , static
-  procedure deserialize(p_obj_type in varchar2, p_obj in clob)
+  function deserialize(p_obj_type in varchar2, p_obj in clob)
   return std_object
 
 , final

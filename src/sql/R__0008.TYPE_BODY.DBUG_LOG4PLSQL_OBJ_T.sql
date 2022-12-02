@@ -22,7 +22,7 @@ begin
   return 'DBUG_LOG4PLSQL';
 end name;
 
-member procedure serialize(self in std_object, p_json_object in out nocopy json_object_t)
+overriding member procedure serialize(self in dbug_log4plsql_obj_t, p_json_object in out nocopy json_object_t)
 is
 begin
   -- every sub type must first start with (self as <super type>).serialize(p_json_object)

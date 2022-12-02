@@ -60,7 +60,7 @@ is
   l_obj_type constant std_objects.obj_type%type := p_std_object.get_type();
   l_obj constant std_objects.obj%type := p_std_object.serialize();
 
-  l_user constant std_objects.created_by :=
+  l_user constant std_objects.created_by%type :=
     case
       when SYS_CONTEXT('APEX$SESSION', 'APP_USER') is not null
       then 'APEX:' || SYS_CONTEXT('APEX$SESSION', 'APP_USER')

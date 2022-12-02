@@ -27,6 +27,9 @@ STD_OBJECTS,
 */
 -- pkg_ddl_util v5
 call dbms_application_info.set_module('uninstall.sql', null);
+
+drop package STD_OBJECT_MGR;
+
 /* SQL statement 1 (REVOKE;;OBJECT_GRANT;;EPCAPP;PACKAGE_SPEC;DBUG;;PUBLIC;EXECUTE;NO;2) */
 call dbms_application_info.set_action('SQL statement 1');
 REVOKE EXECUTE ON "DBUG" FROM "PUBLIC";

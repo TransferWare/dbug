@@ -16,7 +16,7 @@ begin
 end remove;
 
 static
-procedure deserialize(p_obj_type in varchar2, p_obj in clob)
+function deserialize(p_obj_type in varchar2, p_obj in clob)
 return std_object
 is
   l_cursor sys_refcursor;

@@ -58,7 +58,7 @@ begin
   return 'DBUG';
 end name;
 
-member procedure serialize(self in dbug_obj_t, p_json_object in out nocopy json_object_t)
+overriding member procedure serialize(self in dbug_obj_t, p_json_object in out nocopy json_object_t)
 is
   l_json_array json_array_t;
 
@@ -72,6 +72,21 @@ is
       for i_idx in p_str_tab.first .. p_str_tab.last
       loop
         l_json_array.append(p_str_tab(i_idx));
+      end loop;
+    end if;
+    return l_json_array;
+  end to_json_array;
+
+  function to_json_array(p_num_tab in sys.odcinumberlist)
+  return json_array_t
+  is
+  begin
+    l_json_array := json_array_t();
+    if p_num_tab.count > 0
+    then
+      for i_idx in p_num_tab.first .. p_num_tab.last
+      loop
+        l_json_array.append(p_num_tab(i_idx));
       end loop;
     end if;
     return l_json_array;
