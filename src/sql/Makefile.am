@@ -47,7 +47,15 @@ sql_scripts      = 0001.TYPE_SPEC.STD_OBJECT.sql \
 									 R__0023.PACKAGE_BODY.DBUG.sql \
 									 R__0026.OBJECT_GRANT.DBUG_TRIGGER.sql \
 									 R__0027.OBJECT_GRANT.DBUG.sql \
-	                 install.sql \
+									 V20221202174525.0001__TYPE_SPEC.STD_OBJECT.sql \
+									 V20221202174525.0002__TYPE_SPEC.DBUG_LOG4PLSQL_OBJ_T.sql \
+									 V20221202174525.0003__TYPE_SPEC.DBUG_CALL_OBJ_T.sql \
+									 V20221202174525.0004__TYPE_SPEC.DBUG_CALL_TAB_T.sql \
+									 V20221202174525.0005__TYPE_SPEC.DBUG_OBJ_T.sql \
+									 V20221202174525.0006__TABLE.STD_OBJECTS.sql \
+									 V20221202174525.0024__INDEX.STD_OBJECTS.sql \
+									 V20221202174525.0025__CONSTRAINT.STD_OBJECTS.sql \
+                   install.sql \
                    uninstall.sql
 
 SUBDIRS          = .
