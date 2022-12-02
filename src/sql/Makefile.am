@@ -20,28 +20,7 @@ pod_scripts      = dbug.pod dbug_trigger.pod
 
 html_files       = $(pod_scripts:.pod=.html)
 
-sql_scripts      = R__09.PACKAGE_SPEC.DBUG.sql \
-                   R__09.PACKAGE_SPEC.DBUG_DBMS_APPLICATION_INFO.sql \
-                   R__09.PACKAGE_SPEC.DBUG_DBMS_OUTPUT.sql \
-                   R__09.PACKAGE_SPEC.DBUG_LOG4PLSQL.sql \
-                   R__09.PACKAGE_SPEC.DBUG_PROFILER.sql \
-                   R__09.PACKAGE_SPEC.DBUG_TRIGGER.sql \
-                   R__14.PACKAGE_BODY.DBUG.sql \
-                   R__14.PACKAGE_BODY.DBUG_DBMS_APPLICATION_INFO.sql \
-                   R__14.PACKAGE_BODY.DBUG_DBMS_OUTPUT.sql \
-                   R__14.PACKAGE_BODY.DBUG_LOG4PLSQL.sql \
-                   R__14.PACKAGE_BODY.DBUG_PROFILER.sql \
-                   R__14.PACKAGE_BODY.DBUG_TRIGGER.sql \
-                   R__15.TYPE_BODY.DBUG_LOG4PLSQL_OBJ_T.sql \
-                   R__15.TYPE_BODY.DBUG_OBJ_T.sql \
-                   V0001__TABLE.STD_OBJECTS.sql \
-                   V0002__TYPE_SPEC.DBUG_CALL_OBJ_T.sql \
-                   V0003__TYPE_SPEC.DBUG_CALL_TAB_T.sql \
-                   V0004__TYPE_SPEC.DBUG_LOG4PLSQL_OBJ_T.sql \
-                   V0005__TYPE_SPEC.DBUG_OBJ_T.sql \
-                   V0006__INDEX.STD_OBJECTS.sql \
-                   V0007__CONSTRAINT.STD_OBJECTS.sql \
-                   install.sql \
+sql_scripts      = install.sql \
                    uninstall.sql
 
 SUBDIRS          = .
