@@ -1,4 +1,4 @@
-create or replace PACKAGE BODY "STD_OBJECT_MGR" IS
+CREATE OR REPLACE PACKAGE BODY "STD_OBJECT_MGR" IS
 
 -- index by std_objects.object_name
 type std_object_tabtype is table of std_object index by std_objects.object_name%type;
@@ -42,7 +42,7 @@ begin
     where   tab.group_name = g_group_name
     and     tab.object_name = p_object_name;
 
-    p_std_object := std_object.deserialize(l_obj_type, l_obj);    
+    p_std_object := std_object.deserialize(l_obj_type, l_obj);
   else
     p_std_object := g_std_object_tab(p_object_name);
   end if;
@@ -65,7 +65,7 @@ is
       when SYS_CONTEXT('APEX$SESSION', 'APP_USER') is not null
       then 'APEX:' || SYS_CONTEXT('APEX$SESSION', 'APP_USER')
       else 'ORACLE:' || SYS_CONTEXT('USERENV', 'SESSION_USER')
-    end;     
+    end;
 begin
   if p_std_object.dirty = 0
   then
@@ -177,7 +177,7 @@ begin
     l_object_name := g_std_object_tab.first;
     while l_object_name is not null
     loop
-      /* a delete now may influence the next operation, 
+      /* a delete now may influence the next operation,
          so first do next and then maybe delete (the previous) */
       l_object_name_prev := l_object_name;
       l_object_name := g_std_object_tab.next(l_object_name);
@@ -191,3 +191,4 @@ end delete_std_objects;
 
 end std_object_mgr;
 /
+

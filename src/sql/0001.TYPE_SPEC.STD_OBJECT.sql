@@ -48,7 +48,7 @@ CREATE TYPE "STD_OBJECT" AUTHID DEFINER AS OBJECT (
   -- this one just calls serialize() but maybe you want another representation, i.e. pretty print the object
 , member function repr(self in std_object)
   return clob
-  
+
 , final
   member procedure print(self in std_object)
 

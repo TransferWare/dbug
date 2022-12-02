@@ -51,7 +51,7 @@ is
   l_json_object json_object_t := json_object_t();
 begin
   serialize(l_json_object);
-  
+
   return l_json_object.to_clob();
 end serialize;
 

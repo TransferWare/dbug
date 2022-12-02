@@ -1,4 +1,4 @@
-create or replace PACKAGE "STD_OBJECT_MGR" AUTHID DEFINER IS
+CREATE OR REPLACE PACKAGE "STD_OBJECT_MGR" AUTHID DEFINER IS
 /**
 --
 -- This package is used to manage standard objects. Standard objects can be
@@ -11,15 +11,15 @@ create or replace PACKAGE "STD_OBJECT_MGR" AUTHID DEFINER IS
 -- needed. This object is set and get by std_object_mgr.set_std_object()
 -- respectively std_object_mgr.get_std_object(). Again see package epc_clnt
 -- for examples.
--- 
+--
 -- Normal package state is implemented by leaving the group name null, i.e.
 -- never call std_object_mgr.set_group_name() or call
 -- std_object_mgr.set_group_name(null).  Now the objects will be retrieved
 -- from a PL/SQL table indexed by the object name.
--- 
+--
 -- Stateless package state is implemented by setting the group name, a group
 -- of associated objects.  Now the objects will be retrieved from the database
--- table std_objects using group name and object name.  
+-- table std_objects using group name and object name.
 --
 -- An Apex session acts as a group. So the Apex session id can be used as the
 -- group name. It is required to call std_object_mgr.set_group_name every time
@@ -34,7 +34,7 @@ create or replace PACKAGE "STD_OBJECT_MGR" AUTHID DEFINER IS
 --
 -- Setting the group name to a non-NULL value will force the objects to use
 -- table std_objects.
--- 
+--
 -- @param p_group_name  The group name
 */
 procedure set_group_name
@@ -54,7 +54,7 @@ return std_objects.group_name%type;
 --
 -- Retrieve an object from persistent storage (table std_objects) or from an
 -- internal PL/SQL table.
--- 
+--
 -- @param p_object_name  The object name
 -- @param p_std_object   The object
 --
@@ -70,7 +70,7 @@ procedure get_std_object
 --
 -- Store an object in persistent storage (table std_objects) or into an
 -- internal PL/SQL table.
--- 
+--
 -- @param p_object_name  The object name
 -- @param p_std_object   The object
 */
@@ -84,7 +84,7 @@ procedure set_std_object
 --
 -- Deletes an object from persistent storage (table std_objects) or from an
 -- internal PL/SQL table.
--- 
+--
 -- @param p_object_name  The object name.
 --
 -- @throws value_error  p_object_name is NULL
@@ -98,7 +98,7 @@ procedure del_std_object
 --
 -- Get the object names from persistent storage (table std_objects) or from an
 -- internal PL/SQL table.
--- 
+--
 -- @param p_object_name_tab  The list of object names found.
 --
 -- @throws value_error  p_object_name is NULL
@@ -112,7 +112,7 @@ procedure get_object_names
 --
 -- Delete objects from persistent storage (table std_objects) or from an
 -- internal PL/SQL table.
--- 
+--
 -- @param p_group_name   The group name (wildcards allowed, escape character is '\').
 --                       If null the PL/SQL table will be used to delete from.
 -- @param p_object_name  The object name (wildcards allowed, escape character is '\').
@@ -126,3 +126,4 @@ procedure delete_std_objects
 
 end;
 /
+
