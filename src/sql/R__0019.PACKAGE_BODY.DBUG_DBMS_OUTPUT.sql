@@ -12,13 +12,13 @@ CREATE OR REPLACE PACKAGE BODY "DBUG_DBMS_OUTPUT" IS
     p_module in dbug.module_name_t
   ) is
   begin
-    dbms_output.put_line( substr(dbug.format_enter(p_module), 1, 255) );
+    dbms_output.put_line( dbug.format_enter(p_module) ); -- dbms_output.put_line supports 32767 bytes
   end enter;
 
   procedure leave
   is
   begin
-    dbms_output.put_line( substr(dbug.format_leave, 1, 255) );
+    dbms_output.put_line( dbug.format_leave ); -- dbms_output.put_line supports 32767 bytes
   end leave;
 
   procedure print( p_str in varchar2 )
@@ -32,7 +32,7 @@ CREATE OR REPLACE PACKAGE BODY "DBUG_DBMS_OUTPUT" IS
     while l_line_no is not null
     loop
       begin
-        dbms_output.put_line( substr(l_line_tab(l_line_no), 1, 255) );
+        dbms_output.put_line( l_line_tab(l_line_no) ); -- dbms_output.put_line supports 32767 bytes
       end;
       l_line_no := l_line_tab.next(l_line_no);
     end loop;

@@ -1,5 +1,12 @@
 CREATE OR REPLACE PACKAGE BODY "DBUG" IS
 
+-- dbms_output.put_line has increased line size limit since 10g Release 2 (10.2), but we allow only Oracle 11 and higher
+$if dbms_db_version.version < 11 $then
+
+  c_version_too_old constant integer := 1/0; -- divide by zero as a trick since $error is not parsed well by Flyway
+
+$end
+
   /* TYPES */
 
   subtype t_cursor_key is varchar2(4000 char);
@@ -145,9 +152,9 @@ $if dbug.c_trace > 0 $then
   is
   begin
 $if dbug.c_trace_log4plsql > 0 $then
-    plog.debug(substr('TRACE: ' || p_line, 1, 255));
+    plog.debug('TRACE: ' || p_line); -- dbms_output.put_line supports 32767 bytes
 $else
-    dbms_output.put_line(substr('TRACE: ' || p_line, 1, 255));
+    dbms_output.put_line('TRACE: ' || p_line); -- dbms_output.put_line supports 32767 bytes
 $end
   end trace;
 $end
@@ -196,7 +203,7 @@ $else
     l_line_tab line_tab_t;
 $end
   begin
-    dbms_output.put_line(substr('ERROR: ' || p_line, 1, 255));
+    dbms_output.put_line('ERROR: ' || p_line); -- dbms_output.put_line supports 32767 bytes
 
 $if dbms_db_version.version >= 12 $then
     /*

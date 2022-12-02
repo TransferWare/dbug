@@ -2,6 +2,7 @@
 *.log
 *.lis
 *.bak
+*.tmp
 
 # Emacs
 *~
