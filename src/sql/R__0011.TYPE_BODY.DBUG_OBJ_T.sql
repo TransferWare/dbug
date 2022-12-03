@@ -65,16 +65,13 @@ is
   procedure to_json_array(p_attribute in varchar2, p_str_tab in sys.odcivarchar2list)
   is
   begin
-    if p_str_tab is not null
+    if p_str_tab is not null and p_str_tab.count > 0
     then
       l_json_array := json_array_t();
-      if p_str_tab.count > 0
-      then
-        for i_idx in p_str_tab.first .. p_str_tab.last
-        loop
-          l_json_array.append(p_str_tab(i_idx));
-        end loop;
-      end if;
+      for i_idx in p_str_tab.first .. p_str_tab.last
+      loop
+        l_json_array.append(p_str_tab(i_idx));
+      end loop;
       p_json_object.put(p_attribute, l_json_array);
     end if;
   end to_json_array;
@@ -82,16 +79,13 @@ is
   procedure to_json_array(p_attribute in varchar2, p_num_tab in sys.odcinumberlist)
   is
   begin
-    if p_num_tab is not null
+    if p_num_tab is not null and p_num_tab.count > 0
     then
       l_json_array := json_array_t();
-      if p_num_tab.count > 0
-      then
-        for i_idx in p_num_tab.first .. p_num_tab.last
-        loop
-          l_json_array.append(p_num_tab(i_idx));
-        end loop;
-      end if;
+      for i_idx in p_num_tab.first .. p_num_tab.last
+      loop
+        l_json_array.append(p_num_tab(i_idx));
+      end loop;
       p_json_object.put(p_attribute, l_json_array);
     end if;
   end to_json_array;
@@ -100,22 +94,19 @@ is
   is
     l_json_object json_object_t;
   begin
-    if p_dbug_call_tab is not null
+    if p_dbug_call_tab is not null and p_dbug_call_tab.count > 0
     then
       l_json_array := json_array_t();
-      if p_dbug_call_tab.count > 0
-      then
-        for i_idx in p_dbug_call_tab.first .. p_dbug_call_tab.last
-        loop
-          l_json_object := json_object_t();
+      for i_idx in p_dbug_call_tab.first .. p_dbug_call_tab.last
+      loop
+        l_json_object := json_object_t();
 
-          l_json_object.put('MODULE_NAME', p_dbug_call_tab(i_idx).module_name);
-          l_json_object.put('CALLED_FROM', p_dbug_call_tab(i_idx).called_from);
-          l_json_object.put('OTHER_CALLS', p_dbug_call_tab(i_idx).module_name);
+        l_json_object.put('MODULE_NAME', p_dbug_call_tab(i_idx).module_name);
+        l_json_object.put('CALLED_FROM', p_dbug_call_tab(i_idx).called_from);
+        l_json_object.put('OTHER_CALLS', p_dbug_call_tab(i_idx).module_name);
 
-          l_json_array.append(l_json_object);
-        end loop;
-      end if;
+        l_json_array.append(l_json_object);
+      end loop;
       p_json_object.put(p_attribute, l_json_array);
     end if;
   end to_json_array;

@@ -228,6 +228,7 @@ CREATE OR REPLACE PACKAGE "DBUG" AUTHID DEFINER IS
   --%afterall
   procedure ut_teardown;
 
+  --%test
   procedure ut_dbug;
  
 end dbug;
