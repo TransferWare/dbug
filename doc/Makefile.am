@@ -34,7 +34,7 @@ html: dbug.html
 dbug.html: dbug.pod
 	@PERL@ -S $(POD2HTML) --infile=$? --outfile=$@
 
-CLEANFILES = dbug.html pod2htm*
+CLEANFILES = dbug.html pod2htm* test?.out test?.txt
 
 ## TEST section
 
