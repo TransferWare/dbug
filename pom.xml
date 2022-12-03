@@ -21,6 +21,7 @@
     <db.src.dml.scripts>${db.src.scripts}/sql</db.src.dml.scripts>
     <db.src.full.scripts>${db.src.scripts}/sql</db.src.full.scripts>
     <db.src.incr.scripts>${db.src.scripts}/sql</db.src.incr.scripts>
+    <db.src.callbacks.scripts>${db.src.scripts}/sql</db.src.callbacks.scripts>
     <db.object.type />
     <!-- A list of object names to include or exclude (or empty to include all) -->
     <db.object.names>
@@ -50,6 +51,7 @@ STD_OBJECT_MGR,
     <db.full.skip.install.sql>no</db.full.skip.install.sql>
     <db.full.transform.params></db.full.transform.params>
     <db.incr.transform.params></db.incr.transform.params>
+    <db.test.phase>test</db.test.phase>
   </properties>
       
 </project>

@@ -1,5 +1,7 @@
 CREATE OR REPLACE PACKAGE "DBUG" AUTHID DEFINER IS
 
+  c_testing constant boolean := $if $$Testing $then true $else false $end;
+
   c_trace constant pls_integer := 0; -- trace dbug itself for values > 0
   c_trace_log4plsql constant pls_integer := 0; -- use log4plsql to trace instead of dbms_output
   c_ignore_errors constant pls_integer := 1; -- ignore dbug.enter / dbug.leave / dbug.print errors
@@ -216,6 +218,18 @@ CREATE OR REPLACE PACKAGE "DBUG" AUTHID DEFINER IS
   )
   return varchar2;
 
+  --%suitepath(DBUG)
+  --%suite
+  --%rollback(manual)
+
+  --%beforeall
+  procedure ut_setup;
+
+  --%afterall
+  procedure ut_teardown;
+
+  procedure ut_dbug;
+ 
 end dbug;
 
 -- [ 641894 ] Perl pod comment in dbug.pls

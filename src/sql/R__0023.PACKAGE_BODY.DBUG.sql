@@ -2320,6 +2320,91 @@ $if dbug.c_ignore_errors != 0 $then
       return null;
 $end
   end format_print;
+  
+$if dbug.c_testing $then 
+
+  procedure ut_setup
+  is
+    pragma autonomous_transaction;
+  begin
+    delete_std_objects
+    ( p_group_name => 'TEST%'
+    );
+    commit;
+  end;
+
+  procedure ut_teardown
+  is
+    pragma autonomous_transaction;
+  begin
+    delete_std_objects
+    ( p_group_name => 'TEST%'
+    );
+    commit;
+  end;
+
+  procedure ut_dbug
+  is    
+    pragma autonomous_transaction;
+
+    l_dbug_obj dbug_obj_t;
+    l_obj_act varchar2(32767);
+    l_obj_exp constant varchar2(32767) := '{"DIRTY":1,"ACTIVE_STR_TAB":[],"ACTIVE_NUM_TAB":[],"INDENT_LEVEL":0,"CALL_TAB":[],"DBUG_LEVEL":2,"BREAK_POINT_LEVEL_STR_TAB":["debug","error","fatal","info","input","output","trace","warning"],"BREAK_POINT_LEVEL_NUM_TAB":[2,5,6,3,2,2,2,4],"IGNORE_BUFFER_OVERFLOW":0}';
+  begin
+    for i_try in 1..2
+    loop
+      std_object_mgr.set_group_name(case i_try when 1 then 'TEST' else null end);
+      l_dbug_obj := dbug_obj_t();
+      l_dbug_obj.store();
+      case i_try
+        when 1
+        then
+          select  t.obj
+          into    l_obj_act
+          from    std_objects
+          where   group_name = 'TEST'
+          and     object_name = 'DBUG';
+          
+        when 2
+        then
+          std_object_mgr.get_std_object
+          ( p_object_name => 'DBUG'
+          , p_std_object => l_std_object
+          );
+          select  l_std_object.serialize()
+          into    l_obj_act
+          from    dual;
+
+      end case;
+      ut.expect(l_obj_act).to_equal(l_obj_exp);
+    end loop;
+    commit;
+  end;
+
+$else -- dbug.c_testing $then
+
+  -- some dummy stubs
+  
+  procedure ut_setup
+  is
+  begin
+    null;
+  end;
+
+  procedure ut_teardown
+  is
+  begin
+    null;
+  end;
+
+  procedure ut_dbug
+  is    
+  begin
+    null;
+  end;
+
+$end -- dbug.c_testing $then
+
 END DBUG;
 /
 

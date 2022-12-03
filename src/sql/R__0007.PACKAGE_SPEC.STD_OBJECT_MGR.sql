@@ -29,6 +29,8 @@ CREATE OR REPLACE PACKAGE "STD_OBJECT_MGR" AUTHID DEFINER IS
 -- @headcom
 */
 
+c_testing constant boolean := $if $$Testing $then true $else false $end;
+
 /**
 -- Set the group name.
 --
@@ -123,6 +125,26 @@ procedure delete_std_objects
 ( p_group_name in std_objects.group_name%type default '%'
 , p_object_name in std_objects.object_name%type default '%'
 );
+
+
+--%suitepath(DBUG)
+--%suite
+--%rollback(manual)
+
+--%beforeall
+procedure ut_setup;
+
+--%afterall
+procedure ut_teardown;
+
+--%test
+procedure ut_set_group_name;
+
+--%test
+procedure ut_get_group_name;
+
+--%test
+procedure ut_store_remove;
 
 end;
 /

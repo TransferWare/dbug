@@ -189,6 +189,107 @@ begin
   end if;
 end delete_std_objects;
 
+--%beforeall
+procedure ut_setup
+is
+  pragma autonomous_transaction;
+begin
+  delete_std_objects
+  ( p_group_name => 'TEST%'
+  );
+  commit;
+end;
+
+--%afterall
+procedure ut_teardown
+is
+  pragma autonomous_transaction;
+begin
+  delete_std_objects
+  ( p_group_name => 'TEST%'
+  );
+  commit;
+end;
+
+--%test
+procedure ut_set_group_name
+is
+begin
+  set_group_name('TEST1');
+  ut.expect(g_group_name).to_equal('TEST1');
+  set_group_name('TEST2');
+  ut.expect(g_group_name).to_equal('TEST2');
+  set_group_name(null);
+  ut.expect(g_group_name).to_be_null();
+end;
+
+--%test
+procedure ut_get_group_name
+is
+begin
+  set_group_name('TEST1');
+  ut.expect(get_group_name()).to_equal('TEST1');
+  set_group_name('TEST2');
+  ut.expect(get_group_name()).to_equal('TEST2');
+  set_group_name(null);
+  ut.expect(get_group_name()).to_be_null();
+end;
+
+--%test
+procedure ut_store_remove
+is
+  pragma autonomous_transaction;
+  
+  l_std_object std_object;
+  l_dbug_obj_exp dbug_obj_t;
+  l_dbug_obj_act dbug_obj_t;
+  l_count pls_integer;
+begin
+  for i_try in 1..2
+  loop
+    set_group_name(case i_try when 1 then null else 'TEST' end);
+    
+    ut.expect(g_std_object_tab.count, 'try '||i_try).to_equal(0);
+    
+    begin
+      get_std_object('DBUG', l_std_object);
+      raise program_error;
+    exception
+      when no_data_found
+      then
+        ut.expect(sqlcode, 'try '||i_try).to_equal(sqlcode); -- no_data_found
+    end;
+
+    l_dbug_obj_exp := dbug_obj_t();
+    ut.expect(l_dbug_obj_exp.dirty, 'try '||i_try).to_equal(1);
+
+    set_std_object('DBUG', l_dbug_obj_exp);
+    get_std_object('DBUG', l_dbug_obj_act);
+
+    ut.expect(g_std_object_tab.count, 'try '||i_try).to_equal(case when g_group_name is null then 1 else 0 end);
+
+    select  count(*)
+    into    l_count
+    from    std_objects
+    where   group_name = g_group_name;
+
+    ut.expect(l_count, 'try '||i_try).to_equal(case when g_group_name is not null then 1 else 0 end);
+    
+    ut.expect(l_dbug_obj_act.dirty, 'try '||i_try).to_be_null();
+    
+    l_dbug_obj_act.dirty := l_dbug_obj_exp.dirty;
+
+    dbms_output.put_line('act: ' || l_dbug_obj_act.serialize());
+    dbms_output.put_line('exp: ' || l_dbug_obj_exp.serialize());
+
+    ut.expect(json_object_t(l_dbug_obj_act.serialize()), 'try '||i_try).to_equal(json_object_t(l_dbug_obj_exp.serialize()));
+    
+    del_std_object('DBUG');
+  end loop;
+
+  commit;
+end;
+
 end std_object_mgr;
 /
 

@@ -65,8 +65,13 @@ end serialize;
 member function repr(self in std_object)
 return clob
 is
+  l_clob clob := serialize();
 begin
-  return serialize();
+  select  json_serialize(l_clob returning clob pretty)
+  into    l_clob
+  from    dual;
+
+  return l_clob;
 end repr;
 
 final
