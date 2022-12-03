@@ -159,7 +159,7 @@ acx_cv_use_pdbug=no
 
 AM_CONDITIONAL([PDBUG], [test x$acx_cv_use_pdbug = xtrue])
 
-AC_CONFIG_FILES([Makefile doc/Makefile src/Makefile src/lib/Makefile src/pdbug/Makefile src/prog/Makefile src/prog/dbugrpt src/prog/rf2dbug test/Makefile util/Makefile])
+AC_CONFIG_FILES([Makefile doc/Makefile src/Makefile src/lib/Makefile src/pdbug/Makefile src/prog/Makefile src/prog/dbugrpt src/prog/rf2dbug src/sql/Makefile test/Makefile util/Makefile])
 
 AC_OUTPUT
 

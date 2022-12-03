@@ -28,6 +28,8 @@ CP                   = cp -f
 
 MAKEFILE_PERL_ENV    = CPPFLAGS="-I${srcdir}/../lib"
 
+POD2HTML             = pod2html
+
 $(perlbuilddir): $(srcdir)/Makefile.PL $(srcdir)/pdbug.pm $(srcdir)/pdbug.xs $(srcdir)/test.pl
 	test -d $@ || mkdir $@
 	$(CP) $? $@
@@ -88,7 +90,7 @@ ci.perl: $(perlbuilddir)
 all: pdbug.html
 
 pdbug.html: $(srcdir)/pdbug.pm
-	$(PERL) -S pod2html --infile=$< --outfile=$@
+	$(PERL) -S $(POD2HTML) --infile=$< --outfile=$@
 	-@rm pod2htm*.tmp
 
 dist-hook:

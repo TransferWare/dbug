@@ -93,11 +93,12 @@ $ make html
 ```
 
 In the build directory you will find these files now:
-- `src/sql/dbug_trigger.html`
-- `src/sql/dbug.html`
-- `util/dbug_trigger.html`
-- `util/dbug_pls.html`
-- `util/dbug_trigger_show.html`
+- `doc/dbug.html`, the DBUG C library manual page
+- `src/sql/dbug_trigger.html`, documentation about the PL/SQL package `DBUG_TRIGGER`
+- `src/sql/dbug.html`, documentation about the PL/SQL package `DBUG_TRIGGER`
+- `util/dbug_trigger.html`, documentation about the utility to add debugging to triggers
+- `util/dbug_pls.html`, documentation about the utility to add debugging to PL/SQL
+- `util/dbug_trigger_show.html`, documentation about the utility to show the state of data using `DBUG` output of `DBUG_TRIGGER` enabled triggers.
 
 You can also have a look at [the DBUG GitHub Pages](https://TransferWare.github.io/dbug/).
 

@@ -15,11 +15,13 @@
 ## License along with this library; if not, write to the Free Software
 ## Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+POD2HTML = pod2html
+
 .pl.html:
-	@PERL@ -S pod2html --infile=$< --outfile=$@
+	@PERL@ -S $(POD2HTML) --infile=$< --outfile=$@
 
 .sql.html:
-	@PERL@ -S pod2html --infile=$< --outfile=$@
+	@PERL@ -S $(POD2HTML) --infile=$< --outfile=$@
 
 sql_files            = dbug_pls.sql dbug_trigger.sql
 pl_files             = dbug_trigger_show.pl

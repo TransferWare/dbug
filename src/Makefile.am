@@ -1,4 +1,4 @@
-SUBDIRS    = lib prog
+SUBDIRS    = lib prog sql
 
 if PDBUG
 
