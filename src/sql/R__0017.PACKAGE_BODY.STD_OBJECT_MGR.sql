@@ -47,7 +47,7 @@ begin
     p_std_object := g_std_object_tab(p_object_name);
   end if;
 
-  p_std_object.dirty := null;
+  p_std_object.dirty := 0;
 end get_std_object;
 
 procedure set_std_object
@@ -72,6 +72,7 @@ begin
     null; -- not changed
   elsif g_group_name is not null
   then
+    -- persistent storage
     update  std_objects tab
     set     tab.obj = l_obj
     ,       tab.last_updated_by = l_user
@@ -112,6 +113,7 @@ begin
 
     commit;
   else
+    -- package state
     g_std_object_tab(p_object_name) := p_std_object;
   end if;
 end set_std_object;
@@ -261,7 +263,7 @@ begin
     end;
 
     l_dbug_obj_exp := dbug_obj_t();
-    ut.expect(l_dbug_obj_exp.dirty, 'try '||i_try).to_equal(1);
+    ut.expect(l_dbug_obj_exp.dirty, 'try '||i_try).to_equal(0);
 
     set_std_object('DBUG', l_dbug_obj_exp);
     get_std_object('DBUG', l_dbug_obj_act);
@@ -275,9 +277,9 @@ begin
 
     ut.expect(l_count, 'try '||i_try).to_equal(case when g_group_name is not null then 1 else 0 end);
     
-    ut.expect(l_dbug_obj_act.dirty, 'try '||i_try).to_be_null();
+    ut.expect(l_dbug_obj_act.dirty, 'try '||i_try).to_equal(0);
     
-    l_dbug_obj_act.dirty := l_dbug_obj_exp.dirty;
+--    l_dbug_obj_act.dirty := l_dbug_obj_exp.dirty;
 
     dbms_output.put_line('act: ' || l_dbug_obj_act.serialize());
     dbms_output.put_line('exp: ' || l_dbug_obj_exp.serialize());
