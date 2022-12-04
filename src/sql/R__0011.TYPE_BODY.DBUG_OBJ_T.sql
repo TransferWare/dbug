@@ -5,46 +5,46 @@ constructor function dbug_obj_t(self in out nocopy dbug_obj_t)
 return self as result
 is
   l_object_name constant std_objects.object_name%type := 'DBUG';
-  l_std_object std_object;
 begin
   begin
-    std_object_mgr.get_std_object(l_object_name, l_std_object);
-    self := treat(l_std_object as dbug_obj_t);
-    self.dirty := 0;
+    std_object_mgr.get_std_object(l_object_name, self);
   exception
     when no_data_found
     then
-      /* std_object fields */
-      dirty := 1;
+      self := dbug_obj_t
+              ( 1 -- to force a store
+              , sys.odcivarchar2list()
+              , sys.odcinumberlist()
+              , 0
+              , dbug_call_tab_t()
+              , dbug.c_level_default
+              , sys.odcivarchar2list
+                ( dbug."debug"
+                , dbug."error"
+                , dbug."fatal"
+                , dbug."info"
+                , dbug."input"
+                , dbug."output"
+                , dbug."trace"
+                , dbug."warning"
+                )
+              , sys.odcinumberlist
+                ( dbug.c_level_debug
+                , dbug.c_level_error
+                , dbug.c_level_fatal
+                , dbug.c_level_info
+                , dbug.c_level_debug
+                , dbug.c_level_debug
+                , dbug.c_level_debug
+                , dbug.c_level_warning
+                )
+              , 0
+              );
 
-      active_str_tab := sys.odcivarchar2list();
-      active_num_tab := sys.odcinumberlist();
-      indent_level := 0;
-      call_tab := dbug_call_tab_t();
-      dbug_level := dbug.c_level_default; -- default level
-      break_point_level_str_tab :=
-        sys.odcivarchar2list
-        ( dbug."debug"
-        , dbug."error"
-        , dbug."fatal"
-        , dbug."info"
-        , dbug."input"
-        , dbug."output"
-        , dbug."trace"
-        , dbug."warning"
-        );
-      break_point_level_num_tab :=
-        sys.odcinumberlist
-        ( dbug.c_level_debug
-        , dbug.c_level_error
-        , dbug.c_level_fatal
-        , dbug.c_level_info
-        , dbug.c_level_debug
-        , dbug.c_level_debug
-        , dbug.c_level_debug
-        , dbug.c_level_warning
-        );
-      ignore_buffer_overflow := 0; -- false
+      -- make it a singleton by storing it
+      std_object_mgr.set_std_object(l_object_name, self);
+
+      self.dirty := 0;
   end;
 
   -- essential
