@@ -55,7 +55,7 @@ return std_objects.group_name%type;
 -- Get a standard object.
 --
 -- Retrieve an object from persistent storage (table std_objects) or from an
--- internal PL/SQL table.
+-- internal PL/SQL table. The dirty column will be set to 0.
 --
 -- @param p_object_name  The object name
 -- @param p_std_object   The object
@@ -71,7 +71,8 @@ procedure get_std_object
 -- Set a standard object.
 --
 -- Store an object in persistent storage (table std_objects) or into an
--- internal PL/SQL table.
+-- internal PL/SQL table if the dirty column is not equal to 0.
+-- If the value of dirty is 0, nothing will happen.
 --
 -- @param p_object_name  The object name
 -- @param p_std_object   The object
