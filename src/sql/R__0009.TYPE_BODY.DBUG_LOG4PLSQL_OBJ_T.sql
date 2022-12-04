@@ -5,11 +5,45 @@ constructor function dbug_log4plsql_obj_t(self in out nocopy dbug_log4plsql_obj_
 return self as result
 is
   l_object_name constant std_objects.object_name%type := 'DBUG_LOG4PLSQL';
-  l_std_object std_object;
+
+  l_log_ctx plogparam.log_ctx;
+
+  function bool2int(p_bool in boolean)
+  return integer
+  is
+  begin
+    return case p_bool when true then 1 when false then 0 else null end;
+  end bool2int;
 begin
-  std_object_mgr.get_std_object(l_object_name, l_std_object);
-  self := treat(l_std_object as dbug_log4plsql_obj_t);
-  -- do not set dirty, since we do not verify changes
+  begin
+    std_object_mgr.get_std_object(l_object_name, self);
+  exception
+    when no_data_found
+    then
+      l_log_ctx := plog.init;
+      
+      self := dbug_log4plsql_obj_t
+              ( 1 -- dirty
+              , bool2int(l_log_ctx.isdefaultinit)
+              , l_log_ctx.llevel
+              , l_log_ctx.lsection
+              , l_log_ctx.ltext
+              , bool2int(l_log_ctx.use_log4j)
+              , bool2int(l_log_ctx.use_out_trans)
+              , bool2int(l_log_ctx.use_logtable)
+              , bool2int(l_log_ctx.use_alert)
+              , bool2int(l_log_ctx.use_trace)
+              , bool2int(l_log_ctx.use_dbms_output)
+              , l_log_ctx.init_lsection
+              , l_log_ctx.init_llevel
+              , l_log_ctx.dbms_output_wrap
+              );
+
+      -- make it a singleton by storing it
+      std_object_mgr.set_std_object(l_object_name, self);
+
+      self.dirty := 0;
+  end;
 
   -- essential
   return;
