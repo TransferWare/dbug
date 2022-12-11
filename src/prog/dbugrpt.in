@@ -19,7 +19,7 @@ use Carp qw(carp);
 use warnings;
 use bignum;
 
-getopts('d:DFhiLnNPr:t:Tv');
+getopts('d:DFhiLnNPr:t:Tuv');
 
 my %break_points_allowed = ();
 for (split( /,/, ( defined($::opt_d) ? $::opt_d : "" ) )) { 
@@ -296,6 +296,8 @@ use warnings;
 use bignum;
 
 use constant PERC_FMT => '%3.2f';
+
+my $DBUGRPT_PREFIX_SEPARATOR = len("@DBUGRPT_PREFIX_SEPARATOR@") > 1 ? ':' : "@DBUGRPT_PREFIX_SEPARATOR@";
 
 sub TIME_DIGITS {
     return ( $main::resolution > 0 ? int(log($main::resolution) / log(10)) : 0 );
@@ -809,17 +811,17 @@ sub totals {
 
 sub prefix {
     my ($obj, $file, $line, $level, $date) = @_;
-    
-    print( sprintf ("%04d-%02d-%02d %02d:%02d:%02d@DBUGRPT_PREFIX_SEPARATOR@ ",
+
+    print( sprintf ("%04d-%02d-%02d %02d:%02d:%02d$DBUGRPT_PREFIX_SEPARATOR ",
                     substr($date, 0, 4), substr($date, 4, 2), substr($date, 6, 2),
                     substr($date, 8, 2), substr($date, 10, 2), substr($date, 12, 2)))
         if ($print_date);
-    print ($obj->pid(), "@DBUGRPT_PREFIX_SEPARATOR@ ") if ($print_process_id);
-    print ($obj->lineno($obj->lineno()+1), "@DBUGRPT_PREFIX_SEPARATOR@ ") if ($print_sequence);
-    print ($obj->name, "@DBUGRPT_PREFIX_SEPARATOR@ ") if ($print_name);
-    print ($file, "@DBUGRPT_PREFIX_SEPARATOR@ ") if ($print_source_file);
-    print ($line, "@DBUGRPT_PREFIX_SEPARATOR@ ") if ($print_source_line);
-    print ($level, "@DBUGRPT_PREFIX_SEPARATOR@ ") if ($print_level);
+    print ($obj->pid(), "$DBUGRPT_PREFIX_SEPARATOR ") if ($print_process_id);
+    print ($obj->lineno($obj->lineno()+1), "$DBUGRPT_PREFIX_SEPARATOR ") if ($print_sequence);
+    print ($obj->name, "$DBUGRPT_PREFIX_SEPARATOR ") if ($print_name);
+    print ($file, "$DBUGRPT_PREFIX_SEPARATOR ") if ($print_source_file);
+    print ($line, "$DBUGRPT_PREFIX_SEPARATOR ") if ($print_source_line);
+    print ($level, "$DBUGRPT_PREFIX_SEPARATOR ") if ($print_level);
 }
 
 sub indent {
@@ -879,9 +881,9 @@ sub print {
         if ($obj->tracing()) {
             $obj->indent($level+1);
         } else {
-            print ("$function@DBUGRPT_PREFIX_SEPARATOR@ ");
+            print ("$function$DBUGRPT_PREFIX_SEPARATOR ");
         }
-        print ("$break_point@DBUGRPT_PREFIX_SEPARATOR@ $str\n");
+        print ("$break_point$DBUGRPT_PREFIX_SEPARATOR $str\n");
     }
 }
 
