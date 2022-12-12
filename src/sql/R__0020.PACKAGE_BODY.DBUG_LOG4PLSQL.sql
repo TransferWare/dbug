@@ -219,7 +219,9 @@ $if dbug_log4plsql.c_testing $then
     ( p_group_name => 'TEST%'
     );
     commit;
+$if std_object_mgr.c_debugging $then    
     dbms_output.put_line('ut_setup finished');
+$end    
   end;
 
   procedure ut_teardown
@@ -230,7 +232,9 @@ $if dbug_log4plsql.c_testing $then
     ( p_group_name => 'TEST%'
     );
     commit;
+$if std_object_mgr.c_debugging $then
     dbms_output.put_line('ut_teardown finished');
+$end    
   end;
 
   procedure ut_store_remove
@@ -246,7 +250,9 @@ $if dbug_log4plsql.c_testing $then
   begin
     for i_try in 1..2
     loop
+$if std_object_mgr.c_debugging $then
       dbms_output.put_line('i_try: ' || i_try);
+$end
 
       std_object_mgr.get_object_names(l_object_name_tab);
 
@@ -257,7 +263,9 @@ $if dbug_log4plsql.c_testing $then
       std_object_mgr.set_group_name(case i_try when 1 then 'TEST' else null end);
       l_dbug_log4plsql_obj := dbug_log4plsql_obj_t(); -- should store
 
+$if std_object_mgr.c_debugging $then
       dbms_output.put_line('test stored');
+$end
       
       case i_try
         when 1
@@ -274,7 +282,6 @@ $if dbug_log4plsql.c_testing $then
           ( p_object_name => 'DBUG_LOG4PLSQL'
           , p_std_object => l_std_object
           );
-          dbms_output.put_line('serialize');
           select  l_std_object.serialize()
           into    l_obj_act
           from    dual;
@@ -289,7 +296,9 @@ $if dbug_log4plsql.c_testing $then
 
       l_dbug_log4plsql_obj.remove();
 
+$if std_object_mgr.c_debugging $then
       dbms_output.put_line('test removed');
+$end
       
       begin
         case i_try

@@ -29,7 +29,7 @@ CREATE OR REPLACE PACKAGE "STD_OBJECT_MGR" AUTHID DEFINER IS
 -- @headcom
 */
 
-c_debugging constant boolean := true; -- can only use dbms_output, not dbug
+c_debugging constant boolean := false; -- can only use dbms_output, not dbug
 c_testing constant boolean := $if $$Testing $then true $else false $end;
 
 /**
@@ -72,8 +72,8 @@ procedure get_std_object
 -- Set a standard object.
 --
 -- Store an object in persistent storage (table std_objects) or into an
--- internal PL/SQL table if the dirty column is not equal to 0.
--- If the value of dirty is 0, nothing will happen.
+-- internal PL/SQL table unless the dirty column is equal to 0 AND the object
+-- is already stored.
 --
 -- @param p_object_name  The object name
 -- @param p_std_object   The object
