@@ -340,11 +340,6 @@ $if std_object_mgr.c_debugging $then
 $end
     end get_object_names;
   begin
-    -- clean local storage up (due to ut_dbug_log4plsql)
-    std_object_mgr.delete_std_objects
-    ( p_group_name => null
-    , p_object_name => '%'
-    );
     for i_try in 1..2
     loop
       std_object_mgr.set_group_name(case i_try when 1 then 'TEST' else null end);
@@ -470,10 +465,11 @@ $end
     begin
       dbug.activate('plsdbug', false);
       dbug.done;
+      -- clean local storage up
       std_object_mgr.delete_std_objects
-      ( p_object_name => 'DBUG'
+      ( p_group_name => null
+      , p_object_name => '%'
       );
-      ut_teardown;
     end;
   begin
     std_object_mgr.set_group_name(null);

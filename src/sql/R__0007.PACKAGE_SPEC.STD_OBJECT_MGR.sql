@@ -29,7 +29,7 @@ CREATE OR REPLACE PACKAGE "STD_OBJECT_MGR" AUTHID DEFINER IS
 -- @headcom
 */
 
-c_debugging constant boolean := true; -- can only use dbms_output, not dbug
+c_debugging constant boolean := false; -- can only use dbms_output, not dbug
 c_testing constant boolean := $if $$Testing $then true $else false $end;
 
 /**
