@@ -215,9 +215,11 @@ $if dbug_log4plsql.c_testing $then
   is
     pragma autonomous_transaction;
   begin
-    delete_std_objects
+    std_object_mgr.delete_std_objects
     ( p_group_name => 'TEST%'
     );
+    dbug.activate('LOG4PLSQL', false);
+    dbug.activate('DBMS_OUTPUT', true);
     commit;
   end;
 
@@ -225,7 +227,7 @@ $if dbug_log4plsql.c_testing $then
   is
     pragma autonomous_transaction;
   begin
-    delete_std_objects
+    std_object_mgr.delete_std_objects
     ( p_group_name => 'TEST%'
     );
     commit;
@@ -238,12 +240,12 @@ $if dbug_log4plsql.c_testing $then
     l_std_object std_object;
     l_dbug_log4plsql_obj dbug_log4plsql_obj_t;
     l_obj_act varchar2(32767);
-    l_obj_exp constant varchar2(32767) := '{"DIRTY":1}';
+    l_obj_exp constant varchar2(32767) := '{"DIRTY":0,"ISDEFAULTINIT":1,"LLEVEL":70,"LSECTION":"block-->UT3.UT_RUNNER.RUN-->UT3.UT_SUITE_ITEM.DO_EXECUTE-->UT3.UT_RUN.DO_EXECUTE-->UT3.UT_LOGICAL_SUITE.DO_EXECUTE-->UT3.UT_SUITE_ITEM.DO_EXECUTE-->UT3.UT_SUITE.DO_EXECUTE-->UT3.UT_SUITE_ITEM.DO_EXECUTE-->UT3.UT_TEST.DO_EXECUTE-->UT3.UT_EXECUTABLE_TEST.DO_EXECUTE-->UT3.UT_EXECUTABLE_TEST.DO_EXECUTE-->UT3.UT_EXECUTABLE.DO_EXECUTE-->UT3.UT_EXECUTABLE.DO_EXECUTE-->SYS.DBMS_SQL.EXECUTE-->block-->EPCAPP.DBUG_LOG4PLSQL.UT_STORE_REMOVE-->EPCAPP.DBUG_LOG4PLSQL_OBJ_T.DBUG_LOG4PLSQL_OBJ_T","LTEXT":null,"USE_LOG4J":0,"USE_OUT_TRANS":1,"USE_LOGTABLE":1,"USE_ALERT":0,"USE_TRACE":0,"USE_DBMS_OUTPUT":0,"INIT_LSECTION":null,"INIT_LLEVEL":70,"DBMS_OUTPUT_WRAP":100}';
   begin
     for i_try in 1..2
     loop
       std_object_mgr.set_group_name(case i_try when 1 then 'TEST' else null end);
-      l_dbug_log4plsql_obj := dbug_obj_log4plsql_t(); -- should store
+      l_dbug_log4plsql_obj := dbug_log4plsql_obj_t(); -- should store
 
       -- test stored
       case i_try
@@ -251,7 +253,7 @@ $if dbug_log4plsql.c_testing $then
         then
           select  t.obj
           into    l_obj_act
-          from    std_objects
+          from    std_objects t
           where   group_name = 'TEST'
           and     object_name = 'DBUG_LOG4PLSQL';
           
@@ -267,7 +269,7 @@ $if dbug_log4plsql.c_testing $then
 
       end case;
       
-      ut.expect(l_obj_act, i_try).to_equal(l_obj_exp);
+      ut.expect(l_obj_act, 'store ' || i_try).to_equal(l_obj_exp);
 
       l_dbug_log4plsql_obj.remove();
 
@@ -278,7 +280,7 @@ $if dbug_log4plsql.c_testing $then
           then
             select  t.obj
             into    l_obj_act
-            from    std_objects
+            from    std_objects t
             where   group_name = 'TEST'
             and     object_name = 'DBUG_LOG4PLSQL';
             
@@ -294,7 +296,7 @@ $if dbug_log4plsql.c_testing $then
       exception
         when others
         then
-          ut.expect(sqlcode, i_try).to_equal(-1);
+          ut.expect(sqlcode, 'remove ' || i_try).to_equal(100);
       end;
     end loop;
 

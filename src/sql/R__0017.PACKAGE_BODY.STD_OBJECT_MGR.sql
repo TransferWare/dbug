@@ -28,6 +28,18 @@ is
       else 'ORACLE:' || SYS_CONTEXT('USERENV', 'SESSION_USER')
     end;
 begin
+$if std_object_mgr.c_debugging $then
+  dbms_output.put_line
+  ( utl_lms.format_message
+    ( '[%s.%s] p_object_name: %s; p_std_object.name(): %s'
+    , $$PLSQL_UNIT
+    , 'SET_STD_OBJECT_AT'
+    , p_object_name
+    , p_std_object.name()
+    )
+  );
+$end
+
   -- persistent storage
   update  std_objects tab
   set     tab.obj = l_obj
@@ -125,6 +137,19 @@ begin
   end if;
 
   p_std_object.dirty := 0;
+
+$if std_object_mgr.c_debugging $then
+  dbms_output.put_line
+  ( utl_lms.format_message
+    ( '[%s.%s] p_object_name: %s; p_std_object.name(): %s; p_std_object.dirty: %s'
+    , $$PLSQL_UNIT
+    , 'GET_STD_OBJECT'
+    , p_object_name
+    , p_std_object.name()
+    , to_char(p_std_object.dirty)
+    )
+  );
+$end
 end get_std_object;
 
 procedure set_std_object
@@ -150,6 +175,19 @@ begin
         l_store := true;
     end;
   end if;
+
+$if std_object_mgr.c_debugging $then
+  dbms_output.put_line
+  ( utl_lms.format_message
+    ( '[%s.%s] p_object_name: %s; p_std_object.name(): %s; l_store: %s'
+    , $$PLSQL_UNIT
+    , 'SET_STD_OBJECT'
+    , p_object_name
+    , p_std_object.name()
+    , case l_store when true then 'TRUE' when false then 'FALSE' else 'NULL' end
+    )
+  );
+$end
 
   if not(l_store)
   then

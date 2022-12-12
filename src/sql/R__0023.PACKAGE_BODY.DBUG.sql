@@ -2327,7 +2327,7 @@ $if dbug.c_testing $then
   is
     pragma autonomous_transaction;
   begin
-    delete_std_objects
+    std_object_mgr.delete_std_objects
     ( p_group_name => 'TEST%'
     );
     commit;
@@ -2337,7 +2337,7 @@ $if dbug.c_testing $then
   is
     pragma autonomous_transaction;
   begin
-    delete_std_objects
+    std_object_mgr.delete_std_objects
     ( p_group_name => 'TEST%'
     );
     commit;
@@ -2362,7 +2362,7 @@ $if dbug.c_testing $then
         then
           select  t.obj
           into    l_obj_act
-          from    std_objects
+          from    std_objects t
           where   group_name = 'TEST'
           and     object_name = 'DBUG';
           
