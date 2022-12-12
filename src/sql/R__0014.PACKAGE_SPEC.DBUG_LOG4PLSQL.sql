@@ -64,6 +64,9 @@ CREATE OR REPLACE PACKAGE "DBUG_LOG4PLSQL" AUTHID DEFINER IS
   --%test
   procedure ut_store_remove;
 
+  --%test
+  procedure ut_dbug_log4plsql;
+
 end dbug_log4plsql;
 /
 

@@ -116,6 +116,32 @@ procedure set_group_name
 )
 is
 begin
+  case
+    when g_group_name is null and p_group_name is not null and g_std_object_tab.count > 0
+    then
+      -- from local storage to external not allowed when there are local objects
+      raise_application_error
+      ( -20000
+      , utl_lms.format_message
+        ( 'Can not change to group %s when there are local objects (first is %s)'
+        , p_group_name
+        , g_std_object_tab(g_std_object_tab.first).name()
+        )
+      );
+    when g_group_name is not null and p_group_name is null and g_std_object_tab.count > 0
+    then
+      -- from external storage to local not allowed when there are local objects
+      raise_application_error
+      ( -20000
+      , utl_lms.format_message
+        ( 'Can not change from group %s when there are local objects (first is %s)'
+        , g_group_name
+        , g_std_object_tab(g_std_object_tab.first).name()
+        )
+      );      
+    else
+      null;
+  end case;
   g_group_name := p_group_name;
 end set_group_name;
 

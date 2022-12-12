@@ -128,6 +128,16 @@ CREATE OR REPLACE PACKAGE BODY "DBUG_LOG4PLSQL" IS
     l_str varchar2(32767) := p_str;
     l_ctx plogparam.log_ctx;
   begin
+$if std_object_mgr.c_debugging $then
+    dbms_output.put_line
+    ( utl_lms.format_message
+      ( '[%s.%s] p_str: %s'
+      , $$PLSQL_UNIT
+      , 'PRINT0'
+      , p_str
+      )
+    );
+$end
     get_log_ctx(l_ctx);
     l_prev_pos := 1;
     loop
@@ -160,6 +170,17 @@ CREATE OR REPLACE PACKAGE BODY "DBUG_LOG4PLSQL" IS
     p_arg1 in varchar2
   ) is
   begin
+$if std_object_mgr.c_debugging $then
+    dbms_output.put_line
+    ( utl_lms.format_message
+      ( '[%s.%s] p_fmt: %s; p_arg1: %s'
+      , $$PLSQL_UNIT
+      , 'PRINT1'
+      , p_fmt
+      , p_arg1
+      )
+    );
+$end
     print( dbug.format_print(p_break_point, p_fmt, 1, p_arg1) );
   end print;
 
@@ -170,6 +191,18 @@ CREATE OR REPLACE PACKAGE BODY "DBUG_LOG4PLSQL" IS
     p_arg2 in varchar2
   ) is
   begin
+$if std_object_mgr.c_debugging $then
+    dbms_output.put_line
+    ( utl_lms.format_message
+      ( '[%s.%s] p_fmt: %s; p_arg1: %s; p_arg2: %s'
+      , $$PLSQL_UNIT
+      , 'PRINT2'
+      , p_fmt
+      , p_arg1
+      , p_arg2
+      )
+    );
+$end
     print( dbug.format_print(p_break_point, p_fmt, 2, p_arg1, p_arg2) );
   end print;
 
@@ -181,6 +214,19 @@ CREATE OR REPLACE PACKAGE BODY "DBUG_LOG4PLSQL" IS
     p_arg3 in varchar2
   ) is
   begin
+$if std_object_mgr.c_debugging $then
+    dbms_output.put_line
+    ( utl_lms.format_message
+      ( '[%s.%s] p_fmt: %s; p_arg1: %s; p_arg2: %s; p_arg3: %s'
+      , $$PLSQL_UNIT
+      , 'PRINT3'
+      , p_fmt
+      , p_arg1
+      , p_arg2
+      , p_arg3
+      )
+    );
+$end
     print( dbug.format_print(p_break_point, p_fmt, 3, p_arg1, p_arg2, p_arg3) );
   end print;
 
@@ -193,6 +239,20 @@ CREATE OR REPLACE PACKAGE BODY "DBUG_LOG4PLSQL" IS
     p_arg4 in varchar2
   ) is
   begin
+$if std_object_mgr.c_debugging $then
+    dbms_output.put_line
+    ( utl_lms.format_message
+      ( '[%s.%s] p_fmt: %s; p_arg1: %s; p_arg2: %s; p_arg3: %s; p_arg4: %s'
+      , $$PLSQL_UNIT
+      , 'PRINT4'
+      , p_fmt
+      , p_arg1
+      , p_arg2
+      , p_arg3
+      , p_arg4
+      )
+    );
+$end
     print( dbug.format_print(p_break_point, p_fmt, 4, p_arg1, p_arg2, p_arg3, p_arg4) );
   end print;
 
@@ -206,6 +266,21 @@ CREATE OR REPLACE PACKAGE BODY "DBUG_LOG4PLSQL" IS
     p_arg5 in varchar2
   ) is
   begin
+$if std_object_mgr.c_debugging $then
+    dbms_output.put_line
+    ( utl_lms.format_message
+      ( '[%s.%s] p_fmt: %s; p_arg1: %s; p_arg2: %s; p_arg3: %s; p_arg4: %s; p_arg5: %s'
+      , $$PLSQL_UNIT
+      , 'PRINT5'
+      , p_fmt
+      , p_arg1
+      , p_arg2
+      , p_arg3
+      , p_arg4
+      , p_arg5
+      )
+    );
+$end
     print( dbug.format_print(p_break_point, p_fmt, 5, p_arg1, p_arg2, p_arg3, p_arg4, p_arg5) );
   end print;
 
@@ -215,6 +290,7 @@ $if dbug_log4plsql.c_testing $then
   is
     pragma autonomous_transaction;
   begin
+    std_object_mgr.set_group_name(null);
     std_object_mgr.delete_std_objects
     ( p_group_name => 'TEST%'
     );
@@ -228,6 +304,7 @@ $end
   is
     pragma autonomous_transaction;
   begin
+    std_object_mgr.set_group_name(null);
     std_object_mgr.delete_std_objects
     ( p_group_name => 'TEST%'
     );
@@ -244,29 +321,43 @@ $end
     l_std_object std_object;
     l_dbug_log4plsql_obj dbug_log4plsql_obj_t;
     l_object_name_tab sys.odcivarchar2list;
-    l_count_start pls_integer;   
+    l_count pls_integer;   
     l_obj_act varchar2(32767);
     l_obj_exp constant varchar2(32767) := '{"DIRTY":0,"ISDEFAULTINIT":1,"LLEVEL":70,"LSECTION":"block-->UT3.UT_RUNNER.RUN-->UT3.UT_SUITE_ITEM.DO_EXECUTE-->UT3.UT_RUN.DO_EXECUTE-->UT3.UT_LOGICAL_SUITE.DO_EXECUTE-->UT3.UT_SUITE_ITEM.DO_EXECUTE-->UT3.UT_SUITE.DO_EXECUTE-->UT3.UT_SUITE_ITEM.DO_EXECUTE-->UT3.UT_TEST.DO_EXECUTE-->UT3.UT_EXECUTABLE_TEST.DO_EXECUTE-->UT3.UT_EXECUTABLE_TEST.DO_EXECUTE-->UT3.UT_EXECUTABLE.DO_EXECUTE-->UT3.UT_EXECUTABLE.DO_EXECUTE-->SYS.DBMS_SQL.EXECUTE-->block-->EPCAPP.DBUG_LOG4PLSQL.UT_STORE_REMOVE-->EPCAPP.DBUG_LOG4PLSQL_OBJ_T.DBUG_LOG4PLSQL_OBJ_T","LTEXT":null,"USE_LOG4J":0,"USE_OUT_TRANS":1,"USE_LOGTABLE":1,"USE_ALERT":0,"USE_TRACE":0,"USE_DBMS_OUTPUT":0,"INIT_LSECTION":null,"INIT_LLEVEL":70,"DBMS_OUTPUT_WRAP":100}';
+
+    procedure get_object_names
+    is
+    begin
+      std_object_mgr.get_object_names(l_object_name_tab);
+$if std_object_mgr.c_debugging $then
+      if l_object_name_tab.count > 0
+      then
+        for i_idx in l_object_name_tab.first .. l_object_name_tab.last
+        loop
+          dbms_output.put_line('l_object_name_tab[' || i_idx || '] = ' || l_object_name_tab(i_idx));        
+        end loop;
+      end if;
+$end
+    end get_object_names;
   begin
+    -- clean local storage up (due to ut_dbug_log4plsql)
+    std_object_mgr.delete_std_objects
+    ( p_group_name => null
+    , p_object_name => '%'
+    );
     for i_try in 1..2
     loop
-$if std_object_mgr.c_debugging $then
-      dbms_output.put_line('i_try: ' || i_try);
-$end
-
-      std_object_mgr.get_object_names(l_object_name_tab);
-
-      l_count_start := l_object_name_tab.count;
-
-      ut.expect(l_count_start, 'object count ' || i_try).to_equal(0);
-      
       std_object_mgr.set_group_name(case i_try when 1 then 'TEST' else null end);
-      l_dbug_log4plsql_obj := dbug_log4plsql_obj_t(); -- should store
-
-$if std_object_mgr.c_debugging $then
-      dbms_output.put_line('test stored');
-$end
       
+      -- before store
+$if std_object_mgr.c_debugging $then
+      dbms_output.put_line('count before store ' || i_try);
+$end     
+      get_object_names;
+      l_count := l_object_name_tab.count;
+      
+      l_dbug_log4plsql_obj := new dbug_log4plsql_obj_t(); -- should store
+
       case i_try
         when 1
         then
@@ -288,12 +379,16 @@ $end
 
       end case;
       
-      ut.expect(l_obj_act, 'store ' || i_try).to_equal(l_obj_exp);
+$if std_object_mgr.c_debugging $then
+      dbms_output.put_line('count after store ' || i_try);
+$end     
+      get_object_names;
+      ut.expect(l_object_name_tab.count, 'count after store ' || i_try).to_equal(l_count + 1);
+      ut.expect(l_obj_act, 'compare ' || i_try).to_equal(l_obj_exp);
 
-      std_object_mgr.get_object_names(l_object_name_tab);
-
-      ut.expect(l_object_name_tab.count, 'store ' || i_try).to_equal(l_count_start + 1);
-
+      -- after store
+      l_count := l_object_name_tab.count;
+      
       l_dbug_log4plsql_obj.remove();
 
 $if std_object_mgr.c_debugging $then
@@ -325,13 +420,99 @@ $end
           ut.expect(sqlcode, 'remove ' || i_try).to_equal(100);
       end;
       
-      std_object_mgr.get_object_names(l_object_name_tab);
+$if std_object_mgr.c_debugging $then
+      dbms_output.put_line('count after remove ' || i_try);
+$end     
+      get_object_names;
 
-      ut.expect(l_object_name_tab.count, 'remove ' || i_try).to_equal(l_count_start);
+      ut.expect(l_object_name_tab.count, 'count after remove ' || i_try).to_equal(l_count - 1);
     end loop;
 
     commit;
   end ut_store_remove;
+
+  procedure ut_dbug_log4plsql
+  is    
+    pragma autonomous_transaction;
+
+    l_id tlog.id%type;
+    l_act sys_refcursor;
+    l_exp sys_refcursor;
+
+    procedure test(p_try in integer)
+    is
+    begin
+      dbug.enter('test');
+      dbug.print(dbug."info", 'p_try: %s %s %s %s %s', p_try, p_try+1, p_try+2, p_try+3, p_try+4);
+      if p_try = 2
+      then
+        raise program_error;
+      else
+        test(p_try + 1);
+      end if;
+      dbug.leave;
+    end test;
+
+    procedure main
+    is
+    begin
+      dbug.enter('main');
+      test(1);
+      dbug.leave;
+    exception
+      when others
+      then
+        dbug.leave_on_error;
+    end main;
+    
+    procedure cleanup
+    is
+    begin
+      dbug.activate('plsdbug', false);
+      dbug.done;
+      std_object_mgr.delete_std_objects
+      ( p_object_name => 'DBUG'
+      );
+      ut_teardown;
+    end;
+  begin
+    std_object_mgr.set_group_name(null);
+    
+    select nvl(max(id), 0) into l_id from tlog;
+
+    dbug.activate('plsdbug', true);
+
+    main;
+
+    open l_act for
+      select rownum as nr, ltext from (select substr(ltext, 1, 104) as ltext from tlog where id > l_id and luser = user order by id asc);
+    open l_exp for
+      select  1 as nr, '>main' as ltext from dual union all
+      select  2      , '|   >test' as ltext from dual union all
+      select  3      , '|   |   info: p_try: 1 2 3 4 5' as ltext from dual union all
+      select  4      , '|   |   >test' as ltext from dual union all
+      select  5      , '|   |   |   info: p_try: 2 3 4 5 6' as ltext from dual union all
+      select  6      , '|   |   |   error: sqlerrm: ORA-06501: PL/SQL: program error' as ltext from dual union all
+      select  7      , '|   |   |   error: dbms_utility.format_error_backtrace (1): ORA-06512: at "EPCAPP.DBUG_LOG4PLSQL", line ' /*441*/ as ltext from dual union all
+      select  8      , '|   |   |   error: dbms_utility.format_error_backtrace (2): ORA-06512: at "EPCAPP.DBUG_LOG4PLSQL", line ' /*443*/ as ltext from dual union all
+      select  9      , '|   |   |   error: dbms_utility.format_error_backtrace (3): ORA-06512: at "EPCAPP.DBUG_LOG4PLSQL", line ' /*452*/ as ltext from dual union all
+      select 10      , '|   |   <test' as ltext from dual union all
+      select 11      , '|   <test' as ltext from dual union all
+      select 12      , '<main' as ltext from dual;     
+
+    ut.expect(l_act, 'tlog').to_equal(l_exp);
+
+    cleanup;
+
+    commit;
+  exception
+    when others
+    then
+      rollback;
+      cleanup;
+      commit;
+      raise;
+  end ut_dbug_log4plsql;
 
 $else -- dbug_log4plsql.c_testing $then
 
@@ -340,21 +521,27 @@ $else -- dbug_log4plsql.c_testing $then
   procedure ut_setup
   is
   begin
-    null;
+    raise program_error;
   end;
 
   procedure ut_teardown
   is
   begin
-    null;
+    raise program_error;
   end;
 
   procedure ut_store_remove
   is    
   begin
-    null;
+    raise program_error;
   end ut_store_remove;
-
+  
+  procedure ut_dbug_log4plsql
+  is
+  begin
+    raise program_error;
+  end ut_dbug_log4plsql;
+  
 $end -- dbug_log4plsql.c_testing $then
 
 end dbug_log4plsql;
