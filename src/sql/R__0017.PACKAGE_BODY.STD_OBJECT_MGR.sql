@@ -28,18 +28,6 @@ is
       else 'ORACLE:' || SYS_CONTEXT('USERENV', 'SESSION_USER')
     end;
 begin
-$if std_object_mgr.c_debugging $then
-  dbms_output.put_line
-  ( utl_lms.format_message
-    ( '[%s.%s] p_object_name: %s; p_std_object.name(): %s'
-    , $$PLSQL_UNIT
-    , 'SET_STD_OBJECT_AT'
-    , p_object_name
-    , p_std_object.name()
-    )
-  );
-$end
-
   -- persistent storage
   update  std_objects tab
   set     tab.obj = l_obj
@@ -47,6 +35,18 @@ $end
   ,       tab.last_update_date = sysdate
   where   tab.group_name = g_group_name
   and     tab.object_name = p_object_name;
+
+$if std_object_mgr.c_debugging $then
+  dbms_output.put_line
+  ( utl_lms.format_message
+    ( '[%s.%s] p_object_name: %s; sql%rowcount: %s'
+    , $$PLSQL_UNIT
+    , 'SET_STD_OBJECT_AT'
+    , p_object_name
+    , to_char(sql%rowcount)
+    )
+  );
+$end
 
   if sql%rowcount = 0
   then
@@ -93,6 +93,19 @@ begin
   from    std_objects tab
   where   tab.group_name like p_group_name escape g_escape
   and     tab.object_name like p_object_name escape g_escape;
+
+$if std_object_mgr.c_debugging $then
+  dbms_output.put_line
+  ( utl_lms.format_message
+    ( '[%s.%s] p_group_name: %s; p_object_name: %s; sql%rowcount: %s'
+    , $$PLSQL_UNIT
+    , 'DELETE_STD_OBJECTS_AT'
+    , p_group_name
+    , p_object_name
+    , to_char(sql%rowcount)
+    )
+  );
+$end
 
   commit;
 end delete_std_objects_at;
@@ -141,11 +154,11 @@ begin
 $if std_object_mgr.c_debugging $then
   dbms_output.put_line
   ( utl_lms.format_message
-    ( '[%s.%s] p_object_name: %s; p_std_object.name(): %s; p_std_object.dirty: %s'
+    ( '[%s.%s] p_object_name: %s; g_group_name: %s; p_std_object.dirty: %s'
     , $$PLSQL_UNIT
     , 'GET_STD_OBJECT'
     , p_object_name
-    , p_std_object.name()
+    , g_group_name
     , to_char(p_std_object.dirty)
     )
   );
@@ -179,11 +192,11 @@ begin
 $if std_object_mgr.c_debugging $then
   dbms_output.put_line
   ( utl_lms.format_message
-    ( '[%s.%s] p_object_name: %s; p_std_object.name(): %s; l_store: %s'
+    ( '[%s.%s] p_object_name: %s; g_group_name: %s; l_store: %s'
     , $$PLSQL_UNIT
     , 'SET_STD_OBJECT'
     , p_object_name
-    , p_std_object.name()
+    , g_group_name
     , case l_store when true then 'TRUE' when false then 'FALSE' else 'NULL' end
     )
   );
@@ -209,6 +222,17 @@ procedure del_std_object
 )
 is
 begin
+$if std_object_mgr.c_debugging $then
+  dbms_output.put_line
+  ( utl_lms.format_message
+    ( '[%s.%s] p_object_name: %s'
+    , $$PLSQL_UNIT
+    , 'DEL_STD_OBJECT'
+    , p_object_name
+    )
+  );
+$end
+
   delete_std_objects
   ( p_group_name => replace(g_group_name, '_', g_escape || '_')
   , p_object_name => replace(p_object_name, '_', g_escape || '_')
@@ -248,6 +272,18 @@ is
   l_object_name std_objects.object_name%type;
   l_object_name_prev std_objects.object_name%type;
 begin
+$if std_object_mgr.c_debugging $then
+  dbms_output.put_line
+  ( utl_lms.format_message
+    ( '[%s.%s] p_group_name: %s; p_object_name: %s'
+    , $$PLSQL_UNIT
+    , 'DELETE_STD_OBJECTS'
+    , p_group_name
+    , p_object_name
+    )
+  );
+$end
+
   if p_object_name is null
   then
     raise value_error;
@@ -265,7 +301,19 @@ begin
          so first do next and then maybe delete (the previous) */
       l_object_name_prev := l_object_name;
       l_object_name := g_std_object_tab.next(l_object_name);
-      if l_object_name_prev like p_object_name
+$if std_object_mgr.c_debugging $then
+      dbms_output.put_line
+      ( utl_lms.format_message
+        ( '[%s.%s] l_object_name_prev: %s; l_object_name: %s; l_object_name_prev like p_object_name escape g_escape: %s'
+        , $$PLSQL_UNIT
+        , 'DELETE_STD_OBJECTS'
+        , l_object_name_prev
+        , l_object_name
+        , case l_object_name_prev like p_object_name when true then 'TRUE' when false then 'FALSE' else 'NULL' end
+        )
+      );
+$end
+      if l_object_name_prev like p_object_name escape g_escape
       then
         g_std_object_tab.delete(l_object_name_prev);
       end if;

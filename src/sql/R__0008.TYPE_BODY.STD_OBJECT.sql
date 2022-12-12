@@ -5,6 +5,16 @@ final
 member procedure store(self in std_object)
 is
 begin
+$if std_object_mgr.c_debugging $then
+  dbms_output.put_line
+  ( utl_lms.format_message
+    ( '[%s.%s] name(): %s'
+    , $$PLSQL_UNIT
+    , 'STORE'
+    , name()
+    )
+  );
+$end
   std_object_mgr.set_std_object(name(), self);
 end store;
 
@@ -12,6 +22,16 @@ final
 member procedure remove(self in std_object)
 is
 begin
+$if std_object_mgr.c_debugging $then
+  dbms_output.put_line
+  ( utl_lms.format_message
+    ( '[%s.%s] name(): %s'
+    , $$PLSQL_UNIT
+    , 'REMOVE'
+    , name()
+    )
+  );
+$end
   std_object_mgr.del_std_object(name());
 end remove;
 

@@ -12,7 +12,7 @@ begin
     when no_data_found
     then
       self := dbug_obj_t
-              ( 1 -- to force a store
+              ( 0 -- to force a store
               , sys.odcivarchar2list()
               , sys.odcinumberlist()
               , 0
@@ -43,8 +43,6 @@ begin
 
       -- make it a singleton by storing it
       std_object_mgr.set_std_object(l_object_name, self);
-
-      self.dirty := 0;
   end;
 
   -- essential

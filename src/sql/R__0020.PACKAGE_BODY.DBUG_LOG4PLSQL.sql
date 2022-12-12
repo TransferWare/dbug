@@ -218,9 +218,8 @@ $if dbug_log4plsql.c_testing $then
     std_object_mgr.delete_std_objects
     ( p_group_name => 'TEST%'
     );
-    dbug.activate('LOG4PLSQL', false);
-    dbug.activate('DBMS_OUTPUT', true);
     commit;
+    dbms_output.put_line('ut_setup finished');
   end;
 
   procedure ut_teardown
@@ -231,6 +230,7 @@ $if dbug_log4plsql.c_testing $then
     ( p_group_name => 'TEST%'
     );
     commit;
+    dbms_output.put_line('ut_teardown finished');
   end;
 
   procedure ut_store_remove
@@ -239,15 +239,26 @@ $if dbug_log4plsql.c_testing $then
 
     l_std_object std_object;
     l_dbug_log4plsql_obj dbug_log4plsql_obj_t;
+    l_object_name_tab sys.odcivarchar2list;
+    l_count_start pls_integer;   
     l_obj_act varchar2(32767);
     l_obj_exp constant varchar2(32767) := '{"DIRTY":0,"ISDEFAULTINIT":1,"LLEVEL":70,"LSECTION":"block-->UT3.UT_RUNNER.RUN-->UT3.UT_SUITE_ITEM.DO_EXECUTE-->UT3.UT_RUN.DO_EXECUTE-->UT3.UT_LOGICAL_SUITE.DO_EXECUTE-->UT3.UT_SUITE_ITEM.DO_EXECUTE-->UT3.UT_SUITE.DO_EXECUTE-->UT3.UT_SUITE_ITEM.DO_EXECUTE-->UT3.UT_TEST.DO_EXECUTE-->UT3.UT_EXECUTABLE_TEST.DO_EXECUTE-->UT3.UT_EXECUTABLE_TEST.DO_EXECUTE-->UT3.UT_EXECUTABLE.DO_EXECUTE-->UT3.UT_EXECUTABLE.DO_EXECUTE-->SYS.DBMS_SQL.EXECUTE-->block-->EPCAPP.DBUG_LOG4PLSQL.UT_STORE_REMOVE-->EPCAPP.DBUG_LOG4PLSQL_OBJ_T.DBUG_LOG4PLSQL_OBJ_T","LTEXT":null,"USE_LOG4J":0,"USE_OUT_TRANS":1,"USE_LOGTABLE":1,"USE_ALERT":0,"USE_TRACE":0,"USE_DBMS_OUTPUT":0,"INIT_LSECTION":null,"INIT_LLEVEL":70,"DBMS_OUTPUT_WRAP":100}';
   begin
     for i_try in 1..2
     loop
+      dbms_output.put_line('i_try: ' || i_try);
+
+      std_object_mgr.get_object_names(l_object_name_tab);
+
+      l_count_start := l_object_name_tab.count;
+
+      ut.expect(l_count_start, 'object count ' || i_try).to_equal(0);
+      
       std_object_mgr.set_group_name(case i_try when 1 then 'TEST' else null end);
       l_dbug_log4plsql_obj := dbug_log4plsql_obj_t(); -- should store
 
-      -- test stored
+      dbms_output.put_line('test stored');
+      
       case i_try
         when 1
         then
@@ -263,6 +274,7 @@ $if dbug_log4plsql.c_testing $then
           ( p_object_name => 'DBUG_LOG4PLSQL'
           , p_std_object => l_std_object
           );
+          dbms_output.put_line('serialize');
           select  l_std_object.serialize()
           into    l_obj_act
           from    dual;
@@ -271,9 +283,14 @@ $if dbug_log4plsql.c_testing $then
       
       ut.expect(l_obj_act, 'store ' || i_try).to_equal(l_obj_exp);
 
+      std_object_mgr.get_object_names(l_object_name_tab);
+
+      ut.expect(l_object_name_tab.count, 'store ' || i_try).to_equal(l_count_start + 1);
+
       l_dbug_log4plsql_obj.remove();
 
-      -- test removed
+      dbms_output.put_line('test removed');
+      
       begin
         case i_try
           when 1
@@ -298,6 +315,10 @@ $if dbug_log4plsql.c_testing $then
         then
           ut.expect(sqlcode, 'remove ' || i_try).to_equal(100);
       end;
+      
+      std_object_mgr.get_object_names(l_object_name_tab);
+
+      ut.expect(l_object_name_tab.count, 'remove ' || i_try).to_equal(l_count_start);
     end loop;
 
     commit;
