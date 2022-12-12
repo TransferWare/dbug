@@ -36,7 +36,7 @@ c_testing constant boolean := $if $$Testing $then true $else false $end;
 -- Set the group name.
 --
 -- Setting the group name to a non-NULL value will force the objects to use
--- table std_objects.
+-- table STD_OBJECTS.
 --
 -- @param p_group_name  The group name
 */

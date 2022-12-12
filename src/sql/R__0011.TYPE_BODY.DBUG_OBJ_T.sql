@@ -12,7 +12,7 @@ begin
     when no_data_found
     then
       self := dbug_obj_t
-              ( 0 -- to force a store
+              ( 0
               , sys.odcivarchar2list()
               , sys.odcinumberlist()
               , 0
