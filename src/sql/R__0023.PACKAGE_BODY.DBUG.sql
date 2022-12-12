@@ -2347,6 +2347,7 @@ $if dbug.c_testing $then
   is    
     pragma autonomous_transaction;
 
+    l_std_object std_object;
     l_dbug_obj dbug_obj_t;
     l_obj_act varchar2(32767);
     l_obj_exp constant varchar2(32767) := '{"DIRTY":1,"ACTIVE_STR_TAB":[],"ACTIVE_NUM_TAB":[],"INDENT_LEVEL":0,"CALL_TAB":[],"DBUG_LEVEL":2,"BREAK_POINT_LEVEL_STR_TAB":["debug","error","fatal","info","input","output","trace","warning"],"BREAK_POINT_LEVEL_NUM_TAB":[2,5,6,3,2,2,2,4],"IGNORE_BUFFER_OVERFLOW":0}';

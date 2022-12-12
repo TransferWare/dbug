@@ -52,6 +52,9 @@ CREATE TYPE "STD_OBJECT" AUTHID DEFINER AS OBJECT (
 , final
   member procedure print(self in std_object)
 
+, order member function compare(p_other in std_object)
+  return integer
+
 ) not instantiable not final;
 /
 

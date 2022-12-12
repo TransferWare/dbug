@@ -87,6 +87,15 @@ begin
   );
 end print;
 
+order member function compare(p_other in std_object)
+return integer
+is
+  l_one std_object := self;
+begin
+  l_one.dirty := p_other.dirty; -- ignore dirty
+  return dbms_lob.compare(l_one.repr(), p_other.repr());
+end compare;
+
 end;
 /
 

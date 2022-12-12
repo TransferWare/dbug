@@ -1,5 +1,7 @@
 CREATE OR REPLACE PACKAGE "DBUG_LOG4PLSQL" AUTHID DEFINER IS
 
+  c_testing constant boolean := $if $$Testing $then true $else false $end;
+
   procedure done;
 
   procedure enter(
@@ -47,6 +49,20 @@ CREATE OR REPLACE PACKAGE "DBUG_LOG4PLSQL" AUTHID DEFINER IS
     p_arg4 in varchar2,
     p_arg5 in varchar2
   );
+
+
+  --%suitepath(DBUG)
+  --%suite
+  --%rollback(manual)
+
+  --%beforeall
+  procedure ut_setup;
+
+  --%afterall
+  procedure ut_teardown;
+
+  --%test
+  procedure ut_store_remove;
 
 end dbug_log4plsql;
 /

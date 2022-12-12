@@ -9,6 +9,83 @@ g_std_object_tab std_object_tabtype;
 
 g_group_name std_objects.group_name%type := null;
 
+-- PRIVATE
+
+procedure set_std_object_at
+( p_object_name in std_objects.object_name%type
+, p_std_object in std_object
+)
+is
+  pragma autonomous_transaction;
+  
+  l_obj_type constant std_objects.obj_type%type := p_std_object.get_type();
+  l_obj constant std_objects.obj%type := p_std_object.serialize();
+
+  l_user constant std_objects.created_by%type :=
+    case
+      when SYS_CONTEXT('APEX$SESSION', 'APP_USER') is not null
+      then 'APEX:' || SYS_CONTEXT('APEX$SESSION', 'APP_USER')
+      else 'ORACLE:' || SYS_CONTEXT('USERENV', 'SESSION_USER')
+    end;
+begin
+  -- persistent storage
+  update  std_objects tab
+  set     tab.obj = l_obj
+  ,       tab.last_updated_by = l_user
+  ,       tab.last_update_date = sysdate
+  where   tab.group_name = g_group_name
+  and     tab.object_name = p_object_name;
+
+  if sql%rowcount = 0
+  then
+    insert
+    into    std_objects
+    ( group_name
+    , object_name
+    , created_by
+    , creation_date
+    , last_updated_by
+    , last_update_date
+    , obj_type
+    , obj
+    , app_session
+    )
+    values
+    ( g_group_name
+    , p_object_name
+    , l_user
+    , sysdate
+    , l_user
+    , sysdate
+    , l_obj_type
+    , l_obj
+    , case
+        when SYS_CONTEXT('APEX$SESSION','APP_SESSION') is not null
+        then 'APEX:' || SYS_CONTEXT('APEX$SESSION','APP_SESSION')
+        else 'ORACLE:' || SYS_CONTEXT('USERENV','SESSIONID')
+      end
+    );
+  end if;
+
+  commit;
+end set_std_object_at;
+
+procedure delete_std_objects_at
+( p_group_name in std_objects.group_name%type
+, p_object_name in std_objects.object_name%type
+)
+is
+  pragma autonomous_transaction;
+begin
+  delete
+  from    std_objects tab
+  where   tab.group_name like p_group_name escape g_escape
+  and     tab.object_name like p_object_name escape g_escape;
+
+  commit;
+end delete_std_objects_at;
+
+-- PUBLIC 
 procedure set_group_name
 ( p_group_name in std_objects.group_name%type
 )
@@ -55,63 +132,34 @@ procedure set_std_object
 , p_std_object in std_object
 )
 is
-  pragma autonomous_transaction;
-
-  l_obj_type constant std_objects.obj_type%type := p_std_object.get_type();
-  l_obj constant std_objects.obj%type := p_std_object.serialize();
-
-  l_user constant std_objects.created_by%type :=
-    case
-      when SYS_CONTEXT('APEX$SESSION', 'APP_USER') is not null
-      then 'APEX:' || SYS_CONTEXT('APEX$SESSION', 'APP_USER')
-      else 'ORACLE:' || SYS_CONTEXT('USERENV', 'SESSION_USER')
-    end;
+  l_store boolean := case when p_std_object.dirty = 0 then null else true end;
+  l_std_object std_object;
 begin
-  if p_std_object.dirty = 0
+  if l_store is null
   then
-    null; -- not changed
+    -- retrieve the last version stored and compare
+    begin
+      get_std_object
+      ( p_object_name => p_object_name
+      , p_std_object => l_std_object
+      );
+      l_store := case when p_std_object.compare(l_std_object) = 0 then false else true end;
+    exception
+      when no_data_found
+      then
+        l_store := true;
+    end;
+  end if;
+
+  if not(l_store)
+  then
+    null;
   elsif g_group_name is not null
   then
-    -- persistent storage
-    update  std_objects tab
-    set     tab.obj = l_obj
-    ,       tab.last_updated_by = l_user
-    ,       tab.last_update_date = sysdate
-    where   tab.group_name = g_group_name
-    and     tab.object_name = p_object_name;
-
-    if sql%rowcount = 0
-    then
-      insert
-      into    std_objects
-      ( group_name
-      , object_name
-      , created_by
-      , creation_date
-      , last_updated_by
-      , last_update_date
-      , obj_type
-      , obj
-      , app_session
-      )
-      values
-      ( g_group_name
-      , p_object_name
-      , l_user
-      , sysdate
-      , l_user
-      , sysdate
-      , l_obj_type
-      , l_obj
-      , case
-          when SYS_CONTEXT('APEX$SESSION','APP_SESSION') is not null
-          then 'APEX:' || SYS_CONTEXT('APEX$SESSION','APP_SESSION')
-          else 'ORACLE:' || SYS_CONTEXT('USERENV','SESSIONID')
-        end
-      );
-    end if;
-
-    commit;
+    set_std_object_at
+    ( p_object_name => p_object_name
+    , p_std_object => p_std_object
+    );  
   else
     -- package state
     g_std_object_tab(p_object_name) := p_std_object;
@@ -159,8 +207,6 @@ procedure delete_std_objects
 , p_object_name in std_objects.object_name%type default '%'
 )
 is
-  pragma autonomous_transaction;
-
   l_object_name std_objects.object_name%type;
   l_object_name_prev std_objects.object_name%type;
 begin
@@ -169,12 +215,10 @@ begin
     raise value_error;
   elsif p_group_name is not null
   then
-    delete
-    from    std_objects tab
-    where   tab.group_name like p_group_name escape g_escape
-    and     tab.object_name like p_object_name escape g_escape;
-
-    commit;
+    delete_std_objects_at
+    ( p_group_name => p_group_name
+    , p_object_name => p_object_name
+    );
   else
     l_object_name := g_std_object_tab.first;
     while l_object_name is not null
@@ -191,7 +235,8 @@ begin
   end if;
 end delete_std_objects;
 
---%beforeall
+$if std_object_mgr.c_testing $then
+
 procedure ut_setup
 is
   pragma autonomous_transaction;
@@ -202,7 +247,6 @@ begin
   commit;
 end;
 
---%afterall
 procedure ut_teardown
 is
   pragma autonomous_transaction;
@@ -213,7 +257,6 @@ begin
   commit;
 end;
 
---%test
 procedure ut_set_group_name
 is
 begin
@@ -225,7 +268,6 @@ begin
   ut.expect(g_group_name).to_be_null();
 end;
 
---%test
 procedure ut_get_group_name
 is
 begin
@@ -237,7 +279,6 @@ begin
   ut.expect(get_group_name()).to_be_null();
 end;
 
---%test
 procedure ut_store_remove
 is
   pragma autonomous_transaction;
@@ -291,6 +332,40 @@ begin
 
   commit;
 end;
+
+$else -- $if std_object_mgr.c_testing $then
+
+procedure ut_setup
+is
+begin
+  raise program_error;
+end;  
+
+procedure ut_teardown
+is
+begin
+  raise program_error;
+end;
+
+procedure ut_set_group_name
+is
+begin
+  raise program_error;
+end;
+
+procedure ut_get_group_name
+is
+begin
+  raise program_error;
+end;
+
+procedure ut_store_remove
+is
+begin
+  raise program_error;
+end;
+
+$end -- $if std_object_mgr.c_testing $then
 
 end std_object_mgr;
 /

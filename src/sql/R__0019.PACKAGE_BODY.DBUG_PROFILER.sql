@@ -39,7 +39,7 @@ $else
 $end
 end;
 
-$end
+$end -- $if dbug_profiler.c_testing $then
 
 -- GLOBAL ROUTINES
 procedure start_timer
@@ -194,7 +194,6 @@ begin
 end print;
 
 -- test procedures
--- enable by: alter package xxyss_admin.dbug_profiler compile body PLSQL_CCFlags = 'Testing:true' reuse settings
 procedure ut_setup
 is
 begin

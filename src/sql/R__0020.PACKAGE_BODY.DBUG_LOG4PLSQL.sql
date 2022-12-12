@@ -62,23 +62,12 @@ CREATE OR REPLACE PACKAGE BODY "DBUG_LOG4PLSQL" IS
   is
     l_obj dbug_log4plsql_obj_t;
   begin
-    begin
-      l_obj := new dbug_log4plsql_obj_t();
+    l_obj := new dbug_log4plsql_obj_t();
 
-      dbug_log4plsql_obj2log_ctx
-      ( p_obj => l_obj
-      , p_ctx => p_ctx
-      );
-    exception
-      when no_data_found
-      then
-        p_ctx :=
-          plog.init
-          ( plevel => plog.ldebug
-          , plogtable => true
-          , pout_trans => true
-          );
-    end;
+    dbug_log4plsql_obj2log_ctx
+    ( p_obj => l_obj
+    , p_ctx => p_ctx
+    );
   end get_log_ctx;
 
   procedure set_log_ctx
@@ -87,28 +76,8 @@ CREATE OR REPLACE PACKAGE BODY "DBUG_LOG4PLSQL" IS
   is
     l_obj dbug_log4plsql_obj_t;
   begin
-    begin
-      l_obj := new dbug_log4plsql_obj_t();
-    exception
-      when no_data_found
-      then
-        l_obj := new dbug_log4plsql_obj_t
-                     ( null
-                     , null
-                     , null
-                     , null
-                     , null
-                     , null
-                     , null
-                     , null
-                     , null
-                     , null
-                     , null
-                     , null
-                     , null
-                     , null
-                     );
-    end;
+    l_obj := new dbug_log4plsql_obj_t();
+
     log_ctx2dbug_log4plsql_obj
     ( p_ctx => p_ctx
     , p_obj => l_obj
@@ -122,12 +91,8 @@ CREATE OR REPLACE PACKAGE BODY "DBUG_LOG4PLSQL" IS
   is
     l_obj dbug_log4plsql_obj_t;
   begin
-    l_obj := new dbug_log4plsql_obj_t(); -- may raise no_data_found
+    l_obj := new dbug_log4plsql_obj_t();
     l_obj.remove();
-  exception
-    when no_data_found
-    then
-      null;
   end done;
 
   procedure enter(
@@ -243,6 +208,122 @@ CREATE OR REPLACE PACKAGE BODY "DBUG_LOG4PLSQL" IS
   begin
     print( dbug.format_print(p_break_point, p_fmt, 5, p_arg1, p_arg2, p_arg3, p_arg4, p_arg5) );
   end print;
+
+$if dbug_log4plsql.c_testing $then 
+
+  procedure ut_setup
+  is
+    pragma autonomous_transaction;
+  begin
+    delete_std_objects
+    ( p_group_name => 'TEST%'
+    );
+    commit;
+  end;
+
+  procedure ut_teardown
+  is
+    pragma autonomous_transaction;
+  begin
+    delete_std_objects
+    ( p_group_name => 'TEST%'
+    );
+    commit;
+  end;
+
+  procedure ut_store_remove
+  is    
+    pragma autonomous_transaction;
+
+    l_std_object std_object;
+    l_dbug_log4plsql_obj dbug_log4plsql_obj_t;
+    l_obj_act varchar2(32767);
+    l_obj_exp constant varchar2(32767) := '{"DIRTY":1}';
+  begin
+    for i_try in 1..2
+    loop
+      std_object_mgr.set_group_name(case i_try when 1 then 'TEST' else null end);
+      l_dbug_log4plsql_obj := dbug_obj_log4plsql_t(); -- should store
+
+      -- test stored
+      case i_try
+        when 1
+        then
+          select  t.obj
+          into    l_obj_act
+          from    std_objects
+          where   group_name = 'TEST'
+          and     object_name = 'DBUG_LOG4PLSQL';
+          
+        when 2
+        then
+          std_object_mgr.get_std_object
+          ( p_object_name => 'DBUG_LOG4PLSQL'
+          , p_std_object => l_std_object
+          );
+          select  l_std_object.serialize()
+          into    l_obj_act
+          from    dual;
+
+      end case;
+      
+      ut.expect(l_obj_act, i_try).to_equal(l_obj_exp);
+
+      l_dbug_log4plsql_obj.remove();
+
+      -- test removed
+      begin
+        case i_try
+          when 1
+          then
+            select  t.obj
+            into    l_obj_act
+            from    std_objects
+            where   group_name = 'TEST'
+            and     object_name = 'DBUG_LOG4PLSQL';
+            
+          when 2
+          then
+            std_object_mgr.get_std_object
+            ( p_object_name => 'DBUG_LOG4PLSQL'
+            , p_std_object => l_std_object
+            );
+
+        end case;
+        raise program_error;
+      exception
+        when others
+        then
+          ut.expect(sqlcode, i_try).to_equal(-1);
+      end;
+    end loop;
+
+    commit;
+  end ut_store_remove;
+
+$else -- dbug_log4plsql.c_testing $then
+
+  -- some dummy stubs
+  
+  procedure ut_setup
+  is
+  begin
+    null;
+  end;
+
+  procedure ut_teardown
+  is
+  begin
+    null;
+  end;
+
+  procedure ut_store_remove
+  is    
+  begin
+    null;
+  end ut_store_remove;
+
+$end -- dbug_log4plsql.c_testing $then
 
 end dbug_log4plsql;
 /

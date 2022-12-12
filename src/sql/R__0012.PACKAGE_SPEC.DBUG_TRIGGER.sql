@@ -44,7 +44,5 @@ CREATE OR REPLACE PACKAGE "DBUG_TRIGGER" AUTHID DEFINER IS
   );
 
 end dbug_trigger;
-
--- =cut
 /
 
