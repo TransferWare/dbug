@@ -110,10 +110,34 @@ end print;
 order member function compare(p_other in std_object)
 return integer
 is
-  l_one std_object := self;
+  l_json_object_self json_object_t := json_object_t();
+  l_json_object_other json_object_t := json_object_t();
+  l_clob_self clob;
+  l_clob_other clob;
+  l_cmp pls_integer;
 begin
-  l_one.dirty := p_other.dirty; -- ignore dirty
-  return dbms_lob.compare(l_one.repr(), p_other.repr());
+  case
+    when self.get_type() < p_other.get_type() then return -1;
+    when self.get_type() > p_other.get_type() then return +1;
+    else
+      -- same type
+      self.serialize(l_json_object_self);
+      p_other.serialize(l_json_object_other);
+
+      -- ignore dirty
+      l_json_object_self.put_null('DIRTY');
+      l_json_object_other.put_null('DIRTY');
+      
+      l_clob_self := l_json_object_self.to_clob();
+      l_clob_other := l_json_object_other.to_clob();
+      
+      select  nvl(min(0), 1)
+      into    l_cmp
+      from    dual
+      where   json_equal(l_clob_self, l_clob_other);
+
+      return l_cmp;
+  end case;      
 end compare;
 
 end;

@@ -207,7 +207,7 @@ begin
       ( p_object_name => p_object_name
       , p_std_object => l_std_object
       );
-      l_store := case when p_std_object.compare(l_std_object) = 0 then false else true end;
+      l_store := case when p_std_object = l_std_object then false else true end;
     exception
       when no_data_found
       then
@@ -432,13 +432,16 @@ begin
     
     ut.expect(l_dbug_obj_act.dirty, 'try '||i_try).to_equal(0);
     
---    l_dbug_obj_act.dirty := l_dbug_obj_exp.dirty;
-
     dbms_output.put_line('act: ' || l_dbug_obj_act.serialize());
     dbms_output.put_line('exp: ' || l_dbug_obj_exp.serialize());
 
     ut.expect(json_object_t(l_dbug_obj_act.serialize()), 'try '||i_try).to_equal(json_object_t(l_dbug_obj_exp.serialize()));
-    
+
+    l_dbug_obj_act.dirty := 1;
+    l_dbug_obj_exp.dirty := 0;
+
+    ut.expect(l_dbug_obj_act = l_dbug_obj_exp, 'compare ignores dummy '||i_try).to_equal(true);
+
     del_std_object('DBUG');
   end loop;
 
