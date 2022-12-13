@@ -512,8 +512,8 @@ See C<DBUG_DUMP>.
 
 =item break_point
 
-The break point for a line of output. Can be used by the reporting tool to
-display only lines which have this break point.
+The break point for a line of output. Can be used by the DBUG reporting tool
+B<dbugrpt> to display only lines which have this break point.
 
 =item dbug_ctx
 
@@ -717,86 +717,6 @@ Errors are printed to stderr in the following format:
 DBUG#<dbug context>#ERROR: <function name>: <description>
 
 Status values are defined in <errno.h>.
-
-=back
-
-=head2 Debug reporting tool
-
-After a program has sent its output to a file (or whatever), the debug
-report tool can be used to create a user friendly output in various
-ways. The options are supplied to C<dbugrpt> in a standard (Unix) way. This
-program uses standard input to create the report. It is possible to store
-several runs of a program in an output file and input this file to the debug reporting tool.
-
-=head2 Debug report options
-
-This section summarizes the currently available report options and the
-flag characters which enable or disable them.
-
-=over 4
-
-=item d[<break points>]
-
-Enable output from DBUG_PRINT macros which have a break point which is in the list of
-specified break points (separated by comma's). A null list means all break points are enabled.
-
-=item D
-
-Emulate a done() call (if missing) at the end of each debugging context in order
-to print totals.
-
-=item F
-
-Mark each debugger output line with the name of the source file
-containing the macro causing the output.
-
-=item h
-
-Print help.
-
-=item i
-
-Identify the process emitting each line of debug or trace output with
-the process id for that process.
-
-=item L 
-
-Mark each debugger output line with the source file line number of the
-macro causing the output.
-
-=item n
-
-Mark each debugger output line with the current function nesting
-depth.
-
-=item N
-
-Sequentially number each debugger output line starting at 1. This is
-useful for reference purposes when debugger output is interspersed
-with program output.
-
-=item P
-
-Mark each debugger output line with the name of the debugging context as
-supplied to C<DBUG_INIT>.
-
-=item r[<resolution>]
-
-The time resolution. A value of 1000 (default) means that time is printed in
-milliseconds.
-
-=item t[<functions>] 
-
-Limit debugger and profiling actions to the specified list of comma separated
-functions. A null list of functions implies that all functions are selected.
-
-=item T
-
-Print date/time of each output line.
-
-=item v
-
-Print the debug reporting tool version.
 
 =back
 
@@ -1097,13 +1017,14 @@ file at source line 11.
 
 =head2 Profiling a program
 
-It is sometimes desirable to profile your program. The option 'g'
-provides support for profiling. The debug reporting tool is able to print a
+It is sometimes desirable to profile your program. The option 'g' provides
+support for profiling. The DBUG reporting tool B<dbugrpt> is able to print a
 profile report for each debugging context encountered as well as a
 total. Besides displaying timing results, also stack usage is printed. The
 stack usage is only determined for functions which have a
 dbug_enter/dbug_leave pair. Figure 11 is the output of the factorial program
-for determining the factorial of 3 when run with the debug control string "-#t,D=1000,g".
+for determining the factorial of 3 when run with the debug control string
+"-#t,D=1000,g".
 
   >main
   |   >factorial
@@ -1205,12 +1126,12 @@ name, I had to change the option separator into the comma. The modifier
 separator has become the equal sign. So -#d:D,2 has become -#d,D=200. I also
 separated content and formatting of the debugging output, hence several
 options are now obsolete in the debug control string and have been moved to the
-options of the debug reporting tool.
+options of the DBUG reporting tool B<dbugrpt>.
 
-=item Debug reporting tool
+=item DBUG reporting tool
 
-There is now a Perl debug reporting tool which formats the debugging output in
-a user friendly way.
+There is now a Perl DBUG reporting tool B<dbugrpt> which formats the debugging
+output in a user friendly way.
 
 =item DEBUG_LEAVE
 
