@@ -14,7 +14,7 @@ CREATE TYPE "STD_OBJECT" AUTHID DEFINER AS OBJECT (
   -- The dirty flag is set to 0 automatically by
   -- std_object_mgr.get_std_object() and std_object_mgr.set_std_object().
   -- In the rest of the application the dirty flag should be set it to 1 if
-  -- one of the members of the object changes. 
+  -- one of the members of the object changes.
   -- Now std_object_mgr.set_std_object() will write the object back to the cache.
   */
   dirty integer

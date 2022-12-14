@@ -72,7 +72,7 @@ procedure get_std_object
 -- Set a standard object.
 --
 -- Store an object in persistent storage (table std_objects) or into an
--- internal PL/SQL table in the following three cases: 
+-- internal PL/SQL table in the following three cases:
 -- <ol>
 -- <li>first when dirty equals 1</li>
 -- <li>then if the object is not stored yet</li>

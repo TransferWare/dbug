@@ -226,7 +226,7 @@ begin
              1) see order member function compare of type std_object.
              2) see NOTE about dirty.
           */
-          when p_std_object = l_std_object 
+          when p_std_object = l_std_object
           then false
           else true /* case C */
         end;
@@ -249,7 +249,7 @@ $if std_object_mgr.c_debugging $then
     )
   );
 $end
-  
+
   if not(l_store)
   then
     null;

@@ -284,7 +284,7 @@ $end
     print( dbug.format_print(p_break_point, p_fmt, 5, p_arg1, p_arg2, p_arg3, p_arg4, p_arg5) );
   end print;
 
-$if dbug_log4plsql.c_testing $then 
+$if dbug_log4plsql.c_testing $then
 
   procedure ut_setup
   is
@@ -295,9 +295,9 @@ $if dbug_log4plsql.c_testing $then
     ( p_group_name => 'TEST%'
     );
     commit;
-$if std_object_mgr.c_debugging $then    
+$if std_object_mgr.c_debugging $then
     dbms_output.put_line('ut_setup finished');
-$end    
+$end
   end;
 
   procedure ut_teardown
@@ -311,17 +311,17 @@ $end
     commit;
 $if std_object_mgr.c_debugging $then
     dbms_output.put_line('ut_teardown finished');
-$end    
+$end
   end;
 
   procedure ut_store_remove
-  is    
+  is
     pragma autonomous_transaction;
 
     l_std_object std_object;
     l_dbug_log4plsql_obj dbug_log4plsql_obj_t;
     l_object_name_tab sys.odcivarchar2list;
-    l_count pls_integer;   
+    l_count pls_integer;
     l_obj_act varchar2(32767);
     -- we need to add the owner but the generate_ddl.pl utility will strip it, so use $$plsql_unit_owner
     l_obj_exp constant varchar2(32767) := utl_lms.format_message('{"DIRTY":0,"ISDEFAULTINIT":1,"LLEVEL":70,"LSECTION":"block-->UT3.UT_RUNNER.RUN-->UT3.UT_SUITE_ITEM.DO_EXECUTE-->UT3.UT_RUN.DO_EXECUTE-->UT3.UT_LOGICAL_SUITE.DO_EXECUTE-->UT3.UT_SUITE_ITEM.DO_EXECUTE-->UT3.UT_SUITE.DO_EXECUTE-->UT3.UT_SUITE_ITEM.DO_EXECUTE-->UT3.UT_TEST.DO_EXECUTE-->UT3.UT_EXECUTABLE_TEST.DO_EXECUTE-->UT3.UT_EXECUTABLE_TEST.DO_EXECUTE-->UT3.UT_EXECUTABLE.DO_EXECUTE-->UT3.UT_EXECUTABLE.DO_EXECUTE-->SYS.DBMS_SQL.EXECUTE-->block-->%s.DBUG_LOG4PLSQL.UT_STORE_REMOVE-->%s.DBUG_LOG4PLSQL_OBJ_T.DBUG_LOG4PLSQL_OBJ_T","LTEXT":null,"USE_LOG4J":0,"USE_OUT_TRANS":1,"USE_LOGTABLE":1,"USE_ALERT":0,"USE_TRACE":0,"USE_DBMS_OUTPUT":0,"INIT_LSECTION":null,"INIT_LLEVEL":70,"DBMS_OUTPUT_WRAP":100}', $$PLSQL_UNIT_OWNER, $$PLSQL_UNIT_OWNER);
@@ -335,7 +335,7 @@ $if std_object_mgr.c_debugging $then
       then
         for i_idx in l_object_name_tab.first .. l_object_name_tab.last
         loop
-          dbms_output.put_line('l_object_name_tab[' || i_idx || '] = ' || l_object_name_tab(i_idx));        
+          dbms_output.put_line('l_object_name_tab[' || i_idx || '] = ' || l_object_name_tab(i_idx));
         end loop;
       end if;
 $end
@@ -344,14 +344,14 @@ $end
     for i_try in 1..2
     loop
       std_object_mgr.set_group_name(case i_try when 1 then 'TEST' else null end);
-      
+
       -- before store
 $if std_object_mgr.c_debugging $then
       dbms_output.put_line('count before store ' || i_try);
-$end     
+$end
       get_object_names;
       l_count := l_object_name_tab.count;
-      
+
       l_dbug_log4plsql_obj := new dbug_log4plsql_obj_t(); -- should store
 
       case i_try
@@ -362,7 +362,7 @@ $end
           from    std_objects t
           where   group_name = 'TEST'
           and     object_name = 'DBUG_LOG4PLSQL';
-          
+
         when 2
         then
           std_object_mgr.get_std_object
@@ -374,23 +374,23 @@ $end
           from    dual;
 
       end case;
-      
+
 $if std_object_mgr.c_debugging $then
       dbms_output.put_line('count after store ' || i_try);
-$end     
+$end
       get_object_names;
       ut.expect(l_object_name_tab.count, 'count after store ' || i_try).to_equal(l_count + 1);
       ut.expect(l_obj_act, 'compare ' || i_try).to_equal(l_obj_exp);
 
       -- after store
       l_count := l_object_name_tab.count;
-      
+
       l_dbug_log4plsql_obj.remove();
 
 $if std_object_mgr.c_debugging $then
       dbms_output.put_line('test removed');
 $end
-      
+
       begin
         case i_try
           when 1
@@ -400,7 +400,7 @@ $end
             from    std_objects t
             where   group_name = 'TEST'
             and     object_name = 'DBUG_LOG4PLSQL';
-            
+
           when 2
           then
             std_object_mgr.get_std_object
@@ -415,10 +415,10 @@ $end
         then
           ut.expect(sqlcode, 'remove ' || i_try).to_equal(100);
       end;
-      
+
 $if std_object_mgr.c_debugging $then
       dbms_output.put_line('count after remove ' || i_try);
-$end     
+$end
       get_object_names;
 
       ut.expect(l_object_name_tab.count, 'count after remove ' || i_try).to_equal(l_count - 1);
@@ -428,7 +428,7 @@ $end
   end ut_store_remove;
 
   procedure ut_dbug_log4plsql
-  is    
+  is
     pragma autonomous_transaction;
 
     l_id tlog.id%type;
@@ -460,7 +460,7 @@ $end
       then
         dbug.leave_on_error;
     end main;
-    
+
     procedure cleanup
     is
     begin
@@ -474,7 +474,7 @@ $end
     end;
   begin
     std_object_mgr.set_group_name(null);
-    
+
     select nvl(max(id), 0) into l_id from tlog;
 
     dbug.activate('plsdbug', true);
@@ -495,7 +495,7 @@ $end
       select  9      , '|   |   |   error: dbms_utility.format_error_backtrace (3): ORA-06512: at "' || $$PLSQL_UNIT_OWNER || '.DBUG_LOG4PLSQL", line ' /*452*/ as ltext from dual union all
       select 10      , '|   |   <test' as ltext from dual union all
       select 11      , '|   <test' as ltext from dual union all
-      select 12      , '<main' as ltext from dual;     
+      select 12      , '<main' as ltext from dual;
 
     ut.expect(l_act, 'tlog').to_equal(l_exp);
 
@@ -514,7 +514,7 @@ $end
 $else -- dbug_log4plsql.c_testing $then
 
   -- some dummy stubs
-  
+
   procedure ut_setup
   is
   begin
@@ -528,17 +528,17 @@ $else -- dbug_log4plsql.c_testing $then
   end;
 
   procedure ut_store_remove
-  is    
+  is
   begin
     raise program_error;
   end ut_store_remove;
-  
+
   procedure ut_dbug_log4plsql
   is
   begin
     raise program_error;
   end ut_dbug_log4plsql;
-  
+
 $end -- dbug_log4plsql.c_testing $then
 
 end dbug_log4plsql;
