@@ -72,15 +72,20 @@ procedure get_std_object
 -- Set a standard object.
 --
 -- Store an object in persistent storage (table std_objects) or into an
--- internal PL/SQL table unless the dirty column is equal to 0 AND the object
--- is already stored.
+-- internal PL/SQL table in the following three cases: 
+-- <ol>
+-- <li>first when dirty equals 1</li>
+-- <li>then if the object is not stored yet</li>
+-- <li>else when the object stored is not equal to the input object (ignoring the dirty attribute)</li>
+-- </ol>
+-- The dirty column will be set to 0 at the end.
 --
 -- @param p_object_name  The object name
 -- @param p_std_object   The object
 */
 procedure set_std_object
 ( p_object_name in std_objects.object_name%type
-, p_std_object in std_object
+, p_std_object in out nocopy std_object
 );
 
 /**

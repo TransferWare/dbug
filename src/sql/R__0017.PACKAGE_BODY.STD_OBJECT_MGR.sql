@@ -193,12 +193,25 @@ end get_std_object;
 
 procedure set_std_object
 ( p_object_name in std_objects.object_name%type
-, p_std_object in std_object
+, p_std_object in out nocopy std_object
 )
 is
-  l_store boolean := case when p_std_object.dirty = 0 then null else true end;
+  /* Store when:
+  -- A) first when dirty equals 1
+  -- B) then if the object is not stored yet
+  -- C) else when the object stored is not equal to the input object (ignoring the dirty attribute)
+  */
+  l_store boolean := case when p_std_object.dirty = 1 then true /* case A */ else null end;
   l_std_object std_object;
 begin
+  /*
+  -- NOTE about dirty.
+  --
+  -- We start by setting dirty to 0 so a comparison with cache will not be different for dirty
+  -- since the object stored will also have dirty equal to 0 due to this line.
+  */
+  p_std_object.dirty := 0;
+
   if l_store is null
   then
     -- retrieve the last version stored and compare
@@ -207,11 +220,20 @@ begin
       ( p_object_name => p_object_name
       , p_std_object => l_std_object
       );
-      l_store := case when p_std_object = l_std_object then false else true end;
+      l_store :=
+        case
+          /* comparison ignores attribute dirty:
+             1) see order member function compare of type std_object.
+             2) see NOTE about dirty.
+          */
+          when p_std_object = l_std_object 
+          then false
+          else true /* case C */
+        end;
     exception
       when no_data_found
       then
-        l_store := true;
+        l_store := true; /* case B */
     end;
   end if;
 
@@ -227,7 +249,7 @@ $if std_object_mgr.c_debugging $then
     )
   );
 $end
-
+  
   if not(l_store)
   then
     null;

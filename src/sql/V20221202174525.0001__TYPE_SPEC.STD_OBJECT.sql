@@ -7,16 +7,15 @@ CREATE TYPE "STD_OBJECT" AUTHID DEFINER AS OBJECT (
   -- to get or set an object.
   --
   -- There are two situations when std_object_mgr.get_std_object() is called in a
-  -- constructor of a type depnding on std_object:
+  -- constructor of a type depending on std_object:
   -- 1) std_object_mgr.get_std_object() raises no_data_found (no object found).
-  -- Now the application should set the dirty flag for a new object to 1
-  -- because a new object has to be written back to the cache in
-  -- std_object_mgr.set_std_object().
+  -- Now the application should invoke std_object_mgr.set_std_object().
   -- 2) std_object_mgr.get_std_object() succeeds.
-  -- The dirty flag is set to null automatically by std_object_mgr.get_std_object().
-  -- Now the application should set it immediately to 0. In the rest of the application
-  -- the dirty flag should be set it to 1 if one of the members of the object changes.
-  -- Now std_object_mgr.set_std_object() will not write the object back to the cache.
+  -- The dirty flag is set to 0 automatically by
+  -- std_object_mgr.get_std_object() and std_object_mgr.set_std_object().
+  -- In the rest of the application the dirty flag should be set it to 1 if
+  -- one of the members of the object changes. 
+  -- Now std_object_mgr.set_std_object() will write the object back to the cache.
   */
   dirty integer
 
@@ -25,7 +24,7 @@ CREATE TYPE "STD_OBJECT" AUTHID DEFINER AS OBJECT (
   return varchar2
 
 , final
-  member procedure store(self in std_object)
+  member procedure store(self in out nocopy std_object)
 
 , final
   member procedure remove(self in std_object)

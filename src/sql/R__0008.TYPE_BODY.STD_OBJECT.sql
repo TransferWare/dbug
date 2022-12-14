@@ -2,7 +2,7 @@ CREATE OR REPLACE TYPE BODY "STD_OBJECT"
 is
 
 final
-member procedure store(self in std_object)
+member procedure store(self in out nocopy std_object)
 is
 begin
 $if std_object_mgr.c_debugging $then

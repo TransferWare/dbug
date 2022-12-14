@@ -45,6 +45,13 @@ begin
       std_object_mgr.set_std_object(l_object_name, self);
   end;
 
+  if self.dirty = 0
+  then
+    null; -- ok
+  else
+    raise program_error;
+  end if;
+
   -- essential
   return;
 end;
