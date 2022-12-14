@@ -93,6 +93,60 @@ CREATE OR REPLACE PACKAGE BODY "DBUG_DBMS_OUTPUT" IS
     print( dbug.format_print(p_break_point, p_fmt, 5, p_arg1, p_arg2, p_arg3, p_arg4, p_arg5) );
   end print;
 
+  procedure ut_store_remove
+  is
+  begin
+    null;
+  end;
+
+  procedure ut_dbug_dbms_output
+  is
+    l_lines_exp constant sys.odcivarchar2list :=
+      sys.odcivarchar2list
+      ( '>main'
+      , '|   >f3'
+      , '|   |   >f2'
+      , '|   |   |   >f1'
+      , '|   |   |   |   >f1'
+      , '|   |   |   |   |   >f1'
+      , '|   |   |   |   |   |   >f1'
+      , '|   |   |   |   |   |   |   >f1'
+      , '|   |   |   |   |   |   |   |   >f1'
+      , '|   |   |   |   |   |   |   |   <f1'
+      , '|   |   |   |   |   |   |   <f1'
+      , '|   |   |   |   |   |   <f1'
+      , '|   |   |   |   |   <f1'
+      , '|   |   |   |   <f1'
+      , '|   |   |   <f1'
+      , '|   |   <f2'
+      , '|   <f3'
+      , '<main'
+      );
+
+    procedure chk
+    is
+      l_lines_act dbms_output.chararr;
+      l_numlines integer := l_lines_exp.count; -- the number of lines to retrieve
+    begin
+      dbms_output.get_lines(lines => l_lines_act, numlines => l_numlines);
+      ut.expect(l_numlines, '# lines').to_equal(l_lines_exp.count);
+      ut.expect(l_lines_act.first, 'lines first').to_equal(l_lines_exp.first);
+      for i_idx in l_lines_exp.first .. l_lines_exp.last
+      loop
+        ut.expect(l_lines_act(i_idx), to_char(i_idx)).to_equal(l_lines_exp(i_idx));
+      end loop;
+    end chk;
+  begin
+    dbms_output.disable; -- clear the buffer
+    dbms_output.enable;
+    
+    for i_idx in l_lines_exp.first .. l_lines_exp.last
+    loop
+      dbms_output.put_line(l_lines_exp(i_idx));
+    end loop;    
+    chk;
+  end ut_dbug_dbms_output;
+
 end dbug_dbms_output;
 /
 

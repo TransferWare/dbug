@@ -48,6 +48,15 @@ CREATE OR REPLACE PACKAGE "DBUG_DBMS_OUTPUT" AUTHID DEFINER IS
     p_arg5 in varchar2
   );
 
+  --%suitepath(DBUG)
+  --%suite
+
+  --%test
+  procedure ut_store_remove;
+
+  --%test
+  procedure ut_dbug_dbms_output;
+
 end dbug_dbms_output;
 /
 
