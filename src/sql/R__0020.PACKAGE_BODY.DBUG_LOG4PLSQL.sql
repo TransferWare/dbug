@@ -323,7 +323,8 @@ $end
     l_object_name_tab sys.odcivarchar2list;
     l_count pls_integer;   
     l_obj_act varchar2(32767);
-    l_obj_exp constant varchar2(32767) := '{"DIRTY":0,"ISDEFAULTINIT":1,"LLEVEL":70,"LSECTION":"block-->UT3.UT_RUNNER.RUN-->UT3.UT_SUITE_ITEM.DO_EXECUTE-->UT3.UT_RUN.DO_EXECUTE-->UT3.UT_LOGICAL_SUITE.DO_EXECUTE-->UT3.UT_SUITE_ITEM.DO_EXECUTE-->UT3.UT_SUITE.DO_EXECUTE-->UT3.UT_SUITE_ITEM.DO_EXECUTE-->UT3.UT_TEST.DO_EXECUTE-->UT3.UT_EXECUTABLE_TEST.DO_EXECUTE-->UT3.UT_EXECUTABLE_TEST.DO_EXECUTE-->UT3.UT_EXECUTABLE.DO_EXECUTE-->UT3.UT_EXECUTABLE.DO_EXECUTE-->SYS.DBMS_SQL.EXECUTE-->block-->EPCAPP.DBUG_LOG4PLSQL.UT_STORE_REMOVE-->EPCAPP.DBUG_LOG4PLSQL_OBJ_T.DBUG_LOG4PLSQL_OBJ_T","LTEXT":null,"USE_LOG4J":0,"USE_OUT_TRANS":1,"USE_LOGTABLE":1,"USE_ALERT":0,"USE_TRACE":0,"USE_DBMS_OUTPUT":0,"INIT_LSECTION":null,"INIT_LLEVEL":70,"DBMS_OUTPUT_WRAP":100}';
+    -- we need to add the owner but the generate_ddl.pl utility will strip it, so use $$plsql_unit_owner
+    l_obj_exp constant varchar2(32767) := utl_lms.format_message('{"DIRTY":0,"ISDEFAULTINIT":1,"LLEVEL":70,"LSECTION":"block-->UT3.UT_RUNNER.RUN-->UT3.UT_SUITE_ITEM.DO_EXECUTE-->UT3.UT_RUN.DO_EXECUTE-->UT3.UT_LOGICAL_SUITE.DO_EXECUTE-->UT3.UT_SUITE_ITEM.DO_EXECUTE-->UT3.UT_SUITE.DO_EXECUTE-->UT3.UT_SUITE_ITEM.DO_EXECUTE-->UT3.UT_TEST.DO_EXECUTE-->UT3.UT_EXECUTABLE_TEST.DO_EXECUTE-->UT3.UT_EXECUTABLE_TEST.DO_EXECUTE-->UT3.UT_EXECUTABLE.DO_EXECUTE-->UT3.UT_EXECUTABLE.DO_EXECUTE-->SYS.DBMS_SQL.EXECUTE-->block-->%s.DBUG_LOG4PLSQL.UT_STORE_REMOVE-->%s.DBUG_LOG4PLSQL_OBJ_T.DBUG_LOG4PLSQL_OBJ_T","LTEXT":null,"USE_LOG4J":0,"USE_OUT_TRANS":1,"USE_LOGTABLE":1,"USE_ALERT":0,"USE_TRACE":0,"USE_DBMS_OUTPUT":0,"INIT_LSECTION":null,"INIT_LLEVEL":70,"DBMS_OUTPUT_WRAP":100}', $$PLSQL_UNIT_OWNER, $$PLSQL_UNIT_OWNER);
 
     procedure get_object_names
     is
@@ -489,9 +490,9 @@ $end
       select  4      , '|   |   >test' as ltext from dual union all
       select  5      , '|   |   |   info: p_try: 2 3 4 5 6' as ltext from dual union all
       select  6      , '|   |   |   error: sqlerrm: ORA-06501: PL/SQL: program error' as ltext from dual union all
-      select  7      , '|   |   |   error: dbms_utility.format_error_backtrace (1): ORA-06512: at "EPCAPP.DBUG_LOG4PLSQL", line ' /*441*/ as ltext from dual union all
-      select  8      , '|   |   |   error: dbms_utility.format_error_backtrace (2): ORA-06512: at "EPCAPP.DBUG_LOG4PLSQL", line ' /*443*/ as ltext from dual union all
-      select  9      , '|   |   |   error: dbms_utility.format_error_backtrace (3): ORA-06512: at "EPCAPP.DBUG_LOG4PLSQL", line ' /*452*/ as ltext from dual union all
+      select  7      , '|   |   |   error: dbms_utility.format_error_backtrace (1): ORA-06512: at "' || $$PLSQL_UNIT_OWNER || '.DBUG_LOG4PLSQL", line ' /*441*/ as ltext from dual union all
+      select  8      , '|   |   |   error: dbms_utility.format_error_backtrace (2): ORA-06512: at "' || $$PLSQL_UNIT_OWNER || '.DBUG_LOG4PLSQL", line ' /*443*/ as ltext from dual union all
+      select  9      , '|   |   |   error: dbms_utility.format_error_backtrace (3): ORA-06512: at "' || $$PLSQL_UNIT_OWNER || '.DBUG_LOG4PLSQL", line ' /*452*/ as ltext from dual union all
       select 10      , '|   |   <test' as ltext from dual union all
       select 11      , '|   <test' as ltext from dual union all
       select 12      , '<main' as ltext from dual;     

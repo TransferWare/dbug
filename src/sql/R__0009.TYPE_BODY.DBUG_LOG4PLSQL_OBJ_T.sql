@@ -21,7 +21,7 @@ begin
     when no_data_found
     then
       l_log_ctx := plog.init;
-      
+
       self := dbug_log4plsql_obj_t
               ( 0 -- dirty
               , bool2int(l_log_ctx.isdefaultinit)

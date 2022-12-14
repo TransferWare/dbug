@@ -17,7 +17,7 @@ procedure set_std_object_at
 )
 is
   pragma autonomous_transaction;
-  
+
   l_obj_type constant std_objects.obj_type%type := p_std_object.get_type();
   l_obj constant std_objects.obj%type := p_std_object.serialize();
 
@@ -110,7 +110,7 @@ $end
   commit;
 end delete_std_objects_at;
 
--- PUBLIC 
+-- PUBLIC
 procedure set_group_name
 ( p_group_name in std_objects.group_name%type
 )
@@ -138,7 +138,7 @@ begin
         , g_group_name
         , g_std_object_tab(g_std_object_tab.first).name()
         )
-      );      
+      );
     else
       null;
   end case;
@@ -236,7 +236,7 @@ $end
     set_std_object_at
     ( p_object_name => p_object_name
     , p_std_object => p_std_object
-    );  
+    );
   else
     -- package state
     g_std_object_tab(p_object_name) := p_std_object;
@@ -394,7 +394,7 @@ end;
 procedure ut_store_remove
 is
   pragma autonomous_transaction;
-  
+
   l_std_object std_object;
   l_dbug_obj_exp dbug_obj_t;
   l_dbug_obj_act dbug_obj_t;
@@ -403,9 +403,9 @@ begin
   for i_try in 1..2
   loop
     set_group_name(case i_try when 1 then null else 'TEST' end);
-    
+
     ut.expect(g_std_object_tab.count, 'try '||i_try).to_equal(0);
-    
+
     begin
       get_std_object('DBUG', l_std_object);
       raise program_error;
@@ -429,9 +429,9 @@ begin
     where   group_name = g_group_name;
 
     ut.expect(l_count, 'try '||i_try).to_equal(case when g_group_name is not null then 1 else 0 end);
-    
+
     ut.expect(l_dbug_obj_act.dirty, 'try '||i_try).to_equal(0);
-    
+
     dbms_output.put_line('act: ' || l_dbug_obj_act.serialize());
     dbms_output.put_line('exp: ' || l_dbug_obj_exp.serialize());
 
@@ -454,7 +454,7 @@ procedure ut_setup
 is
 begin
   raise program_error;
-end;  
+end;
 
 procedure ut_teardown
 is

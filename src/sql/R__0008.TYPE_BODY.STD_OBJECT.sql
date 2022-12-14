@@ -127,17 +127,17 @@ begin
       -- ignore dirty
       l_json_object_self.put_null('DIRTY');
       l_json_object_other.put_null('DIRTY');
-      
+
       l_clob_self := l_json_object_self.to_clob();
       l_clob_other := l_json_object_other.to_clob();
-      
+
       select  nvl(min(0), 1)
       into    l_cmp
       from    dual
       where   json_equal(l_clob_self, l_clob_other);
 
       return l_cmp;
-  end case;      
+  end case;
 end compare;
 
 end;

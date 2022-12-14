@@ -2320,8 +2320,8 @@ $if dbug.c_ignore_errors != 0 $then
       return null;
 $end
   end format_print;
-  
-$if dbug.c_testing $then 
+
+$if dbug.c_testing $then
 
   procedure ut_setup
   is
@@ -2344,7 +2344,7 @@ $if dbug.c_testing $then
   end;
 
   procedure ut_dbug
-  is    
+  is
     pragma autonomous_transaction;
 
     l_std_object std_object;
@@ -2365,7 +2365,7 @@ $if dbug.c_testing $then
           from    std_objects t
           where   group_name = 'TEST'
           and     object_name = 'DBUG';
-          
+
         when 2
         then
           std_object_mgr.get_std_object
@@ -2385,7 +2385,7 @@ $if dbug.c_testing $then
 $else -- dbug.c_testing $then
 
   -- some dummy stubs
-  
+
   procedure ut_setup
   is
   begin
@@ -2399,7 +2399,7 @@ $else -- dbug.c_testing $then
   end;
 
   procedure ut_dbug
-  is    
+  is
   begin
     null;
   end;
