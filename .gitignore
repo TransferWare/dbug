@@ -34,3 +34,7 @@ pod2htmd.tmp
 doc/factorial
 doc/test[123456]
 doc/*.trs
+
+# Maven
+target/
+\.flattened-pom.xml
