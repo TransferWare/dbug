@@ -232,9 +232,5 @@ CREATE OR REPLACE PACKAGE "DBUG" AUTHID DEFINER IS
   procedure ut_dbug;
 
 end dbug;
-
--- [ 641894 ] Perl pod comment in dbug.pls
-
--- =cut
 /
 
