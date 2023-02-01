@@ -38,3 +38,6 @@ doc/*.trs
 # Maven
 target/
 \.flattened-pom.xml
+
+# Mac
+\.Ds_Store
