@@ -96,15 +96,18 @@ dnl AC_ARG_VAR(PYTHON,[The program name of Python.])
 
 AC_PROG_CC
 
-AC_LIBTOOL_WIN32_DLL
-AC_PROG_LIBTOOL
+LT_INIT([win32-dll])
 AC_PROG_FGREP
 
-LT_INIT
 # Checks for libraries.
 
 # Checks for header files.
-AC_HEADER_STDC
+
+# Autoupdate added the next two lines to ensure that your configure
+# script's behavior did not change.  They are probably safe to remove.
+AC_CHECK_INCLUDES_DEFAULT
+AC_PROG_EGREP
+
 AC_CHECK_HEADERS([stdarg.h stdlib.h string.h unistd.h errno.h assert.h stdio.h pthread.h])
 # Header files needed for timing functions.
 AC_CHECK_HEADERS([time.h sys/timeb.h sys/param.h sys/time.h sys/resource.h])

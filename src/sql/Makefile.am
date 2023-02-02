@@ -70,7 +70,7 @@ EXTRA_DIST       = $(pod_scripts) \
                    $(html_files) \
                    $(sql_scripts)
 
-POD2HTML        := pod2html
+POD2HTML         = pod2html
 
 @SUFFIXES@: .pod .html
 
