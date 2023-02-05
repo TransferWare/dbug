@@ -141,7 +141,7 @@ $if dbug.c_testing $then
   begin
     dbms_output.disable; -- clear the buffer
     dbms_output.enable;
-    
+
     for i_idx in l_lines_exp.first .. l_lines_exp.last
     loop
       dbms_output.put_line(l_lines_exp(i_idx));

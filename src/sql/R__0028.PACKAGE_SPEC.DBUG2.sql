@@ -1,5 +1,7 @@
 CREATE OR REPLACE PACKAGE "DBUG2" AUTHID DEFINER IS
 
+c_testing constant boolean := $if $$Testing $then true $else false $end;
+
 subtype module_name_t is varchar2(4000);
 
 -- Break points
@@ -25,7 +27,7 @@ procedure leave;
 procedure on_error;
 
 procedure leave_on_error;
-    
+
 procedure print
 ( p_break_point in break_point_t
 , p_str in varchar2

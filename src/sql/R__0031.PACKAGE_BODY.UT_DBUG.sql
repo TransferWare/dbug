@@ -35,7 +35,7 @@ exception
     dbug2.leave_on_error;
     raise;
 end ut_run;
-    
+
 END UT_DBUG;
 /
 

@@ -103,7 +103,7 @@ begin
   on_error;
   leave(2);
 end leave_on_error;
-    
+
 procedure print
 ( p_break_point in break_point_t
 , p_str in varchar2
@@ -113,7 +113,7 @@ begin
   dbms_output.put_line('-- dbug2.print');
   dbms_output.put_line(p_str);
 end print;  
-    
+
 END DBUG2;
 /
 
