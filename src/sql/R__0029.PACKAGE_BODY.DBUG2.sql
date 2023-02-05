@@ -2,7 +2,7 @@ CREATE OR REPLACE PACKAGE BODY "DBUG2" IS
 
 -- private
 
-type t_call_stack_history_tab is table of oracle_tools.api_call_stack_pkg.t_call_stack_tab index by binary_integer;
+type t_call_stack_history_tab is table of dbug_call_stack.t_call_stack_tab index by binary_integer;
 
 g_call_stack_history_tab t_call_stack_history_tab;
 
@@ -13,7 +13,7 @@ is
 begin
   for i_idx in reverse p_depth + 1 .. g_call_stack_history_tab.count
   loop
-    dbms_output.put_line('== <'|| oracle_tools.api_call_stack_pkg.repr(g_call_stack_history_tab(i_idx)(g_call_stack_history_tab(i_idx).last)));
+    dbms_output.put_line('== <'|| dbug_call_stack.repr(g_call_stack_history_tab(i_idx)(g_call_stack_history_tab(i_idx).last)));
   end loop;
   g_call_stack_history_tab.delete(p_depth, g_call_stack_history_tab.count); -- remove entries after this enter call. TO DO: issue leave calls
 end pop_stack;
@@ -23,25 +23,25 @@ procedure enter
 , p_size_decrement in pls_integer
 )
 is
-  l_call_stack_tab oracle_tools.api_call_stack_pkg.t_call_stack_tab;
+  l_call_stack_tab dbug_call_stack.t_call_stack_tab;
   l_depth constant simple_integer := utl_call_stack.dynamic_depth - p_size_decrement;
 begin
-  l_call_stack_tab := oracle_tools.api_call_stack_pkg.get_call_stack(p_start => 1, p_size => l_depth);
+  l_call_stack_tab := dbug_call_stack.get_call_stack(p_start => 1, p_size => l_depth);
   pop_stack(l_depth);
   g_call_stack_history_tab(l_depth) := l_call_stack_tab;
-  dbms_output.put_line('>' || p_module || ':' || oracle_tools.api_call_stack_pkg.repr(l_call_stack_tab(l_call_stack_tab.last)));
+  dbms_output.put_line('>' || p_module || ':' || dbug_call_stack.repr(l_call_stack_tab(l_call_stack_tab.last)));
 end enter;
 
 procedure leave
 ( p_size_decrement in pls_integer
 )
 is
-  l_call_stack_tab oracle_tools.api_call_stack_pkg.t_call_stack_tab;
+  l_call_stack_tab dbug_call_stack.t_call_stack_tab;
   l_depth simple_integer := utl_call_stack.dynamic_depth - p_size_decrement;
 begin  
-  l_call_stack_tab := oracle_tools.api_call_stack_pkg.get_call_stack(p_start => 1, p_size => l_depth);
+  l_call_stack_tab := dbug_call_stack.get_call_stack(p_start => 1, p_size => l_depth);
   pop_stack(l_depth);
-  dbms_output.put_line('<' || oracle_tools.api_call_stack_pkg.repr(l_call_stack_tab(l_call_stack_tab.last)));
+  dbms_output.put_line('<' || dbug_call_stack.repr(l_call_stack_tab(l_call_stack_tab.last)));
 end leave;
 
 -- public
@@ -64,13 +64,13 @@ end leave;
 
 procedure on_error
 is
-  l_error_stack_tab oracle_tools.api_call_stack_pkg.t_error_stack_tab;
-  l_backtrace_stack_tab oracle_tools.api_call_stack_pkg.t_backtrace_stack_tab;
+  l_error_stack_tab dbug_call_stack.t_error_stack_tab;
+  l_backtrace_stack_tab dbug_call_stack.t_backtrace_stack_tab;
 begin
   dbms_output.put_line('-- dbug2.on_error');
   dbms_output.put_line('== error stack');
   l_error_stack_tab :=
-    oracle_tools.api_call_stack_pkg.get_error_stack
+    dbug_call_stack.get_error_stack
     ( p_start => 1 -- You can use -1 like the POSITION parameter in the SUBSTR() function
     , p_size => utl_call_stack.error_depth
     );
@@ -78,12 +78,12 @@ begin
   then
     for i_idx in l_error_stack_tab.first .. l_error_stack_tab.last
     loop
-      dbms_output.put_line(oracle_tools.api_call_stack_pkg.repr(l_error_stack_tab(i_idx)));
+      dbms_output.put_line(dbug_call_stack.repr(l_error_stack_tab(i_idx)));
     end loop;
   end if;
   dbms_output.put_line('== backtrace stack');
   l_backtrace_stack_tab :=
-    oracle_tools.api_call_stack_pkg.get_backtrace_stack
+    dbug_call_stack.get_backtrace_stack
     ( p_start => 1 -- You can use -1 like the POSITION parameter in the SUBSTR() function
     , p_size => utl_call_stack.backtrace_depth
     );
@@ -91,7 +91,7 @@ begin
   then
     for i_idx in l_backtrace_stack_tab.first .. l_backtrace_stack_tab.last
     loop
-      dbms_output.put_line(oracle_tools.api_call_stack_pkg.repr(l_backtrace_stack_tab(i_idx)));
+      dbms_output.put_line(dbug_call_stack.repr(l_backtrace_stack_tab(i_idx)));
     end loop;
   end if;
 end on_error;
