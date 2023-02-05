@@ -52,7 +52,7 @@ UT_DBUG,
          create or replace "source name" ? -->
     <db.generate.full.strip.source.schema>1</db.generate.full.strip.source.schema>
     <db.full.skip.install.sql>no</db.full.skip.install.sql>
-    <db.full.transform.params></db.full.transform.params>
+    <db.full.transform.params>-SEGMENT_ATTRIBUTES,-TABLESPACE</db.full.transform.params>
     <db.incr.transform.params></db.incr.transform.params>
     <db.test.phase>test</db.test.phase>
   </properties>

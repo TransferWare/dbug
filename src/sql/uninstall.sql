@@ -26,7 +26,7 @@ STD_OBJECT_MGR,
 UT_DBUG,
 -- skip repeatables    : 0
 -- interface           : pkg_ddl_util v5
--- transform params    : 
+-- transform params    : -SEGMENT_ATTRIBUTES,-TABLESPACE
 -- exclude objects     : 
 -- include objects     : 
 -- owner               : ORACLE_TOOLS
