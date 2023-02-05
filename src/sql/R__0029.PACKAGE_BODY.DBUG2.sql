@@ -11,7 +11,7 @@ procedure pop_stack
 )
 is
 begin
-  for i_idx in reverse p_depth .. g_call_stack_history_tab.count
+  for i_idx in reverse p_depth + 1 .. g_call_stack_history_tab.count
   loop
     dbms_output.put_line('== <'|| oracle_tools.api_call_stack_pkg.repr(g_call_stack_history_tab(i_idx)(g_call_stack_history_tab(i_idx).last)));
   end loop;
@@ -27,8 +27,8 @@ is
   l_depth constant simple_integer := utl_call_stack.dynamic_depth - p_size_decrement;
 begin
   l_call_stack_tab := oracle_tools.api_call_stack_pkg.get_call_stack(p_start => 1, p_size => l_depth);
+  pop_stack(l_depth);
   g_call_stack_history_tab(l_depth) := l_call_stack_tab;
-  pop_stack(l_depth + 1);
   dbms_output.put_line('>' || p_module || ':' || oracle_tools.api_call_stack_pkg.repr(l_call_stack_tab(l_call_stack_tab.last)));
 end enter;
 
@@ -40,7 +40,7 @@ is
   l_depth simple_integer := utl_call_stack.dynamic_depth - p_size_decrement;
 begin  
   l_call_stack_tab := oracle_tools.api_call_stack_pkg.get_call_stack(p_start => 1, p_size => l_depth);
-  pop_stack(l_depth + 1);
+  pop_stack(l_depth);
   dbms_output.put_line('<' || oracle_tools.api_call_stack_pkg.repr(l_call_stack_tab(l_call_stack_tab.last)));
 end leave;
 
