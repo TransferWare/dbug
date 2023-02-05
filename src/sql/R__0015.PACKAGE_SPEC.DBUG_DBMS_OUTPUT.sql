@@ -48,6 +48,8 @@ CREATE OR REPLACE PACKAGE "DBUG_DBMS_OUTPUT" AUTHID DEFINER IS
     p_arg5 in varchar2
   );
 
+$if dbug.c_testing $then
+
   --%suitepath(DBUG)
   --%suite
 
@@ -56,6 +58,8 @@ CREATE OR REPLACE PACKAGE "DBUG_DBMS_OUTPUT" AUTHID DEFINER IS
 
   --%test
   procedure ut_dbug_dbms_output;
+
+$end
 
 end dbug_dbms_output;
 /

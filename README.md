@@ -41,9 +41,14 @@ This section explains how to install just the PL/SQL library.
 
 ### Preconditions
 
-You need to install [LOG4PLSQL](https://sourceforge.net/projects/log4plsql/) first. Running the 
-`<LOG4PLSQL_HOME>/sql/install_log_user/install.sql` SQL*Plus script is sufficient for simple
-logging to a table TLOG. Have a look at its documention file `<LOG4PLSQL_HOME>/index.html`.
+First, you need to [install LOG4PLSQL as described in the User Guide](https://log4plsql.sourceforge.net/docs/UserGuide.html).
+
+You need a user with these role grants, system grants and quota:
+1. grant connect, resource, create view to &&LOG4PLSQL
+2. alter user &&LOG4PLSQL quota unlimited on &&DATA
+
+Running the `<LOG4PLSQL_HOME>/sql/install_log_user/install.sql` SQL*Plus script is sufficient for simple
+logging to a table TLOG.
 
 ### Installation
 

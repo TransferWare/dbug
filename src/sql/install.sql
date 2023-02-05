@@ -2,6 +2,7 @@ whenever oserror exit failure
 whenever sqlerror exit failure
 set define off sqlblanklines on
 ALTER SESSION SET PLSQL_WARNINGS = 'ENABLE:ALL';
+ALTER SESSION SET PLSQL_CCFlags = 'Testing:false';
 
 prompt @@0001.TYPE_SPEC.STD_OBJECT.sql
 @@0001.TYPE_SPEC.STD_OBJECT.sql
