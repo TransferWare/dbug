@@ -6,14 +6,17 @@ type t_call_stack_history_tab is table of dbug_call_stack.t_call_stack_tab index
 
 g_call_stack_history_tab t_call_stack_history_tab;
 
+g_prev_call_stack_tab dbug_call_stack.t_call_stack_tab;
+g_last_call_stack_tab dbug_call_stack.t_call_stack_tab;
+
 procedure pop_stack
 ( p_depth in simple_integer
 )
 is
 begin
-  for i_idx in reverse p_depth + 1 .. g_call_stack_history_tab.count
+  for i_depth in reverse p_depth + 1 .. g_call_stack_history_tab.count
   loop
-    dbms_output.put_line('== <'|| dbug_call_stack.repr(g_call_stack_history_tab(i_idx)(g_call_stack_history_tab(i_idx).last)));
+    dbms_output.put_line(lpad('<', i_depth*2 - 1, ' ') || dbug_call_stack.repr(g_call_stack_history_tab(i_depth)(g_call_stack_history_tab(i_depth).last), 1));
   end loop;
   g_call_stack_history_tab.delete(p_depth, g_call_stack_history_tab.count); -- remove entries after this enter call. TO DO: issue leave calls
 end pop_stack;
@@ -23,25 +26,25 @@ procedure enter
 , p_size_decrement in pls_integer
 )
 is
-  l_call_stack_tab dbug_call_stack.t_call_stack_tab;
   l_depth constant simple_integer := utl_call_stack.dynamic_depth - p_size_decrement;
 begin
-  l_call_stack_tab := dbug_call_stack.get_call_stack(p_start => 1, p_size => l_depth);
+  g_prev_call_stack_tab := g_last_call_stack_tab;
+  g_last_call_stack_tab := dbug_call_stack.get_call_stack(p_start => 1, p_size => l_depth);
   pop_stack(l_depth);
-  g_call_stack_history_tab(l_depth) := l_call_stack_tab;
-  dbms_output.put_line('>' || p_module || ':' || dbug_call_stack.repr(l_call_stack_tab(l_call_stack_tab.last)));
+  g_call_stack_history_tab(l_depth) := g_last_call_stack_tab;
+  dbms_output.put_line(lpad('>', l_depth*2 - 1, ' ') || nvl(p_module, dbug_call_stack.repr(g_last_call_stack_tab(g_last_call_stack_tab.last), 1)));
 end enter;
 
 procedure leave
 ( p_size_decrement in pls_integer
 )
 is
-  l_call_stack_tab dbug_call_stack.t_call_stack_tab;
   l_depth simple_integer := utl_call_stack.dynamic_depth - p_size_decrement;
 begin  
-  l_call_stack_tab := dbug_call_stack.get_call_stack(p_start => 1, p_size => l_depth);
+  g_prev_call_stack_tab := g_last_call_stack_tab;
+  g_last_call_stack_tab := dbug_call_stack.get_call_stack(p_start => 1, p_size => l_depth);
   pop_stack(l_depth);
-  dbms_output.put_line('<' || dbug_call_stack.repr(l_call_stack_tab(l_call_stack_tab.last)));
+  dbms_output.put_line(lpad('<', l_depth*2 - 1, ' ') || dbug_call_stack.repr(g_last_call_stack_tab(g_last_call_stack_tab.last), 1));
 end leave;
 
 -- public
@@ -51,14 +54,12 @@ procedure enter
 )
 is
 begin
-  dbms_output.put_line('-- dbug2.enter' || '('|| p_module || ')');
   enter(p_module, 2);
 end enter;
 
 procedure leave
 is
 begin
-  dbms_output.put_line('-- dbug2.leave');
   leave(2);
 end leave;
 
@@ -67,7 +68,7 @@ is
   l_error_stack_tab dbug_call_stack.t_error_stack_tab;
   l_backtrace_stack_tab dbug_call_stack.t_backtrace_stack_tab;
 begin
-  dbms_output.put_line('-- dbug2.on_error');
+  -- dbms_output.put_line('-- dbug2.on_error');
   dbms_output.put_line('== error stack');
   l_error_stack_tab :=
     dbug_call_stack.get_error_stack
@@ -99,7 +100,7 @@ end on_error;
 procedure leave_on_error
 is
 begin
-  dbms_output.put_line('-- dbug2.leave_on_error');
+  -- dbms_output.put_line('-- dbug2.leave_on_error');
   on_error;
   leave(2);
 end leave_on_error;
@@ -110,7 +111,7 @@ procedure print
 )
 is
 begin
-  dbms_output.put_line('-- dbug2.print');
+  -- dbms_output.put_line('-- dbug2.print');
   dbms_output.put_line(p_str);
 end print;  
 

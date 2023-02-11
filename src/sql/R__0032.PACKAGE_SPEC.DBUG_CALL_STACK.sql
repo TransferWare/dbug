@@ -98,6 +98,7 @@ utl_call_stack.dynamic_depth.
 
 function repr
 ( p_call_stack_rec in t_call_stack_rec
+, p_just_module_location integer default 0
 )
 return varchar2
 deterministic;
@@ -107,15 +108,18 @@ deterministic;
 Get the representation of a call that is a string with these fields separated by a bar (|):
 - dynamic_depth
 - lexical_depth
-- owner
 - unit_type
+- owner
 - name
 - unit_line
+
+When p_just_module_location is true (1), just the last three items are shown.
 
 **/
 
 function repr
 ( p_call_stack_tab in t_call_stack_tab
+, p_just_module_location integer default 0
 )
 return t_repr_tab
 deterministic;

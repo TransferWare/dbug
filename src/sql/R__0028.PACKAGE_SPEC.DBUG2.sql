@@ -19,7 +19,7 @@ subtype break_point_t is varchar2(100);
 "fatal"   constant break_point_t := 'fatal';
 
 procedure enter
-( p_module in module_name_t
+( p_module in module_name_t default null
 );
 
 procedure leave;

@@ -46,24 +46,35 @@ end get_call_stack;
 
 function repr
 ( p_call_stack_rec in t_call_stack_rec
+, p_just_module_location integer
 )
 return varchar2
 deterministic
 is
 begin
-  return utl_lms.format_message
-         ( '%d|%d|%s|%s|%s|%d'
-         , p_call_stack_rec.dynamic_depth
-         , p_call_stack_rec.lexical_depth
-         , p_call_stack_rec.owner
-         , p_call_stack_rec.unit_type
-         , p_call_stack_rec.name
-         , p_call_stack_rec.unit_line
-         );
+  return case p_just_module_location
+           when 0
+           then utl_lms.format_message
+                ( '%d|%d|%s|%s|%s|%d'
+                , p_call_stack_rec.dynamic_depth
+                , p_call_stack_rec.lexical_depth
+                , p_call_stack_rec.unit_type
+                , p_call_stack_rec.owner
+                , p_call_stack_rec.name
+                , p_call_stack_rec.unit_line
+                )
+           else utl_lms.format_message
+                ( '%s|%s|%d'
+                , p_call_stack_rec.owner
+                , p_call_stack_rec.name
+                , p_call_stack_rec.unit_line
+                )
+         end;
 end repr;
 
 function repr
 ( p_call_stack_tab in t_call_stack_tab
+, p_just_module_location integer
 )
 return t_repr_tab
 deterministic
@@ -76,7 +87,7 @@ begin
     l_repr_tab.extend(p_call_stack_tab.count);
     for i_idx in 1 .. p_call_stack_tab.count
     loop
-      l_repr_tab(i_idx) := repr(p_call_stack_tab(i_idx));
+      l_repr_tab(i_idx) := repr(p_call_stack_tab(i_idx), p_just_module_location);
     end loop;
   end if;
   return l_repr_tab;

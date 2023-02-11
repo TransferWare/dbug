@@ -6,7 +6,7 @@ is
   is
     i integer;
   begin
-    dbug2.enter('NESTED_PROC');
+    dbug2.enter;
 
     i := 42/0;
 
@@ -18,7 +18,7 @@ is
       raise;
   end NESTED_PROC;
 begin
-  dbug2.enter('PROC');
+  dbug2.enter;
   NESTED_PROC;
   dbug2.leave;
 end PROC;
@@ -26,7 +26,7 @@ end PROC;
 procedure ut_run
 is
 begin
-  dbug2.enter('UT_RUN');
+  dbug2.enter;
   PROC;
   dbug2.leave;
 exception
