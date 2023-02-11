@@ -26,9 +26,7 @@
     <!-- A list of object names to include or exclude (or empty to include all) -->
     <db.object.names>
 DBUG,
-DBUG2,
 DBUG_CALL_OBJ_T,
-DBUG_CALL_STACK,
 DBUG_CALL_TAB_T,
 DBUG_DBMS_APPLICATION_INFO,
 DBUG_DBMS_OUTPUT,
@@ -39,8 +37,7 @@ DBUG_PROFILER,
 DBUG_TRIGGER,
 STD_OBJECT,
 STD_OBJECTS,
-STD_OBJECT_MGR,
-UT_DBUG,
+STD_OBJECT_MGR
     </db.object.names>
     <!-- db.object.names.include specifies what to do with db.object.names: empty (no filter), 0 (exclude) or 1 (include) -->
     <db.object.names.include>1</db.object.names.include>

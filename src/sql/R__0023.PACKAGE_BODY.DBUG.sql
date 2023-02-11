@@ -1,7 +1,10 @@
 CREATE OR REPLACE PACKAGE BODY "DBUG" IS
 
--- dbms_output.put_line has increased line size limit since 10g Release 2 (10.2), but we allow only Oracle 11 and higher
-$if dbms_db_version.version < 11 $then
+
+-- > private (DBUG)
+
+-- dbms_output.put_line has increased line size limit since 10g Release 2 (10.2), but we allow only Oracle 12 and higher
+$if dbms_db_version.version < 12 $then
 
   c_version_too_old constant integer := 1/0; -- divide by zero as a trick since $error is not parsed well by Flyway
 
@@ -147,23 +150,22 @@ $end
     return case when l_idx is null then null else p_num_tab(l_idx) end;
   end get_number;
 
-$if dbug.c_trace > 0 $then
+$if dbug.c_trace > 0 or dbug.c_trace_enter > 0 or dbug.c_trace_leave > 0 $then
   procedure trace( p_line in varchar2 )
   is
   begin
 $if dbug.c_trace_log4plsql > 0 $then
-    plog.debug('TRACE: ' || p_line); -- dbms_output.put_line supports 32767 bytes
+    plog.debug('TRACE: ' || p_line);
 $else
     dbms_output.put_line('TRACE: ' || p_line); -- dbms_output.put_line supports 32767 bytes
 $end
   end trace;
 $end
 
-$if dbms_db_version.version >= 12 $then
   function get_call( p_idx in positiven )
   return varchar2
   is
-    l_dynamic_depth constant pls_integer := utl_call_stack.dynamic_depth;
+    -- l_dynamic_depth constant pls_integer := utl_call_stack.dynamic_depth;
     l_idx constant pls_integer := p_idx + 1;
   begin
     /*
@@ -180,32 +182,24 @@ $if dbms_db_version.version >= 12 $then
      * So index p_idx before the call is p_idx + 1 now.
      * The first call (A) should return stack number 1, so use (l_dynamic_depth + 1 - l_idx) as the stack number.
      */
-    return to_char(l_dynamic_depth + 1 - l_idx) ||
+    return utl_call_stack.owner(l_idx) ||
+           '.' ||
+           utl_call_stack.concatenate_subprogram(utl_call_stack.subprogram(l_idx)) ||
            '#' ||
-           utl_call_stack.owner(l_idx) ||
-           '#' ||
-           utl_call_stack.concatenate_subprogram(utl_call_stack.subprogram(l_idx))/* ||
-           '#' ||
-           utl_call_stack.unit_line(l_idx)*/
+           utl_call_stack.unit_line(l_idx)
            ;
   end;
-$end
 
   procedure show_error
   ( p_line in varchar2
   , p_format_call_stack in varchar2 default dbms_utility.format_call_stack
   )
   is
-$if dbms_db_version.version >= 12 $then
     l_dynamic_depth constant pls_integer := utl_call_stack.dynamic_depth;
     l_subprogram_not_dbug_found boolean := false;
-$else
-    l_line_tab line_tab_t;
-$end
   begin
     dbms_output.put_line('ERROR: ' || p_line); -- dbms_output.put_line supports 32767 bytes
 
-$if dbms_db_version.version >= 12 $then
     /*
      * In the case of a call stack in which A calls B, which calls C, which calls D, which calls E, which calls F, which calls E, this stack can be written as a line with the dynamic depths underneath:
      *
@@ -215,7 +209,7 @@ $if dbms_db_version.version >= 12 $then
 
     for i_idx in 1..l_dynamic_depth
     loop
-      if utl_call_stack.subprogram(i_idx)(1) != 'DBUG' -- (1) is unit name
+      if utl_call_stack.subprogram(i_idx)(1) != $$PLSQL_UNIT -- (1) is unit name
       then
         l_subprogram_not_dbug_found := true;
       end if;
@@ -224,21 +218,6 @@ $if dbms_db_version.version >= 12 $then
         dbms_output.put_line(get_call(i_idx));
       end if;
     end loop;
-$else
-    split
-    ( p_buf => p_format_call_stack
-    , p_sep => chr(10)
-    , p_line_tab => l_line_tab
-    );
-
-    if l_line_tab.count > 0
-    then
-      for i_idx in l_line_tab.first .. l_line_tab.last
-      loop
-        dbms_output.put_line(l_line_tab(i_idx));
-      end loop;
-    end if;
-$end
   end show_error;
 
   procedure get_cursor
@@ -280,11 +259,11 @@ $end
     end if;
   end get_cursor;
 
-  function handle_error(
-    p_obj in dbug_obj_t,
-    p_sqlcode in pls_integer,
-    p_sqlerrm in varchar2,
-    p_format_call_stack in varchar2 default dbms_utility.format_call_stack
+  function handle_error
+  ( p_obj in dbug_obj_t
+  , p_sqlcode in pls_integer
+  , p_sqlerrm in varchar2
+  , p_format_call_stack in varchar2 default dbms_utility.format_call_stack
   )
   return boolean
   is
@@ -332,15 +311,11 @@ $end
   end handle_error;
 
   procedure get_called_from
-  ( p_latest_call out nocopy varchar2
-  , p_other_calls out nocopy varchar2
+  ( p_called_from out nocopy module_name_t
+  , p_depth out nocopy integer
   )
   is
-$if dbms_db_version.version >= 12 $then
-
     l_dynamic_depth constant pls_integer := utl_call_stack.dynamic_depth;
-    l_idx pls_integer := 1;
-    l_subprogram_not_dbug_found boolean := false;
   begin
     /*
      * In the case of a call stack in which A calls B, which calls C, which calls D, which calls E, which calls F, which calls E, this stack can be written as a line with the dynamic depths underneath:
@@ -348,65 +323,27 @@ $if dbms_db_version.version >= 12 $then
      * A B C D E F E
      * 7 6 5 4 3 2 1
      */
-$if dbug.c_trace > 0 $then
-    trace('>get_called_from()');
-$end
 
-    p_latest_call := null;
-    p_other_calls := null;
+    p_called_from := null;
+    p_depth := null;
+
     <<search_loop>>
-    while l_idx <= l_dynamic_depth
+    for i_idx in 2 .. l_dynamic_depth -- since we are already in package DBUG, this call is utl_call_stack.subprogram(1)
     loop
-      if not(l_subprogram_not_dbug_found) and utl_call_stack.subprogram(l_idx)(1) != 'DBUG' -- (1) is unit name
+      if utl_call_stack.subprogram(i_idx)(1) != $$PLSQL_UNIT -- (1) is unit name
       then
-        l_subprogram_not_dbug_found := true;
         -- the subprogram calling DBUG has been found
-        p_latest_call := get_call(l_idx);
+        p_called_from := get_call(i_idx);
+        p_depth := l_dynamic_depth - i_idx + 1; -- using standard approach, i.e. we start at depth 1 and go up as long as we keep on calling subprograms
         exit search_loop;
       end if;
-      l_idx := l_idx + 1;
-    end loop;
-
-$if dbug.c_trace > 0 $then
-    trace('p_latest_call: ' || p_latest_call);
-    trace('<get_called_from()');
-$end
-
-$else -- $if dbms_db_version.version >= 12 $then
-
-    l_format_call_stack constant varchar2(32767) := dbms_utility.format_call_stack;
-    l_pos pls_integer;
-    l_start pls_integer := 1;
-    l_lines_without_dbug pls_integer := null;
-  begin
-    loop
-      l_pos := instr(l_format_call_stack, chr(10), l_start);
-
-      exit when l_pos is null or l_pos = 0;
-
-      l_lines_without_dbug :=
-        case instr(substr(l_format_call_stack, l_start, l_pos-l_start), '.DBUG')
-          when 0
-          then l_lines_without_dbug + 1 /* null+1 is null */
-          else 0
-        end;
-
-      if l_lines_without_dbug = 2 -- the line from which the method invoking dbug is called
-      then
-        p_latest_call := substr(l_format_call_stack, l_start, l_pos-l_start);
-        p_other_calls := substr(l_format_call_stack, l_pos+1);
-        exit;
-      end if;
-
-      l_start := l_pos+1;
-    end loop;
-
-$end -- $if dbms_db_version.version >= 12 $then
+    end loop search_loop;    
   end get_called_from;
 
   procedure pop_call_stack
   ( p_obj in out nocopy dbug_obj_t
   , p_lwb in binary_integer
+  , p_leave_on_error in boolean -- are we in a leave_on_error?
   )
   is
     l_active_idx pls_integer;
@@ -422,13 +359,14 @@ $end -- $if dbms_db_version.version >= 12 $then
     -- When there is no mismatch this means the top entry from p_obj.call_tab will be removed.
 
 $if dbug.c_trace > 1 $then
-    trace('pop_call_stack(p_lwb => '||p_lwb||')');
+    trace('pop_call_stack(p_lwb => '||p_lwb||', p_leave_on_error => ' || dbug.cast_to_varchar2(p_leave_on_error) || ')');
 $end
 
     if p_lwb = p_obj.call_tab.last
     then
       null;
-    else
+    elsif not(p_leave_on_error) -- no error message when invoked from leave_on_error
+    then
       show_error('Popping ' || to_char(p_obj.call_tab.last - p_lwb) || ' missing dbug.leave calls');
     end if;
 
@@ -695,7 +633,7 @@ $end
     return true;
   end check_break_point;
 
-$if dbug.c_trace > 0 $then
+$if dbug.c_trace > 0 or dbug.c_trace_enter > 0 or dbug.c_trace_leave > 0 $then
 
   procedure show_call_stack
   ( p_obj in out nocopy dbug_obj_t
@@ -710,24 +648,9 @@ $if dbug.c_trace > 0 $then
 
       for i_call_idx in p_obj.call_tab.first .. p_obj.call_tab.last
       loop
+        trace('['||to_char(i_call_idx, 'fm00')||'] module name: '|| p_obj.call_tab(i_call_idx).module_name);
+        trace('['||to_char(i_call_idx, 'fm00')||'] depth: '|| p_obj.call_tab(i_call_idx).depth);
         trace('['||to_char(i_call_idx, 'fm00')||'] called from: '|| p_obj.call_tab(i_call_idx).called_from);
-$if dbms_db_version.version < 12 $then
-        trace('['||to_char(i_call_idx, 'fm00')||'] other calls: ');
-
-        dbug.split
-        ( p_buf => p_obj.call_tab(i_call_idx).other_calls
-        , p_sep => chr(10)
-        , p_line_tab => l_line_tab
-        );
-
-        if l_line_tab.count > 0
-        then
-          for i_line_idx in l_line_tab.first .. l_line_tab.last
-          loop
-            trace(l_line_tab(i_line_idx));
-          end loop;
-        end if;
-$end
       end loop;
     end if;
 
@@ -754,36 +677,25 @@ $end
     -- GJP 21-04-2006 Store the location from which dbug.enter is called
     declare
       l_idx constant pls_integer := p_obj.call_tab.count + 1;
-      l_other_calls varchar2(32767);
       l_call dbug_call_obj_t;
     begin
        p_obj.call_tab.extend(1);
-       p_obj.call_tab(l_idx) := dbug_call_obj_t(p_module, null, null);
+       p_obj.call_tab(l_idx) := dbug_call_obj_t(null, null, null);
 
-$if dbug.c_trace > 1 $then
+$if dbug.c_trace_enter > 0 $then
        trace('extended p_obj.call_tab with 1 to '||p_obj.call_tab.count||' elements');
 $end
 
-       -- only the first other_calls has to be stored, so use a variable for l_idx > 1
-       if l_idx = 1
+       get_called_from(p_obj.call_tab(l_idx).called_from, p_obj.call_tab(l_idx).depth);
+       p_obj.call_tab(l_idx).module_name := nvl(p_module, p_obj.call_tab(l_idx).called_from);
+       if l_idx != 1
        then
-         get_called_from(p_obj.call_tab(l_idx).called_from, p_obj.call_tab(l_idx).other_calls);
-       else
-         get_called_from(p_obj.call_tab(l_idx).called_from, l_other_calls);
-
-         /* 04-02-2014 Just store it for now and check in leave. */
-         p_obj.call_tab(l_idx).other_calls := l_other_calls;
-
          -- Same stack?
          -- See =head2 Restarting a PL/SQL block with dbug.leave calls missing due to an exception
-         if ( p_obj.call_tab(p_obj.call_tab.first).module_name = p_module
+         if ( p_obj.call_tab(p_obj.call_tab.first).module_name = p_obj.call_tab(l_idx).module_name
               and
               -- use a trick with appending 'X' so circumvent checking ((x is null and y is null) or x = y)
               p_obj.call_tab(p_obj.call_tab.first).called_from || 'X' = p_obj.call_tab(l_idx).called_from || 'X'
-$if dbms_db_version.version < 12 $then
-              and
-              p_obj.call_tab(p_obj.call_tab.first).other_calls || 'X' = l_other_calls || 'X'
-$end
             )
          then
            show_error
@@ -800,12 +712,11 @@ $end
            l_call := p_obj.call_tab(l_idx);
 
            p_obj.call_tab.trim; -- this one is moved to nr 1
-           pop_call_stack(p_obj, 1); -- erase the complete stack (except index 0)
+           pop_call_stack(p_obj, 1, false); -- erase the complete stack (except index 0)
            p_obj.call_tab.extend(1);
            p_obj.call_tab(1) := l_call;
-           p_obj.call_tab(1).other_calls := l_other_calls;
 
-$if dbug.c_trace > 1 $then
+$if dbug.c_trace_enter > 0 $then
            trace('extended p_obj.call_tab with 1 to '||p_obj.call_tab.count||' elements');
 $end
 
@@ -828,7 +739,7 @@ $end
           , 'begin dbug_'||l_active_str||'.enter(:0); end;'
           , l_cursor
           );
-          dbms_sql.bind_variable(l_cursor, '0', p_module);
+          dbms_sql.bind_variable(l_cursor, '0', p_obj.call_tab(p_obj.call_tab.last).module_name);
           l_dummy := dbms_sql.execute(l_cursor);
         exception
           when others
@@ -848,7 +759,7 @@ $end
     p_obj.indent_level := p_obj.indent_level + 1;
     p_obj.dirty := 1;
 
-$if dbug.c_trace > 0 $then
+$if dbug.c_trace_enter > 0 $then
     show_call_stack(p_obj, true);
 $end
   end enter;
@@ -1125,8 +1036,9 @@ $end
 
   procedure leave
   ( p_obj in out nocopy dbug_obj_t
+  , p_leave_on_error in boolean
   , p_called_from in varchar2
-  , p_other_calls in varchar2
+  , p_depth in integer default null
   )
   is
   begin
@@ -1135,7 +1047,7 @@ $end
       return;
     end if;
 
-$if dbug.c_trace > 0 $then
+$if dbug.c_trace_leave > 0 $then
     show_call_stack(p_obj, false);
 $end
 
@@ -1149,51 +1061,55 @@ $end
 
     declare
       l_idx pls_integer := p_obj.call_tab.last;
-$if dbug.c_trace > 0 $then
+$if dbug.c_trace_leave > 0 $then
       l_obj dbug_obj_t := p_obj;
 $end
     begin
+$if dbug.c_trace_leave > 0 $then
+      trace('p_called_from: "' || p_called_from || '"');
+      trace('p_depth: ' || p_depth);
+$end
       -- adjust for mismatch in enter/leave pairs
+      <<find_same_depth_loop>>
       loop
         if l_idx is null
         then
           -- called_from location for leave does not exist in p_obj.call_tab
-$if dbug.c_trace > 0 $then
-          trace('p_called_from: "' || p_called_from || '"');
-$if dbms_db_version.version < 12 $then
-          trace('p_other_calls: "' || p_other_calls || '"');
-$end
+$if dbug.c_trace_leave > 0 $then
           l_idx := l_obj.call_tab.last;
           while l_idx is not null
           loop
             trace('l_obj.call_tab(' || l_idx || ').called_from: "' || l_obj.call_tab(l_idx).called_from || '"');
-$if dbms_db_version.version < 12 $then
-            trace('l_obj.call_tab(' || l_idx || ').other_calls: "' || l_obj.call_tab(l_idx).other_calls || '"');
-$end
             l_idx := l_obj.call_tab.prior(l_idx);
           end loop;
 $end
           raise program_error;
-          -- use a trick with appending 'X' so circumvent checking ((x is null and y is null) or x = y)
-        elsif p_obj.call_tab(l_idx).called_from || 'X' = p_called_from || 'X'
-$if dbms_db_version.version < 12 $then
-              and
-              p_obj.call_tab(l_idx).other_calls || 'X' = p_other_calls || 'X'
-$end
-        then
-          pop_call_stack(p_obj, l_idx);
-          exit;
         else
-          l_idx := p_obj.call_tab.prior(l_idx);
+$if dbug.c_trace_leave > 0 $then
+          trace('l_idx: ' || l_idx);
+          trace('p_obj.call_tab(l_idx).called_from: "' || p_obj.call_tab(l_idx).called_from || '"');
+          trace('p_obj.call_tab(l_idx).depth: ' || p_obj.call_tab(l_idx).depth);
+$end
+        
+          if p_obj.call_tab(l_idx).depth = p_depth -- GJP 2023-02-11
+          then
+            pop_call_stack(p_obj, l_idx, p_leave_on_error);
+            exit find_same_depth_loop;
+          else
+            l_idx := p_obj.call_tab.prior(l_idx);
+          end if;
         end if;
-      end loop;
+      end loop find_same_depth_loop;
     end;
   end leave;
 
   procedure leave
   ( p_obj in out nocopy dbug_obj_t
+  , p_leave_on_error in boolean
   )
   is
+    l_called_from module_name_t;
+    l_depth integer;
   begin
     if not check_break_point(p_obj, "trace")
     then
@@ -1211,14 +1127,8 @@ $end
     -- the one which has the same called from location as this call.
     -- When there is no mismatch this means the top entry from p_obj.call_tab will be removed.
     -- See also get_called_from for an example.
-
-    declare
-      l_called_from varchar2(32767);
-      l_other_calls varchar2(32767);
-    begin
-      get_called_from(l_called_from, l_other_calls);
-      leave(p_obj, l_called_from, l_other_calls);
-    end;
+    get_called_from(l_called_from, l_depth);
+    leave(p_obj, p_leave_on_error, l_called_from, l_depth);
   end leave;
 
   procedure on_error
@@ -1359,7 +1269,92 @@ $if dbug.c_trace > 1 $then
 $end
   end set_state;
 
-  /* global modules */
+  procedure leave
+  ( p_leave_on_error in boolean
+  )
+  is
+  begin
+$if dbug.c_trace > 1 $then
+    trace('>leave');
+$end
+
+    get_state;
+    begin
+      leave(g_obj, p_leave_on_error);
+    exception
+      when others
+      then
+        set_state(p_store => true, p_print => false);
+        raise;
+    end;
+    set_state(p_store => true);
+
+$if dbug.c_trace > 1 $then
+    trace('<leave');
+$end
+
+$if dbug.c_ignore_errors != 0 $then
+  exception
+    when others
+    then
+      null;
+$end
+  end leave;
+
+-- < private (DBUG)
+/*
+-- > private (DBUG2)
+
+c_indent constant binary_integer := 2;
+
+type t_call_stack_history_tab is table of module_name_t index by binary_integer;
+
+g_call_stack_history_tab t_call_stack_history_tab;
+
+g_prev_call_stack_tab dbug_call_stack.t_call_stack_tab;
+g_last_call_stack_tab dbug_call_stack.t_call_stack_tab;
+
+procedure pop_stack
+( p_depth in simple_integer
+)
+is
+begin
+  for i_depth in reverse p_depth .. g_call_stack_history_tab.count
+  loop
+    if g_call_stack_history_tab.exists(i_depth)
+    then
+      dbms_output.put_line(lpad('<', i_depth * c_indent - 1, ' ') || g_call_stack_history_tab(i_depth));
+    end if;
+  end loop;
+  g_call_stack_history_tab.delete(p_depth, g_call_stack_history_tab.count); -- remove entries after this enter call. TO DO: issue leave calls
+end pop_stack;
+
+procedure enter
+( p_module in module_name_t
+, p_depth in binary_integer
+)
+is
+begin
+  g_prev_call_stack_tab := g_last_call_stack_tab;
+  g_last_call_stack_tab := dbug_call_stack.get_call_stack(p_start => 1, p_size => p_depth);
+  pop_stack(p_depth);
+  g_call_stack_history_tab(p_depth) := nvl(p_module, dbug_call_stack.repr(g_last_call_stack_tab(g_last_call_stack_tab.last), 1));
+  dbms_output.put_line(lpad('>', p_depth * c_indent - 1, ' ') || g_call_stack_history_tab(p_depth));
+end enter;
+
+procedure leave
+( p_depth in binary_integer
+)
+is
+begin  
+  g_prev_call_stack_tab := g_last_call_stack_tab;
+  g_last_call_stack_tab := dbug_call_stack.get_call_stack(p_start => 1, p_size => p_depth);
+  pop_stack(p_depth);
+end leave;
+
+-- < private (DBUG2)
+*/
+-- > public (DBUG)
 
   procedure done
   is
@@ -1629,10 +1624,10 @@ $end
   , p_called_from out nocopy module_name_t
   )
   is
-    l_dummy module_name_t;
+    l_depth integer;
   begin
     enter(p_module);
-    get_called_from(p_latest_call => p_called_from, p_other_calls => l_dummy);
+    get_called_from(p_called_from, l_depth);
 
 $if dbug.c_ignore_errors != 0 $then
   exception
@@ -1645,38 +1640,13 @@ $end
   procedure leave
   is
   begin
-$if dbug.c_trace > 1 $then
-    trace('>leave');
-$end
-
-    get_state;
-    begin
-      leave(g_obj);
-    exception
-      when others
-      then
-        set_state(p_store => true, p_print => false);
-        raise;
-    end;
-    set_state(p_store => true);
-
-$if dbug.c_trace > 1 $then
-    trace('<leave');
-$end
-
-$if dbug.c_ignore_errors != 0 $then
-  exception
-    when others
-    then
-      null;
-$end
+    leave(false);
   end leave;
 
   procedure leave
   ( p_called_from in module_name_t
   )
   is
-    l_dummy module_name_t := null;
   begin
 $if dbug.c_trace > 1 $then
     trace('>leave');
@@ -1684,7 +1654,7 @@ $end
 
     get_state;
     begin
-      leave(g_obj, p_called_from, l_dummy);
+      leave(g_obj, false, p_called_from);
     exception
       when others
       then
@@ -1864,7 +1834,7 @@ $if dbug.c_trace > 1 $then
 $end
     /* since on_error dynamically calls one of the global on_error routines we can not use an object */
     on_error;
-    leave;
+    leave(true);
 $if dbug.c_trace > 1 $then
     trace('<leave_on_error');
 $end
@@ -2364,12 +2334,12 @@ $if dbug.c_testing $then
           into    l_obj_act
           from    std_objects t
           where   group_name = 'TEST'
-          and     object_name = 'DBUG';
+          and     object_name = $$PLSQL_UNIT;
 
         when 2
         then
           std_object_mgr.get_std_object
-          ( p_object_name => 'DBUG'
+          ( p_object_name => $$PLSQL_UNIT
           , p_std_object => l_std_object
           );
           select  l_std_object.serialize()
@@ -2405,6 +2375,77 @@ $else -- dbug.c_testing $then
   end;
 
 $end -- dbug.c_testing $then
+
+-- < public (DBUG)
+
+/*
+-- > public (DBUG2)
+
+procedure enter
+( p_module in module_name_t
+)
+is
+begin
+  enter(p_module => p_module, p_depth => utl_call_stack.dynamic_depth - 1);
+end enter;
+
+procedure leave
+is
+begin
+  leave(p_depth => utl_call_stack.dynamic_depth - 1);
+end leave;
+
+procedure on_error
+is
+  l_error_stack_tab dbug_call_stack.t_error_stack_tab;
+  l_backtrace_stack_tab dbug_call_stack.t_backtrace_stack_tab;
+begin
+  dbms_output.put_line('== error stack');
+  l_error_stack_tab :=
+    dbug_call_stack.get_error_stack
+    ( p_start => 1 -- You can use -1 like the POSITION parameter in the SUBSTR() function
+    , p_size => utl_call_stack.error_depth
+    );
+  if l_error_stack_tab.count > 0
+  then
+    for i_idx in l_error_stack_tab.first .. l_error_stack_tab.last
+    loop
+      dbms_output.put_line(dbug_call_stack.repr(l_error_stack_tab(i_idx)));
+    end loop;
+  end if;
+  dbms_output.put_line('== backtrace stack');
+  l_backtrace_stack_tab :=
+    dbug_call_stack.get_backtrace_stack
+    ( p_start => 1 -- You can use -1 like the POSITION parameter in the SUBSTR() function
+    , p_size => utl_call_stack.backtrace_depth
+    );
+  if l_backtrace_stack_tab.count > 0
+  then
+    for i_idx in l_backtrace_stack_tab.first .. l_backtrace_stack_tab.last
+    loop
+      dbms_output.put_line(dbug_call_stack.repr(l_backtrace_stack_tab(i_idx)));
+    end loop;
+  end if;
+end on_error;
+
+procedure leave_on_error
+is
+begin
+  on_error;
+  leave(p_depth => utl_call_stack.dynamic_depth - 1);
+end leave_on_error;
+
+procedure print
+( p_break_point in break_point_t
+, p_str in varchar2
+)
+is
+begin
+  dbms_output.put_line(p_str);
+end print;  
+
+-- < public (DBUG2)
+*/
 
 END DBUG;
 /
