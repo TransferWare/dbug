@@ -27,30 +27,28 @@ end pop_stack;
 
 procedure enter
 ( p_module in module_name_t
-, p_size_decrement in pls_integer
+, p_depth in binary_integer
 )
 is
-  l_depth constant binary_integer := utl_call_stack.dynamic_depth - p_size_decrement;
   l_dummy module_name_t;
 begin
   g_prev_call_stack_tab := g_last_call_stack_tab;
-  g_last_call_stack_tab := dbug_call_stack.get_call_stack(p_start => 1, p_size => l_depth);
-  pop_stack(l_depth, l_dummy);
-  g_call_stack_history_tab(l_depth) := nvl(p_module, dbug_call_stack.repr(g_last_call_stack_tab(g_last_call_stack_tab.last), 1));
-  dbms_output.put_line(lpad('>', l_depth * c_indent - 1, ' ') || g_call_stack_history_tab(l_depth));
+  g_last_call_stack_tab := dbug_call_stack.get_call_stack(p_start => 1, p_size => p_depth);
+  pop_stack(p_depth, l_dummy);
+  g_call_stack_history_tab(p_depth) := nvl(p_module, dbug_call_stack.repr(g_last_call_stack_tab(g_last_call_stack_tab.last), 1));
+  dbms_output.put_line(lpad('>', p_depth * c_indent - 1, ' ') || g_call_stack_history_tab(p_depth));
 end enter;
 
 procedure leave
-( p_size_decrement in pls_integer
+( p_depth in binary_integer
 )
 is
-  l_depth constant binary_integer := utl_call_stack.dynamic_depth - p_size_decrement;
   l_last_module module_name_t;
 begin  
   g_prev_call_stack_tab := g_last_call_stack_tab;
-  g_last_call_stack_tab := dbug_call_stack.get_call_stack(p_start => 1, p_size => l_depth);
-  pop_stack(l_depth, l_last_module);
-  dbms_output.put_line(lpad('<', l_depth * c_indent - 1, ' ') || l_last_module);
+  g_last_call_stack_tab := dbug_call_stack.get_call_stack(p_start => 1, p_size => p_depth);
+  pop_stack(p_depth, l_last_module);
+  dbms_output.put_line(lpad('<', p_depth * c_indent - 1, ' ') || l_last_module);
 end leave;
 
 -- public
@@ -60,13 +58,13 @@ procedure enter
 )
 is
 begin
-  enter(p_module, 2);
+  enter(p_module => p_module, p_depth => utl_call_stack.dynamic_depth - 1);
 end enter;
 
 procedure leave
 is
 begin
-  leave(2);
+  leave(p_depth => utl_call_stack.dynamic_depth - 1);
 end leave;
 
 procedure on_error
@@ -74,7 +72,6 @@ is
   l_error_stack_tab dbug_call_stack.t_error_stack_tab;
   l_backtrace_stack_tab dbug_call_stack.t_backtrace_stack_tab;
 begin
-  -- dbms_output.put_line('-- dbug2.on_error');
   dbms_output.put_line('== error stack');
   l_error_stack_tab :=
     dbug_call_stack.get_error_stack
@@ -106,9 +103,8 @@ end on_error;
 procedure leave_on_error
 is
 begin
-  -- dbms_output.put_line('-- dbug2.leave_on_error');
   on_error;
-  leave(2);
+  leave(p_depth => utl_call_stack.dynamic_depth - 1);
 end leave_on_error;
 
 procedure print
@@ -117,7 +113,6 @@ procedure print
 )
 is
 begin
-  -- dbms_output.put_line('-- dbug2.print');
   dbms_output.put_line(p_str);
 end print;  
 
