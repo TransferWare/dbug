@@ -13,15 +13,16 @@ g_last_call_stack_tab dbug_call_stack.t_call_stack_tab;
 
 procedure pop_stack
 ( p_depth in simple_integer
-, p_last_module out nocopy module_name_t
 )
 is
 begin
-  for i_depth in reverse p_depth + 1 .. g_call_stack_history_tab.count
+  for i_depth in reverse p_depth .. g_call_stack_history_tab.count
   loop
-    dbms_output.put_line(lpad('<', i_depth * c_indent - 1, ' ') || g_call_stack_history_tab(i_depth));
+    if g_call_stack_history_tab.exists(i_depth)
+    then
+      dbms_output.put_line(lpad('<', i_depth * c_indent - 1, ' ') || g_call_stack_history_tab(i_depth));
+    end if;
   end loop;
-  p_last_module := case when g_call_stack_history_tab.exists(p_depth) then g_call_stack_history_tab(p_depth) end;
   g_call_stack_history_tab.delete(p_depth, g_call_stack_history_tab.count); -- remove entries after this enter call. TO DO: issue leave calls
 end pop_stack;
 
@@ -30,11 +31,10 @@ procedure enter
 , p_depth in binary_integer
 )
 is
-  l_dummy module_name_t;
 begin
   g_prev_call_stack_tab := g_last_call_stack_tab;
   g_last_call_stack_tab := dbug_call_stack.get_call_stack(p_start => 1, p_size => p_depth);
-  pop_stack(p_depth, l_dummy);
+  pop_stack(p_depth);
   g_call_stack_history_tab(p_depth) := nvl(p_module, dbug_call_stack.repr(g_last_call_stack_tab(g_last_call_stack_tab.last), 1));
   dbms_output.put_line(lpad('>', p_depth * c_indent - 1, ' ') || g_call_stack_history_tab(p_depth));
 end enter;
@@ -43,12 +43,10 @@ procedure leave
 ( p_depth in binary_integer
 )
 is
-  l_last_module module_name_t;
 begin  
   g_prev_call_stack_tab := g_last_call_stack_tab;
   g_last_call_stack_tab := dbug_call_stack.get_call_stack(p_start => 1, p_size => p_depth);
-  pop_stack(p_depth, l_last_module);
-  dbms_output.put_line(lpad('<', p_depth * c_indent - 1, ' ') || l_last_module);
+  pop_stack(p_depth);
 end leave;
 
 -- public
