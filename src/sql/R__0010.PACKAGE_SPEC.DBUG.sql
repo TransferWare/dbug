@@ -1,7 +1,5 @@
 CREATE OR REPLACE PACKAGE "DBUG" AUTHID DEFINER IS
 
-c_testing constant boolean := $if $$Testing $then true $else false $end;
-
 c_trace constant pls_integer := 0; -- trace dbug itself for values > 0
 c_trace_enter constant pls_integer := 0;
 c_trace_leave constant pls_integer := 0;
@@ -221,22 +219,6 @@ function format_print
 , p_arg5 in varchar2 default null
 )
 return varchar2;
-
---%suitepath(DBUG)
---%suite
---%rollback(manual)
-
---%beforeall
-procedure ut_setup;
-
---%afterall
-procedure ut_teardown;
-
---%test
-procedure ut_dbug;
-
---%test
-procedure ut_run;
 
 end dbug;
 /

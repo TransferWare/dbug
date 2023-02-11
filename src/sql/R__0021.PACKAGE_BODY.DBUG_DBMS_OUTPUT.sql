@@ -93,7 +93,7 @@ CREATE OR REPLACE PACKAGE BODY "DBUG_DBMS_OUTPUT" IS
     print( dbug.format_print(p_break_point, p_fmt, 5, p_arg1, p_arg2, p_arg3, p_arg4, p_arg5) );
   end print;
 
-$if dbug.c_testing $then
+$if ut_dbug.c_testing $then
 
   procedure ut_store_remove
   is
