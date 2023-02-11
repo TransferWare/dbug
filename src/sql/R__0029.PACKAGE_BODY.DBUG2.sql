@@ -2,7 +2,9 @@ CREATE OR REPLACE PACKAGE BODY "DBUG2" IS
 
 -- private
 
-type t_call_stack_history_tab is table of dbug_call_stack.t_call_stack_tab index by binary_integer;
+c_indent constant binary_integer := 2;
+
+type t_call_stack_history_tab is table of module_name_t index by binary_integer;
 
 g_call_stack_history_tab t_call_stack_history_tab;
 
@@ -11,13 +13,15 @@ g_last_call_stack_tab dbug_call_stack.t_call_stack_tab;
 
 procedure pop_stack
 ( p_depth in simple_integer
+, p_last_module out nocopy module_name_t
 )
 is
 begin
   for i_depth in reverse p_depth + 1 .. g_call_stack_history_tab.count
   loop
-    dbms_output.put_line(lpad('<', i_depth*2 - 1, ' ') || dbug_call_stack.repr(g_call_stack_history_tab(i_depth)(g_call_stack_history_tab(i_depth).last), 1));
+    dbms_output.put_line(lpad('<', i_depth * c_indent - 1, ' ') || g_call_stack_history_tab(i_depth));
   end loop;
+  p_last_module := case when g_call_stack_history_tab.exists(p_depth) then g_call_stack_history_tab(p_depth) end;
   g_call_stack_history_tab.delete(p_depth, g_call_stack_history_tab.count); -- remove entries after this enter call. TO DO: issue leave calls
 end pop_stack;
 
@@ -26,25 +30,27 @@ procedure enter
 , p_size_decrement in pls_integer
 )
 is
-  l_depth constant simple_integer := utl_call_stack.dynamic_depth - p_size_decrement;
+  l_depth constant binary_integer := utl_call_stack.dynamic_depth - p_size_decrement;
+  l_dummy module_name_t;
 begin
   g_prev_call_stack_tab := g_last_call_stack_tab;
   g_last_call_stack_tab := dbug_call_stack.get_call_stack(p_start => 1, p_size => l_depth);
-  pop_stack(l_depth);
-  g_call_stack_history_tab(l_depth) := g_last_call_stack_tab;
-  dbms_output.put_line(lpad('>', l_depth*2 - 1, ' ') || nvl(p_module, dbug_call_stack.repr(g_last_call_stack_tab(g_last_call_stack_tab.last), 1)));
+  pop_stack(l_depth, l_dummy);
+  g_call_stack_history_tab(l_depth) := nvl(p_module, dbug_call_stack.repr(g_last_call_stack_tab(g_last_call_stack_tab.last), 1));
+  dbms_output.put_line(lpad('>', l_depth * c_indent - 1, ' ') || g_call_stack_history_tab(l_depth));
 end enter;
 
 procedure leave
 ( p_size_decrement in pls_integer
 )
 is
-  l_depth simple_integer := utl_call_stack.dynamic_depth - p_size_decrement;
+  l_depth constant binary_integer := utl_call_stack.dynamic_depth - p_size_decrement;
+  l_last_module module_name_t;
 begin  
   g_prev_call_stack_tab := g_last_call_stack_tab;
   g_last_call_stack_tab := dbug_call_stack.get_call_stack(p_start => 1, p_size => l_depth);
-  pop_stack(l_depth);
-  dbms_output.put_line(lpad('<', l_depth*2 - 1, ' ') || dbug_call_stack.repr(g_last_call_stack_tab(g_last_call_stack_tab.last), 1));
+  pop_stack(l_depth, l_last_module);
+  dbms_output.put_line(lpad('<', l_depth * c_indent - 1, ' ') || l_last_module);
 end leave;
 
 -- public
