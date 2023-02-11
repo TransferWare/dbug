@@ -2352,6 +2352,41 @@ $if dbug.c_testing $then
     commit;
   end;
 
+  procedure ut_run
+  is
+    procedure proc
+    is
+      procedure nested_proc
+      is
+        i integer;
+      begin
+        dbug.enter;
+
+        i := 42/0;
+
+        dbug.leave;
+      exception
+        when others
+        then
+          dbug.on_error;
+          raise;
+      end nested_proc;
+    begin
+      dbug.enter;
+      nested_proc;
+      dbug.leave;
+    end proc;
+  begin
+    dbug.enter;
+    proc;
+    dbug.leave;
+  exception
+    when others
+    then
+      dbug.leave_on_error;
+      raise;
+  end ut_run;
+
 $else -- dbug.c_testing $then
 
   -- some dummy stubs
@@ -2369,6 +2404,12 @@ $else -- dbug.c_testing $then
   end;
 
   procedure ut_dbug
+  is
+  begin
+    null;
+  end;
+  
+  procedure ut_run
   is
   begin
     null;

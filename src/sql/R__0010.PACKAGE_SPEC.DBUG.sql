@@ -235,6 +235,9 @@ procedure ut_teardown;
 --%test
 procedure ut_dbug;
 
+--%test
+procedure ut_run;
+
 end dbug;
 /
 
