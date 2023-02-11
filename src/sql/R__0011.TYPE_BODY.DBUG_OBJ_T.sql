@@ -107,8 +107,8 @@ is
         l_json_object := json_object_t();
 
         l_json_object.put('MODULE_NAME', p_dbug_call_tab(i_idx).module_name);
+        l_json_object.put('DEPTH', p_dbug_call_tab(i_idx).depth);
         l_json_object.put('CALLED_FROM', p_dbug_call_tab(i_idx).called_from);
-        l_json_object.put('OTHER_CALLS', p_dbug_call_tab(i_idx).module_name);
 
         l_json_array.append(l_json_object);
       end loop;

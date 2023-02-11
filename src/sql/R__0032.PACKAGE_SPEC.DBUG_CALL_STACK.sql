@@ -220,7 +220,7 @@ Show the current call, error and backtrace stack using DBMS_OUTPUT.
 
 **/
 
-$if dbug2.c_testing $then
+$if dbug.c_testing $then
 
 --%suitepath(API)
 --%suite

@@ -37,7 +37,7 @@ begin
     l_call_stack_rec.owner := utl_call_stack.owner(depth);
     l_call_stack_rec.unit_type := utl_call_stack.unit_type(depth);
     l_call_stack_rec.subprogram := utl_call_stack.subprogram(depth);
-    l_call_stack_rec.name := UTL_CALL_STACK.concatenate_subprogram(l_call_stack_rec.subprogram);
+    l_call_stack_rec.name := utl_call_stack.concatenate_subprogram(l_call_stack_rec.subprogram);
     l_call_stack_rec.unit_line := utl_call_stack.unit_line(depth);
     l_call_stack_tab(l_call_stack_tab.count + 1) := l_call_stack_rec;
   end loop;
@@ -330,7 +330,7 @@ exception
   then null;
 end show_stack;
 
-$if dbug2.c_testing $then
+$if dbug.c_testing $then
 
 procedure ut_get_call_stack
 is

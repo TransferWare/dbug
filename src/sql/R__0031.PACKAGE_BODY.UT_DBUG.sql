@@ -6,33 +6,33 @@ is
   is
     i integer;
   begin
-    dbug2.enter;
+    dbug.enter;
 
     i := 42/0;
 
-    dbug2.leave;
+    dbug.leave;
   exception
     when others
     then
-      dbug2.on_error;
+      dbug.on_error;
       raise;
   end NESTED_PROC;
 begin
-  dbug2.enter;
+  dbug.enter;
   NESTED_PROC;
-  dbug2.leave;
+  dbug.leave;
 end PROC;
 
 procedure ut_run
 is
 begin
-  dbug2.enter;
+  dbug.enter;
   PROC;
-  dbug2.leave;
+  dbug.leave;
 exception
   when others
   then
-    dbug2.leave_on_error;
+    dbug.leave_on_error;
     raise;
 end ut_run;
 
