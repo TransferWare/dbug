@@ -180,13 +180,13 @@ $else -- ut_dbug.c_testing $then
   begin
     null;
   end;
-  
+
   procedure ut_run
   is
   begin
     null;
   end;
-  
+
   procedure ut_leave_on_error
   is
   begin

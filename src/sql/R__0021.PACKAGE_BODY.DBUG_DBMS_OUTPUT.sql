@@ -145,7 +145,7 @@ $if ut_dbug.c_testing $then
     for i_idx in l_lines_exp.first .. l_lines_exp.last
     loop
       dbms_output.put_line(l_lines_exp(i_idx));
-    end loop;    
+    end loop;
     chk;
   end ut_dbug_dbms_output;
 

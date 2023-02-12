@@ -337,7 +337,7 @@ $end
         p_depth := l_dynamic_depth - i_idx + 1; -- using standard approach, i.e. we start at depth 1 and go up as long as we keep on calling subprograms
         exit search_loop;
       end if;
-    end loop search_loop;    
+    end loop search_loop;
   end get_called_from;
 
   procedure pop_call_stack
@@ -1090,7 +1090,7 @@ $if dbug.c_trace_leave > 0 $then
           trace('p_obj.call_tab(l_idx).called_from: "' || p_obj.call_tab(l_idx).called_from || '"');
           trace('p_obj.call_tab(l_idx).depth: ' || p_obj.call_tab(l_idx).depth);
 $end
-        
+
           if p_obj.call_tab(l_idx).depth = p_depth -- GJP 2023-02-11
           then
             pop_call_stack(p_obj, l_idx, p_leave_on_error);
@@ -1346,7 +1346,7 @@ procedure leave
 ( p_depth in binary_integer
 )
 is
-begin  
+begin
   g_prev_call_stack_tab := g_last_call_stack_tab;
   g_last_call_stack_tab := dbug_call_stack.get_call_stack(p_start => 1, p_size => p_depth);
   pop_stack(p_depth);
@@ -2357,7 +2357,7 @@ procedure print
 is
 begin
   dbms_output.put_line(p_str);
-end print;  
+end print;
 
 -- < public (DBUG2)
 */
