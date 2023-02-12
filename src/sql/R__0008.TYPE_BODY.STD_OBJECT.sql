@@ -91,6 +91,13 @@ begin
   into    l_clob
   from    dual;
 
+  if dbms_lob.getlength(l_clob) > 0
+  then
+    null;
+  else
+    raise program_error;
+  end if;
+
   return l_clob;
 end repr;
 
@@ -102,7 +109,7 @@ begin
   ( utl_lms.format_message
     ( 'type: %s; repr: %s'
     , get_type()
-    , repr()
+    , dbms_lob.substr(lob_loc => repr(), amount => 4000)
     )
   );
 end print;

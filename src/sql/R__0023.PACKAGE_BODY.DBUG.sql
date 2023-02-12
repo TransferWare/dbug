@@ -162,10 +162,9 @@ $end
   end trace;
 $end
 
-  function get_call( p_idx in positiven )
+  function get_call( p_idx in pls_integer )
   return varchar2
   is
-    -- l_dynamic_depth constant pls_integer := utl_call_stack.dynamic_depth;
     l_idx constant pls_integer := p_idx + 1;
   begin
     /*
@@ -188,7 +187,14 @@ $end
            '#' ||
            utl_call_stack.unit_line(l_idx)
            ;
-  end;
+  end get_call;
+
+  function get_call_by_depth( p_depth in pls_integer )
+  return varchar2
+  is
+  begin
+    return get_call(utl_call_stack.dynamic_depth - p_depth + 1);
+  end get_call_by_depth;
 
   procedure show_error
   ( p_line in varchar2
@@ -764,6 +770,17 @@ $if dbug.c_trace_enter > 0 $then
 $end
   end enter;
 
+  procedure enter
+  ( p_obj in out nocopy dbug_obj_t
+  , p_module in module_name_t
+  , p_called_from out nocopy module_name_t
+  )
+  is
+  begin
+    enter(p_obj, p_module);
+    p_called_from := p_obj.call_tab(p_obj.call_tab.last).called_from;
+  end enter;
+
   procedure print
   ( p_obj in dbug_obj_t
   , p_break_point in varchar2
@@ -1036,9 +1053,9 @@ $end
 
   procedure leave
   ( p_obj in out nocopy dbug_obj_t
-  , p_leave_on_error in boolean
   , p_called_from in varchar2
-  , p_depth in integer default null
+  , p_depth in pls_integer
+  , p_leave_on_error in boolean
   )
   is
   begin
@@ -1105,30 +1122,13 @@ $end
 
   procedure leave
   ( p_obj in out nocopy dbug_obj_t
-  , p_leave_on_error in boolean
   )
   is
     l_called_from module_name_t;
-    l_depth integer;
+    l_depth pls_integer;
   begin
-    if not check_break_point(p_obj, "trace")
-    then
-      return;
-    end if;
-
-$if dbug.c_trace > 0 $then
-    show_call_stack(p_obj, false);
-$end
-
-    -- GJP 21-04-2006
-    -- When there is a mismatch in enter/leave pairs
-    -- (for example caused by uncaught expections or program errors)
-    -- we must pop from the call stack (p_obj.call_tab) all entries through
-    -- the one which has the same called from location as this call.
-    -- When there is no mismatch this means the top entry from p_obj.call_tab will be removed.
-    -- See also get_called_from for an example.
     get_called_from(l_called_from, l_depth);
-    leave(p_obj, p_leave_on_error, l_called_from, l_depth);
+    leave(p_obj => p_obj, p_called_from => l_called_from, p_depth => l_depth, p_leave_on_error => false);
   end leave;
 
   procedure on_error
@@ -1141,10 +1141,6 @@ $end
     l_line_no pls_integer;
     l_output dbug.line_tab_t;
   begin
-$if dbug.c_trace > 0 $then
-    trace('>on_error('''||p_function||''', '||p_output.count||') (1)');
-$end
-
     if not check_break_point(p_obj, "error")
     then
       return;
@@ -1187,10 +1183,6 @@ $end
       l_line_no := l_output.next(l_line_no);
       l_line := ' (' || l_line_no || ')';
     end loop;
-
-$if dbug.c_trace > 0 $then
-    trace('<on_error (1)');
-$end
   exception
     when others
     then
@@ -1199,9 +1191,6 @@ $end
       loop
         dbms_output.put_line(l_output(i_idx));
       end loop;
-$if dbug.c_trace > 0 $then
-      trace('<on_error (1)');
-$end
       raise;
   end on_error;
 
@@ -1214,20 +1203,43 @@ $end
   is
     l_line_tab line_tab_t;
   begin
-$if dbug.c_trace > 0 $then
-    trace('>on_error('''||p_function||''', '''||p_output||''', '''||p_sep||''') (2)');
-$end
     split(p_output, p_sep, l_line_tab);
-
-    dbug.on_error(p_obj, p_function, l_line_tab);
-
-$if dbug.c_trace > 0 $then
-    trace('<on_error (2)');
-$end
+    on_error(p_obj, p_function, l_line_tab);
   end on_error;
+
+  procedure on_error
+  ( p_obj in dbug_obj_t
+  )
+  is
+  begin
+    /* Get error information from:
+       - sqlerrm
+       - dbms_utility.format_error_backtrace
+    */   
+    on_error(p_obj, 'sqlerrm', sqlerrm, chr(10));
+    on_error
+    ( p_obj => p_obj
+    , p_function => 'dbms_utility.format_error_backtrace'
+    , p_output => dbms_utility.format_error_backtrace
+    , p_sep => chr(10)
+    );
+  end on_error;
+
+  procedure leave_on_error
+  ( p_obj in out nocopy dbug_obj_t
+  )
+  is
+    l_called_from module_name_t;
+    l_depth pls_integer;
+  begin
+    on_error(p_obj);
+    get_called_from(l_called_from, l_depth);
+    leave(p_obj => p_obj, p_called_from => l_called_from, p_depth => l_depth, p_leave_on_error => true);
+  end leave_on_error;
 
   procedure get_state
   is
+    l_dynamic_depth constant pls_integer := utl_call_stack.dynamic_depth;
   begin
 $if dbug.c_trace > 1 $then
     trace('>get_state');
@@ -1247,18 +1259,20 @@ $if dbug.c_trace > 1 $then
 $end
   end get_state;
 
-  procedure set_state(p_store in boolean default true, p_print in boolean default false)
+  procedure set_state(p_print in boolean default false)
   is
   begin
 $if dbug.c_trace > 1 $then
     trace('>set_state');
 $end
 
-    if p_store
-    then
-      g_obj.store();
-    end if;
+    -- g_obj.store() is intelligent and will store only if dirty has been set or the object has changed
+    g_obj.store();
+
     if p_print
+$if dbug.c_trace > 1 $then
+       or true
+$end    
     then
       g_obj.print();
     end if;
@@ -1268,38 +1282,6 @@ $if dbug.c_trace > 1 $then
     trace('<set_state');
 $end
   end set_state;
-
-  procedure leave
-  ( p_leave_on_error in boolean
-  )
-  is
-  begin
-$if dbug.c_trace > 1 $then
-    trace('>leave');
-$end
-
-    get_state;
-    begin
-      leave(g_obj, p_leave_on_error);
-    exception
-      when others
-      then
-        set_state(p_store => true, p_print => false);
-        raise;
-    end;
-    set_state(p_store => true);
-
-$if dbug.c_trace > 1 $then
-    trace('<leave');
-$end
-
-$if dbug.c_ignore_errors != 0 $then
-  exception
-    when others
-    then
-      null;
-$end
-  end leave;
 
 -- < private (DBUG)
 /*
@@ -1369,10 +1351,10 @@ $end
     exception
       when others
       then
-        set_state(p_store => false, p_print => true);
+        set_state(p_print => true);
         raise;
     end;
-    set_state(p_store => false);
+    set_state;
 
 $if dbug.c_trace > 1 $then
     trace('<done');
@@ -1402,10 +1384,10 @@ $end
     exception
       when others
       then
-        set_state(p_store => true, p_print => true);
+        set_state(p_print => true);
         raise;
     end;
-    set_state(p_store => true);
+    set_state;
 
 $if dbug.c_trace > 1 $then
     trace('<activate');
@@ -1436,10 +1418,10 @@ $end
     exception
       when others
       then
-        set_state(p_store => false, p_print => true);
+        set_state(p_print => true);
         raise;
     end;
-    set_state(p_store => false);
+    set_state;
 
 $if dbug.c_trace > 1 $then
     trace('<active');
@@ -1470,10 +1452,10 @@ $end
     exception
       when others
       then
-        set_state(p_store => true, p_print => true);
+        set_state(p_print => true);
         raise;
     end;
-    set_state(p_store => true);
+    set_state;
 
 $if dbug.c_trace > 1 $then
     trace('<set_level');
@@ -1502,10 +1484,10 @@ $end
     exception
       when others
       then
-        set_state(p_store => false, p_print => true);
+        set_state(p_print => true);
         raise;
     end;
-    set_state(p_store => false);
+    set_state;
 
 $if dbug.c_trace > 1 $then
     trace('<get_level');
@@ -1536,10 +1518,10 @@ $end
     exception
       when others
       then
-        set_state(p_store => true, p_print => true);
+        set_state(p_print => true);
         raise;
     end;
-    set_state(p_store => true);
+    set_state;
 
 $if dbug.c_trace > 1 $then
     trace('<set_break_point_level');
@@ -1568,10 +1550,10 @@ $end
     exception
       when others
       then
-        set_state(p_store => false, p_print => true);
+        set_state(p_print => true);
         raise;
     end;
-    set_state(p_store => false);
+    set_state;
 
 $if dbug.c_trace > 1 $then
     trace('<get_break_point_level');
@@ -1583,7 +1565,7 @@ $if dbug.c_ignore_errors != 0 $then
   exception
     when others
     then
-      return l_result;
+      return l_result; -- return value is a pl/sql array so can not return null
 $end
   end get_break_point_level;
 
@@ -1593,7 +1575,7 @@ $end
   is
   begin
 $if dbug.c_trace > 1 $then
-    trace('>enter');
+    trace('>enter (1)');
 $end
 
     get_state;
@@ -1602,13 +1584,13 @@ $end
     exception
       when others
       then
-        set_state(p_store => true, p_print => false);
+        set_state(p_print => false);
         raise;
     end;
-    set_state(p_store => true);
+    set_state;
 
 $if dbug.c_trace > 1 $then
-    trace('<enter');
+    trace('<enter (1)');
 $end
 
 $if dbug.c_ignore_errors != 0 $then
@@ -1624,10 +1606,25 @@ $end
   , p_called_from out nocopy module_name_t
   )
   is
-    l_depth integer;
   begin
-    enter(p_module);
-    get_called_from(p_called_from, l_depth);
+$if dbug.c_trace > 1 $then
+    trace('>enter (2)');
+$end
+
+    get_state;
+    begin
+      enter(g_obj, p_module, p_called_from);
+    exception
+      when others
+      then
+        set_state(p_print => false);
+        raise;
+    end;
+    set_state;
+
+$if dbug.c_trace > 1 $then
+    trace('<enter (2)');
+$end
 
 $if dbug.c_ignore_errors != 0 $then
   exception
@@ -1640,7 +1637,31 @@ $end
   procedure leave
   is
   begin
-    leave(false);
+$if dbug.c_trace > 1 $then
+    trace('>leave (1)');
+$end
+
+    get_state;
+    begin
+      leave(g_obj);
+    exception
+      when others
+      then
+        set_state(p_print => false);
+        raise;
+    end;
+    set_state;
+
+$if dbug.c_trace > 1 $then
+    trace('<leave (1)');
+$end
+
+$if dbug.c_ignore_errors != 0 $then
+  exception
+    when others
+    then
+      null;
+$end
   end leave;
 
   procedure leave
@@ -1649,22 +1670,22 @@ $end
   is
   begin
 $if dbug.c_trace > 1 $then
-    trace('>leave');
+    trace('>leave (2)');
 $end
 
     get_state;
     begin
-      leave(g_obj, false, p_called_from);
+      leave(p_obj => g_obj, p_called_from => p_called_from, p_depth => null, p_leave_on_error => false);
     exception
       when others
       then
-        set_state(p_store => true, p_print => false);
+        set_state(p_print => false);
         raise;
     end;
-    set_state(p_store => true);
+    set_state;
 
 $if dbug.c_trace > 1 $then
-    trace('<leave');
+    trace('<leave (2)');
 $end
 
 $if dbug.c_ignore_errors != 0 $then
@@ -1677,76 +1698,25 @@ $end
 
   procedure on_error
   is
-    l_cursor integer := null;
-    l_dummy integer;
   begin
-    dbug.on_error('sqlerrm', sqlerrm, chr(10));
+$if dbug.c_trace > 1 $then
+    trace('>on_error (1)');
+$end
 
-    /* Get error information from;
-       - dbms_utility.format_error_backtrace
-       - Oracle headstart (really old and maybe not available so use dynamic SQL)
+    get_state;
+    begin
+      on_error(g_obj);
+    exception
+      when others
+      then
+        set_state(p_print => false);
+        raise;
+    end;
+    set_state;
 
-       Long ago dbms_utility.format_error_backtrace was not known but now it is,
-       so no dynamic SQL is used anymore for that.
-    */
-    for i_nr in 1..2
-    loop
-      begin
-        if i_nr = 1
-        then
-          dbug.on_error
-          ( p_function => 'dbms_utility.format_error_backtrace'
-          , p_output => dbms_utility.format_error_backtrace
-          , p_sep => chr(10)
-          );
-        else
-          get_cursor
-          ( 'cg$errors.geterrors'
-          , q'[
-declare
-  l_message_tab hil_message.message_tabtype;
-  l_message_count number;
-  l_raise_error boolean;
-  l_line_tab dbug.line_tab_t;
-begin
-  cg$errors.get_error_messages
-  ( p_message_rectype_tbl=> l_message_tab
-  , p_message_count => l_message_count
-  , p_raise_error => l_raise_error
-  );
-
-  if l_message_tab.count > 0
-  then
-    for i_idx in reverse l_message_tab.first .. l_message_tab.last
-    loop
-      l_line_tab(l_line_tab.count+1) :=
-        cg$errors.get_display_string
-        ( p_msg_code => l_message_tab(i_idx).msg_code
-        , p_msg_text => l_message_tab(i_idx).msg_text
-        , p_msg_type => l_message_tab(i_idx).severity
-        );
-
-      -- reconstruct the error stack
-      cg$errors.push(l_message_tab(i_idx));
-    end loop;
-  end if;
-
-  dbug.on_error('cg$errors.geterrors', l_line_tab);
-end;]'
-          , l_cursor
-          );
-        end if;
-
-        if l_cursor is not null
-        then
-          l_dummy := dbms_sql.execute(l_cursor);
-        end if;
-      exception
-        when others
-        then
-          show_error(sqlerrm);
-      end;
-    end loop;
+$if dbug.c_trace > 1 $then
+    trace('<on_error (1)');
+$end
 
 $if dbug.c_ignore_errors != 0 $then
   exception
@@ -1764,27 +1734,27 @@ $end
   is
   begin
 $if dbug.c_trace > 1 $then
-    trace('>on_error');
+    trace('>on_error (2)');
 $end
 
     get_state;
     begin
       on_error
-      ( g_obj
-      , p_function
-      , p_output
-      , p_sep
+      ( p_obj => g_obj
+      , p_function => p_function
+      , p_output => p_output
+      , p_sep => p_sep
       );
     exception
       when others
       then
-        set_state(p_store => false, p_print => false);
+        set_state(p_print => false);
         raise;
     end;
-    set_state(p_store => false);
+    set_state;
 
 $if dbug.c_trace > 1 $then
-    trace('<on_error');
+    trace('<on_error (2)');
 $end
 
 $if dbug.c_ignore_errors != 0 $then
@@ -1802,20 +1772,21 @@ $end
   is
   begin
 $if dbug.c_trace > 1 $then
-    trace('>on_error');
+    trace('>on_error (3)');
 $end
     get_state;
     begin
-      on_error(g_obj, p_function, p_output);
+      on_error(p_obj => g_obj, p_function => p_function, p_output => p_output);
     exception
       when others
       then
-        set_state(p_store => false, p_print => false);
+        set_state(p_print => false);
         raise;
     end;
-    set_state(p_store => false);
+    set_state;
+    
 $if dbug.c_trace > 1 $then
-    trace('<on_error');
+    trace('<on_error (3)');
 $end
 
 $if dbug.c_ignore_errors != 0 $then
@@ -1832,9 +1803,18 @@ $end
 $if dbug.c_trace > 1 $then
     trace('>leave_on_error');
 $end
-    /* since on_error dynamically calls one of the global on_error routines we can not use an object */
-    on_error;
-    leave(true);
+
+    get_state;
+    begin
+      leave_on_error(g_obj);
+    exception
+      when others
+      then
+        set_state(p_print => false);
+        raise;
+    end;
+    set_state;
+
 $if dbug.c_trace > 1 $then
     trace('<leave_on_error');
 $end
@@ -1866,20 +1846,22 @@ $end
   ) is
   begin
 $if dbug.c_trace > 1 $then
-    trace('>print');
+    trace('>print (1)');
 $end
+
     get_state;
     begin
       print(p_obj => g_obj, p_break_point => p_break_point, p_fmt => '%s', p_arg1 => p_str);
     exception
       when others
       then
-        set_state(p_store => false, p_print => false);
+        set_state(p_print => false);
         raise;
     end;
-    set_state(p_store => false);
+    set_state;
+    
 $if dbug.c_trace > 1 $then
-    trace('<print');
+    trace('<print (1)');
 $end
 
 $if dbug.c_ignore_errors != 0 $then
@@ -1898,20 +1880,22 @@ $end
   is
   begin
 $if dbug.c_trace > 1 $then
-    trace('>print');
+    trace('>print (2a)');
 $end
+
     get_state;
     begin
       print(g_obj, p_break_point, p_fmt, p_arg1);
     exception
       when others
       then
-        set_state(p_store => false, p_print => false);
+        set_state(p_print => false);
         raise;
     end;
-    set_state(p_store => false);
+    set_state;
+    
 $if dbug.c_trace > 1 $then
-    trace('<print');
+    trace('<print (2a)');
 $end
 
 $if dbug.c_ignore_errors != 0 $then
@@ -1922,17 +1906,31 @@ $if dbug.c_ignore_errors != 0 $then
 $end
   end print;
 
-  procedure print(
-    p_break_point in varchar2,
-    p_fmt in varchar2,
-    p_arg1 in date
-  ) is
+  procedure print
+  ( p_break_point in varchar2
+  , p_fmt in varchar2
+  , p_arg1 in date
+  )
+  is
   begin
-    print
-    ( p_break_point => p_break_point
-    , p_fmt => p_fmt
-    , p_arg1 => to_char(p_arg1, 'YYYYMMDDHH24MISS')
-    );
+$if dbug.c_trace > 1 $then
+    trace('>print (2b)');
+$end
+
+    get_state;
+    begin
+      print(g_obj, p_break_point, p_fmt, to_char(p_arg1, 'YYYYMMDDHH24MISS'));
+    exception
+      when others
+      then
+        set_state(p_print => false);
+        raise;
+    end;
+    set_state;
+    
+$if dbug.c_trace > 1 $then
+    trace('<print (2b)');
+$end
 
 $if dbug.c_ignore_errors != 0 $then
   exception
@@ -1942,17 +1940,31 @@ $if dbug.c_ignore_errors != 0 $then
 $end
   end print;
 
-  procedure print(
-    p_break_point in varchar2,
-    p_fmt in varchar2,
-    p_arg1 in boolean
-  ) is
+  procedure print
+  ( p_break_point in varchar2
+  , p_fmt in varchar2
+  , p_arg1 in boolean
+  )
+  is
   begin
-    print
-    ( p_break_point => p_break_point
-    , p_fmt => p_fmt
-    , p_arg1 => cast_to_varchar2(p_arg1)
-    );
+$if dbug.c_trace > 1 $then
+    trace('>print (2c)');
+$end
+
+    get_state;
+    begin
+      print(g_obj, p_break_point, p_fmt, cast_to_varchar2(p_arg1));
+    exception
+      when others
+      then
+        set_state(p_print => false);
+        raise;
+    end;
+    set_state;
+    
+$if dbug.c_trace > 1 $then
+    trace('<print (2c)');
+$end
 
 $if dbug.c_ignore_errors != 0 $then
   exception
@@ -1971,20 +1983,22 @@ $end
   is
   begin
 $if dbug.c_trace > 1 $then
-    trace('>print');
+    trace('>print (3)');
 $end
+
     get_state;
     begin
       print(g_obj, p_break_point, p_fmt, p_arg1, p_arg2);
     exception
       when others
       then
-        set_state(p_store => false, p_print => false);
+        set_state(p_print => false);
         raise;
     end;
-    set_state(p_store => false);
+    set_state;
+    
 $if dbug.c_trace > 1 $then
-    trace('<print');
+    trace('<print (3)');
 $end
 
 $if dbug.c_ignore_errors != 0 $then
@@ -2005,20 +2019,22 @@ $end
   is
   begin
 $if dbug.c_trace > 1 $then
-    trace('>print');
+    trace('>print (4)');
 $end
+
     get_state;
     begin
       print(g_obj, p_break_point, p_fmt, p_arg1, p_arg2, p_arg3);
     exception
       when others
       then
-        set_state(p_store => false, p_print => false);
+        set_state(p_print => false);
         raise;
     end;
-    set_state(p_store => false);
+    set_state;
+    
 $if dbug.c_trace > 1 $then
-    trace('<print');
+    trace('<print (4)');
 $end
 
 $if dbug.c_ignore_errors != 0 $then
@@ -2040,20 +2056,22 @@ $end
   is
   begin
 $if dbug.c_trace > 1 $then
-    trace('>print');
+    trace('>print (5)');
 $end
+
     get_state;
     begin
       print(g_obj, p_break_point, p_fmt, p_arg1, p_arg2, p_arg3, p_arg4);
     exception
       when others
       then
-        set_state(p_store => false, p_print => false);
+        set_state(p_print => false);
         raise;
     end;
-    set_state(p_store => false);
+    set_state;
+    
 $if dbug.c_trace > 1 $then
-    trace('<print');
+    trace('<print (5)');
 $end
 
 $if dbug.c_ignore_errors != 0 $then
@@ -2076,20 +2094,22 @@ $end
   is
   begin
 $if dbug.c_trace > 1 $then
-    trace('>print');
+    trace('>print (6)');
 $end
+
     get_state;
     begin
       print(g_obj, p_break_point, p_fmt, p_arg1, p_arg2, p_arg3, p_arg4, p_arg5);
     exception
       when others
       then
-        set_state(p_store => false, p_print => false);
+        set_state(p_print => false);
         raise;
     end;
-    set_state(p_store => false);
+    set_state;
+    
 $if dbug.c_trace > 1 $then
-    trace('<print');
+    trace('<print (6)');
 $end
 
 $if dbug.c_ignore_errors != 0 $then
@@ -2100,8 +2120,8 @@ $if dbug.c_ignore_errors != 0 $then
 $end
   end print;
 
-  procedure split(
-    p_buf in varchar2
+  procedure split
+  ( p_buf in varchar2
   , p_sep in varchar2
   , p_line_tab out nocopy line_tab_t
   )
@@ -2110,6 +2130,11 @@ $end
     l_prev_pos pls_integer := 1;
     l_length constant pls_integer := nvl(length(p_buf), 0);
   begin
+    if p_sep is null
+    then
+      raise value_error;
+    end if;
+    
     loop
       exit when l_prev_pos > l_length;
 
@@ -2130,8 +2155,8 @@ $end
     end loop;
   end split;
 
-  procedure set_ignore_buffer_overflow(
-    p_value in boolean
+  procedure set_ignore_buffer_overflow
+  ( p_value in boolean
   )
   is
   begin
@@ -2142,10 +2167,10 @@ $end
     exception
       when others
       then
-        set_state(p_store => true, p_print => true);
+        set_state(p_print => true);
         raise;
     end;
-    set_state(p_store => true);
+    set_state;
 
 $if dbug.c_ignore_errors != 0 $then
   exception
@@ -2166,10 +2191,10 @@ $end
     exception
       when others
       then
-        set_state(p_store => false, p_print => true);
+        set_state(p_print => true);
         raise;
     end;
-    set_state(p_store => false);
+    set_state;
 
     return l_result;
 
@@ -2181,8 +2206,8 @@ $if dbug.c_ignore_errors != 0 $then
 $end
   end get_ignore_buffer_overflow;
 
-  function format_enter(
-    p_module in module_name_t
+  function format_enter
+  ( p_module in module_name_t
   )
   return varchar2
   is
@@ -2194,6 +2219,7 @@ $end
     loop
       l_indent := l_indent || c_indent;
     end loop;
+    
     return l_indent || '>' || p_module;
 
 $if dbug.c_ignore_errors != 0 $then
@@ -2216,6 +2242,7 @@ $end
     loop
       l_indent := l_indent || c_indent;
     end loop;
+    
     return l_indent || '<' || g_obj.call_tab(g_obj.call_tab.last).module_name;
 
 $if dbug.c_ignore_errors != 0 $then
@@ -2226,15 +2253,15 @@ $if dbug.c_ignore_errors != 0 $then
 $end
   end format_leave;
 
-  function format_print(
-    p_break_point in varchar2,
-    p_fmt in varchar2,
-    p_nr_arg in pls_integer,
-    p_arg1 in varchar2,
-    p_arg2 in varchar2 default null,
-    p_arg3 in varchar2 default null,
-    p_arg4 in varchar2 default null,
-    p_arg5 in varchar2 default null
+  function format_print
+  ( p_break_point in varchar2
+  , p_fmt in varchar2
+  , p_nr_arg in pls_integer
+  , p_arg1 in varchar2
+  , p_arg2 in varchar2 default null
+  , p_arg3 in varchar2 default null
+  , p_arg4 in varchar2 default null
+  , p_arg5 in varchar2 default null
   )
   return varchar2
   is
