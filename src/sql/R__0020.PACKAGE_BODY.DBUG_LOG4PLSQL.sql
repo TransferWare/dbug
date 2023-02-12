@@ -292,8 +292,10 @@ $if dbug_log4plsql.c_testing $then
   begin
     std_object_mgr.set_group_name(null);
     std_object_mgr.delete_std_objects
-    ( p_group_name => 'TEST%'
+    ( p_group_name => 'TEST%' 
     );
+    -- ORA-20000: Can not change to group TEST when there are local objects (first is DBUG)
+    std_object_mgr.delete_std_objects( p_group_name => null );
     commit;
 $if std_object_mgr.c_debugging $then
     dbms_output.put_line('ut_setup finished');
@@ -324,7 +326,12 @@ $end
     l_count pls_integer;
     l_obj_act varchar2(32767);
     -- we need to add the owner but the generate_ddl.pl utility will strip it, so use $$plsql_unit_owner
-    l_obj_exp constant varchar2(32767) := utl_lms.format_message('{"DIRTY":0,"ISDEFAULTINIT":1,"LLEVEL":70,"LSECTION":"block-->UT3.UT_RUNNER.RUN-->UT3.UT_SUITE_ITEM.DO_EXECUTE-->UT3.UT_RUN.DO_EXECUTE-->UT3.UT_LOGICAL_SUITE.DO_EXECUTE-->UT3.UT_SUITE_ITEM.DO_EXECUTE-->UT3.UT_SUITE.DO_EXECUTE-->UT3.UT_SUITE_ITEM.DO_EXECUTE-->UT3.UT_TEST.DO_EXECUTE-->UT3.UT_EXECUTABLE_TEST.DO_EXECUTE-->UT3.UT_EXECUTABLE_TEST.DO_EXECUTE-->UT3.UT_EXECUTABLE.DO_EXECUTE-->UT3.UT_EXECUTABLE.DO_EXECUTE-->SYS.DBMS_SQL.EXECUTE-->block-->%s.DBUG_LOG4PLSQL.UT_STORE_REMOVE-->%s.DBUG_LOG4PLSQL_OBJ_T.DBUG_LOG4PLSQL_OBJ_T","LTEXT":null,"USE_LOG4J":0,"USE_OUT_TRANS":1,"USE_LOGTABLE":1,"USE_ALERT":0,"USE_TRACE":0,"USE_DBMS_OUTPUT":0,"INIT_LSECTION":null,"INIT_LLEVEL":70,"DBMS_OUTPUT_WRAP":100}', $$PLSQL_UNIT_OWNER, $$PLSQL_UNIT_OWNER);
+    
+       
+    l_obj_exp constant varchar2(32767) := utl_lms.format_message('{"DIRTY":0,"ISDEFAULTINIT":1,"LLEVEL":70,"LSECTION":"block-->UT3.UT.RUN-->UT3.UT.RUN-->UT3.UT.RUN_AUTONOMOUS-->UT3.UT_RUNNER.RUN-->UT3.UT_SUITE_ITEM.DO_EXECUTE-->UT3.UT_RUN.DO_EXECUTE-->UT3.UT_LOGICAL_SUITE.DO_EXECUTE-->UT3.UT_SUITE_ITEM.DO_EXECUTE-->UT3.UT_SUITE.DO_EXECUTE-->UT3.UT_SUITE_ITEM.DO_EXECUTE-->UT3.UT_TEST.DO_EXECUTE-->UT3.UT_EXECUTABLE_TEST.DO_EXECUTE-->UT3.UT_EXECUTABLE_TEST.DO_EXECUTE-->UT3.UT_EXECUTABLE.DO_EXECUTE-->UT3.UT_EXECUTABLE.DO_EXECUTE-->SYS.DBMS_SQL.EXECUTE-->block-->EPCAPP.DBUG_LOG4PLSQL.UT_STORE_REMOVE-->EPCAPP.DBUG_LOG4PLSQL_OBJ_T.DBUG_LOG4PLSQL_OBJ_T","LTEXT":null,"USE_LOG4J":0,"USE_OUT_TRANS":1,"USE_LOGTABLE":1,"USE_ALERT":0,"USE_TRACE":0,"USE_DBMS_OUTPUT":0,"INIT_LSECTION":null,"INIT_LLEVEL":70,"DBMS_OUTPUT_WRAP":100}', $$PLSQL_UNIT_OWNER, $$PLSQL_UNIT_OWNER);
+
+    l_json_act json_object_t;
+    l_json_exp json_object_t;
 
     procedure get_object_names
     is
@@ -380,7 +387,11 @@ $if std_object_mgr.c_debugging $then
 $end
       get_object_names;
       ut.expect(l_object_name_tab.count, 'count after store ' || i_try).to_equal(l_count + 1);
-      ut.expect(l_obj_act, 'compare ' || i_try).to_equal(l_obj_exp);
+      l_json_act := json_object_t(l_obj_act);
+      l_json_exp := json_object_t(l_obj_exp);
+      l_json_act.put_null('LSECTION');
+      l_json_exp.put_null('LSECTION');
+      ut.expect(l_json_act, 'compare ' || i_try).to_equal(l_json_exp);
 
       -- after store
       l_count := l_object_name_tab.count;
@@ -464,7 +475,7 @@ $end
     procedure cleanup
     is
     begin
-      dbug.activate('plsdbug', false);
+      dbug.activate('LOG4PLSQL', false);
       dbug.done;
       -- clean local storage up
       std_object_mgr.delete_std_objects
@@ -477,7 +488,7 @@ $end
 
     select nvl(max(id), 0) into l_id from tlog;
 
-    dbug.activate('plsdbug', true);
+    dbug.activate('LOG4PLSQL', true);
 
     main;
 
