@@ -112,6 +112,16 @@ begin
     , dbms_lob.substr(lob_loc => repr(), amount => 4000)
     )
   );
+  /* GJP 2023-03-11 Sometimes it may be necessary to uncomment the next block for debugging DBUG. */ 
+/*  
+  raise program_error; -- where does it happen?
+exception
+  when others 
+  then
+    dbms_output.put_line( dbms_utility.FORMAT_ERROR_STACK );
+    dbms_output.put_line( dbms_utility.format_error_backtrace );
+    raise;
+*/    
 end print;
 
 order member function compare(p_other in std_object)

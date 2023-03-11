@@ -91,10 +91,22 @@ $end
   )
   is
     l_idx pls_integer;
+    l_str_tab_count constant naturaln := case when p_str_tab is null then 0 else p_str_tab.count end;
+    l_num_tab_count constant naturaln := case when p_num_tab is null then 0 else p_num_tab.count end;
   begin
-    if p_str_tab.count != p_num_tab.count
+    if l_str_tab_count != l_num_tab_count
     then
       raise program_error;
+    end if;
+    
+    if p_str_tab is null
+    then
+      p_str_tab := sys.odcivarchar2list();
+    end if;
+
+    if p_num_tab is null
+    then
+      p_num_tab := sys.odcinumberlist();
     end if;
 
     l_idx := p_str_tab.first;
@@ -129,13 +141,15 @@ $end
   return number
   is
     l_idx pls_integer;
+    l_str_tab_count constant naturaln := case when p_str_tab is null then 0 else p_str_tab.count end;
+    l_num_tab_count constant naturaln := case when p_num_tab is null then 0 else p_num_tab.count end;
   begin
-    if p_str_tab.count != p_num_tab.count
+    if l_str_tab_count != l_num_tab_count
     then
       raise program_error;
     end if;
 
-    l_idx := p_str_tab.first;
+    l_idx := case when p_str_tab is not null then p_str_tab.first end;
     loop
       exit when l_idx is null or p_str_tab(l_idx) = p_str;
 
@@ -388,7 +402,7 @@ $end
       -- Decrement must take place before the leave.
       p_obj.indent_level := greatest(p_obj.indent_level - 1, 0);
 
-      l_active_idx := p_obj.active_num_tab.first;
+      l_active_idx := case when p_obj.active_num_tab is not null then p_obj.active_num_tab.first end;
       while l_active_idx is not null
       loop
         l_active_str := p_obj.active_str_tab(l_active_idx);
@@ -437,10 +451,11 @@ $end
     l_cursor integer;
     l_dummy binary_integer;
   begin
-    l_idx := p_obj.active_num_tab.first;
-
+    l_idx := case when p_obj.active_num_tab is not null then p_obj.active_num_tab.first end;
     loop
-      exit when l_active_str is null;
+      -- GJP 2023-03-11 Clearly an error
+      -- exit when l_active_str is null;
+      exit when l_idx is null;
 
       l_active_str := p_obj.active_str_tab(l_idx);
 
@@ -595,7 +610,7 @@ $end
   )
   return break_point_level_t
   is
-    l_idx pls_integer := p_obj.break_point_level_str_tab.first;
+    l_idx pls_integer := case when p_obj.break_point_level_str_tab is not null then p_obj.break_point_level_str_tab.first end;
     l_break_point_level_tab break_point_level_t;
   begin
     while l_idx is not null
@@ -623,8 +638,7 @@ $end
     else
       l_level :=
         nvl
-        (
-          get_number
+        ( get_number
           ( p_str => p_break_point
           , p_str_tab => p_obj.break_point_level_str_tab
           , p_num_tab => p_obj.break_point_level_num_tab
@@ -730,7 +744,7 @@ $end
        end if;
     end;
 
-    l_idx := p_obj.active_num_tab.first;
+    l_idx := case when p_obj.active_num_tab is not null then p_obj.active_num_tab.first end;
     while l_idx is not null
     loop
       l_active_str := p_obj.active_str_tab(l_idx);
@@ -798,7 +812,7 @@ $end
       return;
     end if;
 
-    l_idx := p_obj.active_num_tab.first;
+    l_idx := case when p_obj.active_num_tab is not null then p_obj.active_num_tab.first end;
     while l_idx is not null
     loop
       l_active_str := p_obj.active_str_tab(l_idx);
@@ -849,7 +863,7 @@ $end
       return;
     end if;
 
-    l_idx := p_obj.active_num_tab.first;
+    l_idx := case when p_obj.active_num_tab is not null then p_obj.active_num_tab.first end;
     while l_idx is not null
     loop
       l_active_str := p_obj.active_str_tab(l_idx);
@@ -902,7 +916,7 @@ $end
       return;
     end if;
 
-    l_idx := p_obj.active_num_tab.first;
+    l_idx := case when p_obj.active_num_tab is not null then p_obj.active_num_tab.first end;
     while l_idx is not null
     loop
       l_active_str := p_obj.active_str_tab(l_idx);
@@ -957,7 +971,7 @@ $end
       return;
     end if;
 
-    l_idx := p_obj.active_num_tab.first;
+    l_idx := case when p_obj.active_num_tab is not null then p_obj.active_num_tab.first end;
     while l_idx is not null
     loop
       l_active_str := p_obj.active_str_tab(l_idx);
@@ -1014,7 +1028,7 @@ $end
       return;
     end if;
 
-    l_idx := p_obj.active_num_tab.first;
+    l_idx := case when p_obj.active_num_tab is not null then p_obj.active_num_tab.first end;
     while l_idx is not null
     loop
       l_active_str := p_obj.active_str_tab(l_idx);
