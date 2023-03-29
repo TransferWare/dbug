@@ -119,16 +119,16 @@ return t_profile_tab pipelined
 is
   l_profile_rec t_profile_rec;
 begin
-  l_profile_rec.module_name := g_count_tab.first;
+  l_profile_rec.module_name := g_time_ms_tab.first;
   while l_profile_rec.module_name is not null
   loop
     l_profile_rec.nr_calls := g_count_tab(l_profile_rec.module_name);
     l_profile_rec.elapsed_time := g_time_ms_tab(l_profile_rec.module_name) / 1000;
     l_profile_rec.avg_time := case when l_profile_rec.nr_calls <> 0 then l_profile_rec.elapsed_time / l_profile_rec.nr_calls end;
     pipe row (l_profile_rec);
-    l_profile_rec.module_name := g_count_tab.next(l_profile_rec.module_name);
+    l_profile_rec.module_name := g_time_ms_tab.next(l_profile_rec.module_name);
   end loop;
-  done; -- cleanup everything
+  g_time_ms_tab.delete; -- cleanup timing
   return;
 end show;
 
