@@ -93,7 +93,12 @@ procedure leave
 is
 begin
   -- stop the timer and add the elapsed time to the current module
-  g_time_ms_tab(g_module_name_stack(g_module_name_stack.last)) := g_time_ms_tab(g_module_name_stack(g_module_name_stack.last)) + end_timer;
+  begin
+    g_time_ms_tab(g_module_name_stack(g_module_name_stack.last)) := g_time_ms_tab(g_module_name_stack(g_module_name_stack.last)) + end_timer;
+  exception
+    when no_data_found
+    then g_time_ms_tab(g_module_name_stack(g_module_name_stack.last)) := 0;
+  end;
   -- increase the count as well
   g_count_tab(g_module_name_stack(g_module_name_stack.last)) := g_count_tab(g_module_name_stack(g_module_name_stack.last)) + 1;
   -- delete the module from the stack
