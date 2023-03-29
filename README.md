@@ -1,15 +1,64 @@
-# DBUG
+# DBUG - debugging for C and Oracle PL/SQL
 
-This is DBUG, a Posix-threads debugging library.
+[DBUG](https://github.com/TransferWare/dbug) provides a debugging library for C and Oracle PL/SQL.
 
-DBUG itself consists of:
-- the C library (-ldbug) and header dbug.h
-- the reporting tool dbugrpt
-- a Robot Framework test execution result converter
+You can install either part or both: they do not depend on each other.
+
+## for C
+
+The C library is a Posix-threads compliant debugging library for C.
+
+It consists of:
+- the C library (`-ldbug`) and header `dbug.h`
+- the reporting tool `dbugrpt`
+- a Robot Framework test execution result converter `rf2dbug`
+
+## for PL/SQL
+
+The PL/SQL library has a plug and play architecture to enable different output channels, i.e. other packages you may want to use like DBMS_OUTPUT.
+
+The following output channels are available:
+- DBMS_OUTPUT
+- DBMS_APPLICATION_INFO
+- PROFILER
+- [LOG4PLSQL](http://sourceforge.net/projects/log4plsql) 
+
+Follow these installation steps:
+
+| Step | When |
+| :--- | :--- |
+| [DATABASE INSTALL](#database-install) | When you want to use it in your Oracle database  |
+| [INSTALL FROM SOURCE](#install-from-source) | When you want the install the rest (not the database) from source |
+| [INSTALL](#install) | When you want the install the rest and you have a `configure` script |
 
 ## CHANGELOG
 
 See the file [CHANGELOG.md](CHANGELOG.md).
+
+## DATABASE INSTALL
+
+This section explains how to install just the PL/SQL library.
+
+### Preconditions
+
+First, you need to [install LOG4PLSQL as described in the User Guide](https://log4plsql.sourceforge.net/docs/UserGuide.html).
+
+You need a user with these role grants, system grants and quota:
+1. grant connect, resource, create view to &&LOG4PLSQL
+2. alter user &&LOG4PLSQL quota unlimited on &&DATA
+
+Running the `<LOG4PLSQL_HOME>/sql/install_log_user/install.sql` SQL*Plus script is sufficient for simple
+logging to a table TLOG.
+
+### Installation
+
+There are two methods to install the PL/SQL library:
+1. use the [Paulissoft Application Tools for Oracle (PATO) GUI](https://github.com/paulissoft/pato-gui)
+with the pom.xml file from the project root and schema ORACLE_TOOLS as the owner
+2. execute `src/sql/install.sql` connected as the owner using SQL*Plus, SQLcl or SQL Developer
+
+The advantage of the first method is that your installation is tracked and
+that you can upgrade later on.
 
 ## INSTALL FROM SOURCE
 
@@ -42,8 +91,19 @@ See file `INSTALL` for further installation instructions.
 
 ## DOCUMENTATION
 
-You can generate HTML documentation by `$ make html` and then you will find this documentation:
-- `doc/dbug.html`, the DBUG manual page
+Issue this to (re-)generate the documentation:
+
+```
+$ make html
+```
+
+In the build directory you will find these files now:
+- `doc/dbug.html`, the DBUG C library manual page
+- `src/sql/dbug_trigger.html`, documentation about the PL/SQL package `DBUG_TRIGGER`
+- `src/sql/dbug.html`, documentation about the PL/SQL package `DBUG_TRIGGER`
+- `util/dbug_trigger.html`, documentation about the utility to add debugging to triggers
+- `util/dbug_pls.html`, documentation about the utility to add debugging to PL/SQL
+- `util/dbug_trigger_show.html`, documentation about the utility to show the state of data using `DBUG` output of `DBUG_TRIGGER` enabled triggers.
 
 You can also have a look at [the DBUG GitHub Pages](https://TransferWare.github.io/dbug/).
 

@@ -17,8 +17,8 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-AC_REVISION([2022-11-25])
-AC_INIT([dbug],[6.1.1],[gert.jan.paulissen@gmail.com])
+AC_REVISION([2022-12-02])
+AC_INIT([dbug],[7.0.0],[gert.jan.paulissen@gmail.com])
 
 # version check
 if test -f "$srcdir/VERSION"
@@ -96,15 +96,18 @@ dnl AC_ARG_VAR(PYTHON,[The program name of Python.])
 
 AC_PROG_CC
 
-AC_LIBTOOL_WIN32_DLL
-AC_PROG_LIBTOOL
+LT_INIT([win32-dll])
 AC_PROG_FGREP
 
-LT_INIT
 # Checks for libraries.
 
 # Checks for header files.
-AC_HEADER_STDC
+
+# Autoupdate added the next two lines to ensure that your configure
+# script's behavior did not change.  They are probably safe to remove.
+AC_CHECK_INCLUDES_DEFAULT
+AC_PROG_EGREP
+
 AC_CHECK_HEADERS([stdarg.h stdlib.h string.h unistd.h errno.h assert.h stdio.h pthread.h])
 # Header files needed for timing functions.
 AC_CHECK_HEADERS([time.h sys/timeb.h sys/param.h sys/time.h sys/resource.h])
@@ -159,7 +162,7 @@ acx_cv_use_pdbug=no
 
 AM_CONDITIONAL([PDBUG], [test x$acx_cv_use_pdbug = xtrue])
 
-AC_CONFIG_FILES([Makefile doc/Makefile src/Makefile src/lib/Makefile src/pdbug/Makefile src/prog/Makefile src/prog/dbugrpt src/prog/rf2dbug test/Makefile])
+AC_CONFIG_FILES([Makefile doc/Makefile src/Makefile src/lib/Makefile src/pdbug/Makefile src/prog/Makefile src/prog/dbugrpt src/prog/rf2dbug src/sql/Makefile test/Makefile util/Makefile])
 
 AC_OUTPUT
 

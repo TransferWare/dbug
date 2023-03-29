@@ -18,6 +18,12 @@ Types of changes:
 
 Please see the [DBUG issue queue](https://github.com/TransferWare/dbug/issues) for issues.
 
+## [Unreleased]
+
+### Changed
+
+- [PL/SQL DBUG functionality must be moved from PLSDBUG to DBUG project.](https://github.com/TransferWare/dbug/issues/7)
+
 ## [6.1.1] -  2022-11-25
 
 ### Fixed

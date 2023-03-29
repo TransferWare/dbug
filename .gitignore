@@ -2,6 +2,7 @@
 *.log
 *.lis
 *.bak
+*.tmp
 
 # Emacs
 *~
@@ -36,8 +37,10 @@ doc/test[123456]
 doc/*.trs
 
 # Maven
-target/
 \.flattened-pom.xml
 
 # Mac
-\.Ds_Store
+\.DS_Store
+target/
+
+oracle-tools
