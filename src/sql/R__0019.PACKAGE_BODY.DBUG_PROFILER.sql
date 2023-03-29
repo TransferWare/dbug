@@ -72,7 +72,12 @@ begin
   -- stop timing for the previous module and add the elapsed time to it
   if g_module_name_stack.last is not null
   then
-    g_time_ms_tab(g_module_name_stack(g_module_name_stack.last)) := g_time_ms_tab(g_module_name_stack(g_module_name_stack.last)) + end_timer;
+    begin
+      g_time_ms_tab(g_module_name_stack(g_module_name_stack.last)) := g_time_ms_tab(g_module_name_stack(g_module_name_stack.last)) + end_timer;
+    exception
+      when no_data_found
+      then g_time_ms_tab(g_module_name_stack(g_module_name_stack.last)) := 0;
+    end;
   end if;
 
   -- add this module to the stack
