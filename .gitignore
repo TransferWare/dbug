@@ -37,7 +37,7 @@ doc/test[123456]
 doc/*.trs
 
 # Maven
-.flattened-pom.xml
+\.flattened-pom.xml
 
 # Mac
 \.DS_Store
