@@ -95,6 +95,21 @@ CREATE OR REPLACE PACKAGE BODY "DBUG_DBMS_OUTPUT" IS
 
 $if ut_dbug.c_testing $then
 
+  procedure ut_setup
+  is
+  begin
+    dbms_output.disable; -- clear the buffer
+    dbms_output.enable;
+
+    dbug.activate('dbms_output');
+  end ut_setup;
+  
+  procedure ut_teardown
+  is
+  begin
+    dbug.activate('dbms_output', false);
+  end ut_teardown;
+
   procedure ut_store_remove
   is
   begin
@@ -138,14 +153,52 @@ $if ut_dbug.c_testing $then
         ut.expect(l_lines_act(i_idx), to_char(i_idx)).to_equal(l_lines_exp(i_idx));
       end loop;
     end chk;
-  begin
-    dbms_output.disable; -- clear the buffer
-    dbms_output.enable;
 
+    procedure main
+    is
+      procedure f3
+      is
+        procedure f2
+        is
+          procedure f1
+          ( p_count in positiven
+          )
+          is
+          begin
+            dbug.enter('f1');
+            begin
+              f1(p_count - 1);
+            exception
+              when value_error
+              then null;
+            end;
+            dbug.leave;        
+          end f1;
+        begin
+          dbug.enter('f2');
+          f1(6);
+          dbug.leave;        
+        end f2;
+      begin
+        dbug.enter('f3');
+        f2;
+        dbug.leave;        
+      end f3;
+    begin
+      dbug.enter('main');
+      f3;
+      dbug.leave;
+    end main;
+  begin
     for i_idx in l_lines_exp.first .. l_lines_exp.last
     loop
       dbms_output.put_line(l_lines_exp(i_idx));
     end loop;
+    chk;
+    
+    dbms_output.disable; -- clear the buffer
+    dbms_output.enable;
+    main;
     chk;
   end ut_dbug_dbms_output;
 

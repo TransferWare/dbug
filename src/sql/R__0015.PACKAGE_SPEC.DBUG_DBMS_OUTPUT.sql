@@ -53,6 +53,12 @@ $if ut_dbug.c_testing $then
   --%suitepath(DBUG)
   --%suite
 
+  --%beforeall
+  procedure ut_setup;
+
+  --%afterall
+  procedure ut_teardown;
+
   --%test
   procedure ut_store_remove;
 
