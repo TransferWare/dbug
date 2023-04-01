@@ -53,10 +53,10 @@ $if ut_dbug.c_testing $then
   --%suitepath(DBUG)
   --%suite
 
-  --%beforeall
+  --%beforeeach
   procedure ut_setup;
 
-  --%afterall
+  --%aftereach
   procedure ut_teardown;
 
   --%test
@@ -65,6 +65,12 @@ $if ut_dbug.c_testing $then
   --%test
   procedure ut_dbug_dbms_output;
 
+  --%test
+  procedure ut_set_ignore_buffer_overflow;
+
+  --%test
+  procedure ut_ignore_buffer_overflow;
+  
 $end
 
 end dbug_dbms_output;

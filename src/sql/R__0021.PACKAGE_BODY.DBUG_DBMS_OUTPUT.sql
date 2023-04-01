@@ -99,7 +99,7 @@ $if ut_dbug.c_testing $then
   is
   begin
     dbms_output.disable; -- clear the buffer
-    dbms_output.enable;
+    dbms_output.enable(5000);
 
     dbug.activate('dbms_output');
   end ut_setup;
@@ -143,7 +143,8 @@ $if ut_dbug.c_testing $then
     procedure chk
     is
       l_lines_act dbms_output.chararr;
-      l_numlines integer := l_lines_exp.count; -- the number of lines to retrieve
+      -- l_numlines integer := l_lines_exp.count; -- the number of lines to retrieve
+      l_numlines integer := power(2, 31); /* maximum nr of lines to retrieve */
     begin
       dbms_output.get_lines(lines => l_lines_act, numlines => l_numlines);
       ut.expect(l_numlines, '# lines').to_equal(l_lines_exp.count);
@@ -201,6 +202,81 @@ $if ut_dbug.c_testing $then
     main;
     chk;
   end ut_dbug_dbms_output;
+
+  procedure ut_set_ignore_buffer_overflow
+  is
+  begin
+    for i_case in -1 .. 1
+    loop
+      dbug.set_ignore_buffer_overflow(case i_case when -1 then null when 0 then false when 1 then true end);
+      case i_case
+        when -1 then ut.expect(dbug.get_ignore_buffer_overflow, i_case).to_be_null();
+        when  0 then ut.expect(dbug.get_ignore_buffer_overflow, i_case).to_be_false();
+        when +1 then ut.expect(dbug.get_ignore_buffer_overflow, i_case).to_be_true();
+      end case;
+    end loop;
+  end ut_set_ignore_buffer_overflow;
+
+  procedure ut_ignore_buffer_overflow
+  is
+    l_lines_exp sys.odcivarchar2list := null;
+
+    -- when buffer is ignored the buffer is emptied, error and format call stack printed and then printing will continue
+
+    procedure chk(p_case in positiven)
+    is
+      l_lines_act dbms_output.chararr;
+      -- l_numlines integer := l_lines_exp.count; -- the number of lines to retrieve
+      l_numlines integer := power(2, 31); /* maximum nr of lines to retrieve */
+    begin
+      dbms_output.get_lines(lines => l_lines_act, numlines => l_numlines);
+      ut.expect(l_numlines, '# lines; case: ' || p_case).to_equal(case p_case when 1 then 25 else 54 end);
+      ut.expect(l_lines_act.first, 'lines first; case: ' || p_case).to_equal(l_lines_exp.first);
+      if dbug.get_ignore_buffer_overflow
+      then
+        ut.expect(l_lines_act(1), 'case: ' || p_case)
+        .to_equal('ERROR: dbug_dbms_output.print(:0, :1, :2): ORA-20000: ORU-10027: buffer overflow, limit of 5000 bytes');
+        for i_idx in 1 .. l_numlines - 1
+        loop
+          if substr(l_lines_act(i_idx), 1, 1) in ('|') -- printing continued
+          then
+            ut.expect(l_lines_act(i_idx), 'idx: ' || i_idx || '; case: ' || p_case).to_equal(l_lines_exp(l_lines_exp.last - (l_numlines - i_idx)));
+          end if;
+        end loop;
+      else
+        for i_idx in 1 .. l_numlines - 1
+        loop
+          ut.expect(l_lines_act(i_idx), 'idx: ' || i_idx || '; case: ' || p_case).to_equal(l_lines_exp(i_idx));
+        end loop;
+      end if;
+      ut.expect(l_lines_act(l_numlines), 'idx: ' || l_numlines || '; case: ' || p_case).to_equal('<main');
+    end chk;
+  begin
+    for i_case in 1..2
+    loop
+      begin
+        dbms_output.disable; -- clear the buffer
+        dbms_output.enable(5000);
+        dbug.set_ignore_buffer_overflow(i_case = 1); -- ignore buffer overflow true / false
+        dbug.enter('main');
+        l_lines_exp := sys.odcivarchar2list();
+        l_lines_exp.extend(1);
+        l_lines_exp(l_lines_exp.last) := '>main';
+        for i_idx in 1..1000
+        loop
+          l_lines_exp.extend(1);
+          l_lines_exp(l_lines_exp.last) := utl_lms.format_message('%s:%s:%s', to_char(i_case), rpad('x', 80, 'x'), to_char(i_idx));
+          dbug.print('info', l_lines_exp(l_lines_exp.last));
+          l_lines_exp(l_lines_exp.last) := '|   info: ' || l_lines_exp(l_lines_exp.last);
+        end loop;
+        dbug.leave;
+        l_lines_exp.extend(1);
+        l_lines_exp(l_lines_exp.last) := '<main';
+      end;
+      
+      chk(i_case);
+    end loop;  
+  end ut_ignore_buffer_overflow;
 
 $end
 
