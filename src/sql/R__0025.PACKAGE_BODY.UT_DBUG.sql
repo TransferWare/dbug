@@ -490,10 +490,13 @@ $if ut_dbug.c_testing $then
       exception
         when value_error
         then
+          /*
           if i_testcase in (3, 5)
           then 
             dbug.leave;
           end if;
+          */
+          null; -- DBUG should solve missing dbug.leave calls when it restarts
           
         when others
         then        
