@@ -114,168 +114,92 @@ $if ut_dbug.c_testing $then
       raise;
   end leave;
 
-  procedure ut_run
+  procedure init
+  ( p_dbug_method in dbug.method_t
+  , p_dbug_options in varchar2
+  )
   is
-    procedure proc
-    is
-      procedure nested_proc
-      is
-        i integer;
-      begin
-        dbug.enter('NESTED_PROC');
-
-        i := 42/0;
-
-        dbug.leave;
-      exception
-        when others
-        then
-          dbug.on_error;
-          raise;
-      end nested_proc;
-    begin
-      dbug.enter('PROC');
-      nested_proc;
-      dbug.leave;
-    end proc;
   begin
-    dbug.enter('UT_RUN');
-    proc;
-    dbug.leave;
-  exception
-    when others
-    then
-      dbug.leave_on_error;
-      raise;
-  end ut_run;
-
-  -- test (help) procedures
-
-  procedure ut_setup
-  is
-    pragma autonomous_transaction;
-  begin
-    std_object_mgr.delete_std_objects
-    ( p_group_name => 'TEST%'
-    );
-    commit;
-  end ut_setup;
-
-  procedure ut_teardown
-  is
-    pragma autonomous_transaction;
-  begin
-    std_object_mgr.delete_std_objects
-    ( p_group_name => 'TEST%'
-    );
-    commit;
-  end ut_teardown;
-
-  procedure ut_dbug
-  is
-    pragma autonomous_transaction;
-
-    l_std_object std_object;
-    l_dbug_obj dbug_obj_t;
-    l_obj_act varchar2(32767);
-    l_obj_exp constant varchar2(32767) := '{"DIRTY":0,"INDENT_LEVEL":0,"DBUG_LEVEL":2,"BREAK_POINT_LEVEL_STR_TAB":["debug","error","fatal","info","input","output","trace","warning"],"BREAK_POINT_LEVEL_NUM_TAB":[2,5,6,3,2,2,2,4],"IGNORE_BUFFER_OVERFLOW":0}';
-  begin
-    for i_try in 1..2
-    loop
-      std_object_mgr.set_group_name(case i_try when 1 then 'TEST' else null end);
-
-      l_dbug_obj := dbug_obj_t();
-      l_dbug_obj.store();
-      case i_try
-        when 1
-        then
-          select  t.obj
-          into    l_obj_act
-          from    std_objects t
-          where   group_name = 'TEST'
-          and     object_name = 'DBUG';
-
-        when 2
-        then
-          std_object_mgr.get_std_object
-          ( p_object_name => 'DBUG'
-          , p_std_object => l_std_object
-          );
-          select  l_std_object.serialize()
-          into    l_obj_act
-          from    dual;
-
-      end case;
-      ut.expect(l_obj_act).to_equal(l_obj_exp);
-    end loop;
-    commit;
-  exception
-    when std_object_mgr.e_unimplemented_feature
-    then commit;
-  end ut_dbug;
-
-  procedure ut_leave_on_error
-  is
-    l_lines_exp constant sys.odcivarchar2list :=
-      sys.odcivarchar2list
-      ( '>main'
-      , '|   >UT_RUN'
-      , '|   |   >PROC'
-      , '|   |   |   >NESTED_PROC'
-      , '|   |   |   |   error: sqlerrm: ORA-01476: divisor is equal to zero'
-      , '|   |   |   |   error: dbms_utility.format_error_backtrace: ORA-06512: at "%.UT_DBUG", line %'
-      , '|   |   |   |   error: sqlerrm: ORA-01476: divisor is equal to zero'
-      , '|   |   |   |   error: dbms_utility.format_error_backtrace (1): ORA-06512: at "%.UT_DBUG", line %'
-      , '|   |   |   |   error: dbms_utility.format_error_backtrace (2): ORA-06512: at "%.UT_DBUG", line %'
-      , '|   |   |   |   error: dbms_utility.format_error_backtrace (3): ORA-06512: at "%.UT_DBUG", line %'
-      , '|   |   |   |   error: dbms_utility.format_error_backtrace (4): ORA-06512: at "%.UT_DBUG", line %'
-      , '|   |   |   <NESTED_PROC'
-      , '|   |   <PROC'
-      , '|   <UT_RUN'
-      , '|   error: sqlerrm: ORA-01476: divisor is equal to zero'
-      , '|   error: dbms_utility.format_error_backtrace (1): ORA-06512: at "%.UT_DBUG", line %'
-      , '|   error: dbms_utility.format_error_backtrace (2): ORA-06512: at "%.UT_DBUG", line %'
-      , '|   error: dbms_utility.format_error_backtrace (3): ORA-06512: at "%.UT_DBUG", line %'
-      , '|   error: dbms_utility.format_error_backtrace (4): ORA-06512: at "%.UT_DBUG", line %'
-      , '|   error: dbms_utility.format_error_backtrace (5): ORA-06512: at "%.UT_DBUG", line %'
-      , '|   error: dbms_utility.format_error_backtrace (6): ORA-06512: at "%.UT_DBUG", line %'
-      , '<main'
-      );
-
-    l_lines_act dbms_output.chararr;
-    l_numlines integer := l_lines_exp.count; -- the number of lines to retrieve
-  begin
-    dbms_output.disable; -- clear the buffer
-    dbms_output.enable;
-    dbug.activate('DBMS_OUTPUT');
-
-    begin
-      dbug.enter('main');
-      ut_run;
-      dbug.leave;
-    exception
-      when others
+    case upper(p_dbug_method)
+      when 'PLSDBUG'
       then
-        dbug.leave_on_error;
-    end;
+        dbug.activate(p_dbug_method);
+        dbug_plsdbug.init(p_dbug_options);
+        
+      when 'DBMS_OUTPUT'
+      then
+        dbms_output.disable; -- clear the buffer
+        dbms_output.enable(200000);
+        dbug.activate(p_dbug_method);
 
-    dbms_output.get_lines(lines => l_lines_act, numlines => l_numlines);
-    ut.expect(l_numlines, '# lines').to_equal(l_lines_exp.count);
-    ut.expect(l_lines_act.first, 'lines first').to_equal(l_lines_exp.first);
-    for i_idx in l_lines_exp.first .. l_lines_exp.last
+      when 'LOG4PLSQL'
+      then
+        execute immediate 'truncate table tlog';
+        dbug.activate(p_dbug_method);
+
+      else
+        null;
+    end case;
+  end init;
+  
+  procedure done
+  ( p_dbug_method in dbug.method_t
+  , p_lines_exp in sys.odcivarchar2list
+  , p_lines_act in out nocopy dbms_output.chararr
+  , p_numlines in out nocopy integer
+  )
+  is
+    l_idx_act pls_integer;
+    l_idx_exp pls_integer;
+  begin
+    case upper(p_dbug_method)
+      when 'PLSDBUG'
+      then
+        null;
+        
+      when 'DBMS_OUTPUT'
+      then
+        p_numlines := power(2, 31); /* maximum nr of lines to retrieve */
+        dbms_output.get_lines(lines => p_lines_act, numlines => p_numlines);
+        
+        -- p_lines_act contains error messages mixed with output: strip the error messages
+        for i_idx in p_lines_act.first .. p_lines_act.last
+        loop
+          if substr(p_lines_act(i_idx), 1, 1) in ('>', '|', '<')
+          then
+            null; -- ok
+          else
+            p_lines_act.delete(i_idx);
+          end if;
+        end loop;
+        p_numlines := p_lines_act.count;
+
+      when 'LOG4PLSQL'
+      then
+        select  ltext
+        bulk collect
+        into    p_lines_act
+        from    tlog
+        order by
+                id;
+        p_numlines := p_lines_act.count;        
+
+      else
+        null;
+    end case;
+    
+    ut.expect(p_numlines, '# lines').to_equal(p_lines_exp.count);
+    ut.expect(p_lines_act.first, 'lines first').to_equal(p_lines_exp.first);
+    l_idx_act := p_lines_act.first;
+    l_idx_exp := p_lines_exp.first;
+    while l_idx_act is not null
     loop
-      ut.expect
-      ( case when l_lines_act.exists(i_idx) then l_lines_act(i_idx) end
-      , to_char(i_idx)).to_be_like(l_lines_exp(i_idx)
-      );
+      ut.expect(p_lines_act(l_idx_act), to_char(l_idx_exp)).to_equal(p_lines_exp(l_idx_exp));
+      l_idx_act := p_lines_act.next(l_idx_act);
+      l_idx_exp := l_idx_exp + 1;
     end loop;
-    /*
-    for i_idx in l_lines_act.first .. l_lines_act.last
-    loop
-      dbms_output.put_line(l_lines_act(i_idx));
-    end loop;
-    */
-  end ut_leave_on_error;
+    ut.expect(l_idx_exp).to_equal(p_lines_exp.last + 1);
+  end done;  
 
   procedure ut_leave
   ( p_dbug_method in dbug.method_t
@@ -526,44 +450,8 @@ $if ut_dbug.c_testing $then
       , '<main'
       );
     l_lines_act dbms_output.chararr;
-    -- l_numlines integer := l_lines_exp.count; -- the number of lines to retrieve
-    l_numlines integer := power(2, 31); /* maximum nr of lines to retrieve */
-
-    procedure chk
-    is
-      l_idx_act pls_integer;
-      l_idx_exp pls_integer;
-    begin
-      if upper(p_dbug_method) = 'DBMS_OUTPUT'
-      then
-        -- l_lines_act contains error messages mixed with output: strip the error messages
-        for i_idx in l_lines_act.first .. l_lines_act.last
-        loop
-          if substr(l_lines_act(i_idx), 1, 1) in ('>', '|', '<')
-          then
-            null; -- ok
-          else
-            l_lines_act.delete(i_idx);
-          end if;
-        end loop;
-        l_numlines := l_lines_act.count;
-      end if;
-      
-      ut.expect(l_numlines, '# lines').to_equal(l_lines_exp.count);
-      ut.expect(l_lines_act.first, 'lines first').to_equal(l_lines_exp.first);
-      l_idx_act := l_lines_act.first;
-      l_idx_exp := l_lines_exp.first;
-      while l_idx_act is not null
-      loop
-        ut.expect(l_lines_act(l_idx_act), to_char(l_idx_exp)).to_equal(l_lines_exp(l_idx_exp));
-        l_idx_act := l_lines_act.next(l_idx_act);
-        l_idx_exp := l_idx_exp + 1;
-      end loop;
-      ut.expect(l_idx_exp).to_equal(l_lines_exp.last + 1);
-    end chk;  
+    l_numlines integer;
   begin
-    execute immediate q'[ALTER SESSION SET NLS_LANGUAGE = 'AMERICAN']';
-
     begin
       -- Try to use a persistent group    
       std_object_mgr.delete_std_objects(null);    
@@ -573,27 +461,8 @@ $if ut_dbug.c_testing $then
       when std_object_mgr.e_unimplemented_feature
       then null;
     end;
-    
-    case upper(p_dbug_method)
-      when 'PLSDBUG'
-      then
-        dbug.activate(p_dbug_method);
-        dbug_plsdbug.init(p_dbug_options);
-        
-      when 'DBMS_OUTPUT'
-      then
-        dbms_output.disable; -- clear the buffer
-        dbms_output.enable(200000);
-        dbug.activate(p_dbug_method);
 
-      when 'LOG4PLSQL'
-      then
-        execute immediate 'truncate table tlog';
-        dbug.activate(p_dbug_method);
-
-      else
-        null;
-    end case;
+    init(p_dbug_method, p_dbug_options);
 
     for i_testcase in reverse 1..9
     loop
@@ -629,34 +498,256 @@ $if ut_dbug.c_testing $then
           ut.expect(sqlcode, 'test case: ' || i_testcase).to_equal(0);
       end;
     end loop;
-
-    case upper(p_dbug_method)
-      when 'PLSDBUG'
-      then
-        null;
-        
-      when 'DBMS_OUTPUT'
-      then
-        dbms_output.get_lines(lines => l_lines_act, numlines => l_numlines);
-        chk;
-
-      when 'LOG4PLSQL'
-      then
-        select  ltext
-        bulk collect
-        into    l_lines_act
-        from    tlog
-        order by
-                id;
-        l_numlines := l_lines_act.count;        
-        chk;
-
-      else
-        null;
-    end case;
-
     std_object_mgr.delete_std_objects;
+
+    done(p_dbug_method, l_lines_exp, l_lines_act, l_numlines);
   end ut_leave;
+
+  procedure ut_benchmark
+  ( p_count in positiven
+  , p_dbug_method in dbug.method_t
+  , p_dbug_options in varchar2
+  )
+  is
+    l_lines_exp sys.odcivarchar2list := sys.odcivarchar2list();
+    l_lines_act dbms_output.chararr;
+    l_numlines integer;
+      
+    procedure doit
+    is
+    begin
+      dbug.enter('doit');
+      dbug.leave;
+    end;
+  begin
+    init(p_dbug_method, p_dbug_options);
+    l_lines_exp.extend(1);
+    l_lines_exp(l_lines_exp.last) := '>main';
+    dbug.enter('main');
+    for i_idx in 1..p_count
+    loop
+      l_lines_exp.extend(1);
+      l_lines_exp(l_lines_exp.last) := '|   >doit';
+      l_lines_exp.extend(1);
+      l_lines_exp(l_lines_exp.last) := '|   <doit';
+      doit;
+    end loop;
+    l_lines_exp.extend(1);
+    l_lines_exp(l_lines_exp.last) := '<main';
+    dbug.leave;
+    dbug.done;
+    done(p_dbug_method, l_lines_exp, l_lines_act, l_numlines);
+  end ut_benchmark;
+
+  procedure ut_run
+  is
+    procedure proc
+    is
+      procedure nested_proc
+      is
+        i integer;
+      begin
+        dbug.enter('NESTED_PROC');
+
+        i := 42/0;
+
+        dbug.leave;
+      exception
+        when others
+        then
+          dbug.on_error;
+          raise;
+      end nested_proc;
+    begin
+      dbug.enter('PROC');
+      nested_proc;
+      dbug.leave;
+    end proc;
+  begin
+    dbug.enter('UT_RUN');
+    proc;
+    dbug.leave;
+  exception
+    when others
+    then
+      dbug.leave_on_error;
+      raise;
+  end ut_run;
+
+  -- test (help) procedures
+
+  procedure ut_setup
+  is
+    pragma autonomous_transaction;
+  begin
+    execute immediate q'[ALTER SESSION SET NLS_LANGUAGE = 'AMERICAN']';
+
+    std_object_mgr.delete_std_objects
+    ( p_group_name => 'TEST%'
+    );
+    commit;
+  end ut_setup;
+
+  procedure ut_teardown
+  is
+    pragma autonomous_transaction;
+  begin
+    std_object_mgr.delete_std_objects
+    ( p_group_name => 'TEST%'
+    );
+    commit;
+  end ut_teardown;
+
+  procedure ut_dbug
+  is
+    pragma autonomous_transaction;
+
+    l_std_object std_object;
+    l_dbug_obj dbug_obj_t;
+    l_obj_act varchar2(32767);
+    l_obj_exp constant varchar2(32767) := '{"DIRTY":0,"INDENT_LEVEL":0,"DBUG_LEVEL":2,"BREAK_POINT_LEVEL_STR_TAB":["debug","error","fatal","info","input","output","trace","warning"],"BREAK_POINT_LEVEL_NUM_TAB":[2,5,6,3,2,2,2,4],"IGNORE_BUFFER_OVERFLOW":0}';
+  begin
+    for i_try in 1..2
+    loop
+      std_object_mgr.set_group_name(case i_try when 1 then 'TEST' else null end);
+
+      l_dbug_obj := dbug_obj_t();
+      l_dbug_obj.store();
+      case i_try
+        when 1
+        then
+          select  t.obj
+          into    l_obj_act
+          from    std_objects t
+          where   group_name = 'TEST'
+          and     object_name = 'DBUG';
+
+        when 2
+        then
+          std_object_mgr.get_std_object
+          ( p_object_name => 'DBUG'
+          , p_std_object => l_std_object
+          );
+          select  l_std_object.serialize()
+          into    l_obj_act
+          from    dual;
+
+      end case;
+      ut.expect(l_obj_act).to_equal(l_obj_exp);
+    end loop;
+    commit;
+  exception
+    when std_object_mgr.e_unimplemented_feature
+    then commit;
+  end ut_dbug;
+
+  procedure ut_leave_on_error
+  is
+    l_lines_exp constant sys.odcivarchar2list :=
+      sys.odcivarchar2list
+      ( '>main'
+      , '|   >UT_RUN'
+      , '|   |   >PROC'
+      , '|   |   |   >NESTED_PROC'
+      , '|   |   |   |   error: sqlerrm: ORA-01476: divisor is equal to zero'
+      , '|   |   |   |   error: dbms_utility.format_error_backtrace: ORA-06512: at "%.UT_DBUG", line %'
+      , '|   |   |   |   error: sqlerrm: ORA-01476: divisor is equal to zero'
+      , '|   |   |   |   error: dbms_utility.format_error_backtrace (1): ORA-06512: at "%.UT_DBUG", line %'
+      , '|   |   |   |   error: dbms_utility.format_error_backtrace (2): ORA-06512: at "%.UT_DBUG", line %'
+      , '|   |   |   |   error: dbms_utility.format_error_backtrace (3): ORA-06512: at "%.UT_DBUG", line %'
+      , '|   |   |   |   error: dbms_utility.format_error_backtrace (4): ORA-06512: at "%.UT_DBUG", line %'
+      , '|   |   |   <NESTED_PROC'
+      , '|   |   <PROC'
+      , '|   <UT_RUN'
+      , '|   error: sqlerrm: ORA-01476: divisor is equal to zero'
+      , '|   error: dbms_utility.format_error_backtrace (1): ORA-06512: at "%.UT_DBUG", line %'
+      , '|   error: dbms_utility.format_error_backtrace (2): ORA-06512: at "%.UT_DBUG", line %'
+      , '|   error: dbms_utility.format_error_backtrace (3): ORA-06512: at "%.UT_DBUG", line %'
+      , '|   error: dbms_utility.format_error_backtrace (4): ORA-06512: at "%.UT_DBUG", line %'
+      , '|   error: dbms_utility.format_error_backtrace (5): ORA-06512: at "%.UT_DBUG", line %'
+      , '|   error: dbms_utility.format_error_backtrace (6): ORA-06512: at "%.UT_DBUG", line %'
+      , '<main'
+      );
+
+    l_lines_act dbms_output.chararr;
+    l_numlines integer := l_lines_exp.count; -- the number of lines to retrieve
+  begin
+    dbms_output.disable; -- clear the buffer
+    dbms_output.enable;
+    dbug.activate('DBMS_OUTPUT');
+
+    begin
+      dbug.enter('main');
+      ut_run;
+      dbug.leave;
+    exception
+      when others
+      then
+        dbug.leave_on_error;
+    end;
+
+    dbms_output.get_lines(lines => l_lines_act, numlines => l_numlines);
+    ut.expect(l_numlines, '# lines').to_equal(l_lines_exp.count);
+    ut.expect(l_lines_act.first, 'lines first').to_equal(l_lines_exp.first);
+    for i_idx in l_lines_exp.first .. l_lines_exp.last
+    loop
+      ut.expect
+      ( case when l_lines_act.exists(i_idx) then l_lines_act(i_idx) end
+      , to_char(i_idx)).to_be_like(l_lines_exp(i_idx)
+      );
+    end loop;
+    /*
+    for i_idx in l_lines_act.first .. l_lines_act.last
+    loop
+      dbms_output.put_line(l_lines_act(i_idx));
+    end loop;
+    */
+  end ut_leave_on_error;
+
+$else -- ut_dbug.c_testing $then
+
+  -- some dummy stubs
+
+  procedure ut_setup
+  is
+  begin
+    raise program_error;
+  end;
+
+  procedure ut_teardown
+  is
+  begin
+    raise program_error;
+  end;
+
+  procedure ut_dbug
+  is
+  begin
+    raise program_error;
+  end;
+
+  procedure ut_run
+  is
+  begin
+    raise program_error;
+  end;
+
+  procedure ut_leave_on_error
+  is
+  begin
+    raise program_error;
+  end;
+
+  procedure ut_leave
+  ( p_dbug_method in dbug.method_t
+  , p_dbug_options in varchar2
+  )
+  is
+  begin
+    raise program_error;
+  end;
+
+$end -- ut_dbug.c_testing $then
 
   procedure ut_leave_dbms_output
   is
@@ -670,62 +761,17 @@ $if ut_dbug.c_testing $then
     ut_leave('LOG4PLSQL');
   end ut_leave_log4plsql;
 
-$else -- ut_dbug.c_testing $then
-
-  -- some dummy stubs
-
-  procedure ut_setup
+  procedure ut_benchmark_dbms_output
   is
   begin
-    null;
-  end;
+    ut_benchmark(100, 'DBMS_OUTPUT');
+  end ut_benchmark_dbms_output;
 
-  procedure ut_teardown
+  procedure ut_benchmark_log4plsql
   is
   begin
-    null;
-  end;
-
-  procedure ut_dbug
-  is
-  begin
-    null;
-  end;
-
-  procedure ut_run
-  is
-  begin
-    null;
-  end;
-
-  procedure ut_leave_on_error
-  is
-  begin
-    null;
-  end;
-
-  procedure ut_leave
-  ( p_dbug_method in dbug.method_t
-  , p_dbug_options in varchar2
-  )
-  is
-  begin
-    null;
-  end;
-
-  procedure ut_leave_dbms_output
-  is
-  begin
-    null;
-  end;
-
-  procedure ut_leave_log4plsql
-  is
-  begin
-    null;
-  end;
-
-$end -- ut_dbug.c_testing $then
+    ut_benchmark(100, 'LOG4PLSQL');
+  end ut_benchmark_log4plsql;
 
 END UT_DBUG;
 /
