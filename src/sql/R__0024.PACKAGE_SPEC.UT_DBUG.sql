@@ -6,24 +6,24 @@ CREATE OR REPLACE PACKAGE "UT_DBUG" AUTHID DEFINER IS
 
 c_testing constant boolean := $if $$Testing $then true $else false $end;
 
---%suitepath(DBUG)
---%suite
---%rollback(manual)
-
 procedure leave
 ( p_testcase in positiven
 );
 
---beforeeach
+procedure ut_run;
+
+--%suitepath(DBUG)
+--%suite
+--%rollback(manual)
+
+--%beforeeach
 procedure ut_setup;
 
---aftereach
+--%aftereach
 procedure ut_teardown;
 
 --%test
 procedure ut_dbug;
-
-procedure ut_run;
 
 --%test
 procedure ut_leave_on_error;

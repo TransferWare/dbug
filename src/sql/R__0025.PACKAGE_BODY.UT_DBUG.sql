@@ -114,6 +114,43 @@ $if ut_dbug.c_testing $then
       raise;
   end leave;
 
+  procedure ut_run
+  is
+    procedure proc
+    is
+      procedure nested_proc
+      is
+        i integer;
+      begin
+        dbug.enter('NESTED_PROC');
+
+        i := 42/0;
+
+        dbug.leave;
+      exception
+        when others
+        then
+          dbug.on_error;
+          raise;
+      end nested_proc;
+    begin
+      dbug.enter('PROC');
+      nested_proc;
+      dbug.leave;
+    end proc;
+  begin
+    dbug.enter('UT_RUN');
+    proc;
+    dbug.leave;
+  exception
+    when others
+    then
+      dbug.leave_on_error;
+      raise;
+  end ut_run;
+
+  -- test (help) procedures
+
   procedure ut_setup
   is
     pragma autonomous_transaction;
@@ -122,7 +159,7 @@ $if ut_dbug.c_testing $then
     ( p_group_name => 'TEST%'
     );
     commit;
-  end;
+  end ut_setup;
 
   procedure ut_teardown
   is
@@ -132,7 +169,7 @@ $if ut_dbug.c_testing $then
     ( p_group_name => 'TEST%'
     );
     commit;
-  end;
+  end ut_teardown;
 
   procedure ut_dbug
   is
@@ -176,41 +213,6 @@ $if ut_dbug.c_testing $then
     when std_object_mgr.e_unimplemented_feature
     then commit;
   end ut_dbug;
-
-  procedure ut_run
-  is
-    procedure proc
-    is
-      procedure nested_proc
-      is
-        i integer;
-      begin
-        dbug.enter('NESTED_PROC');
-
-        i := 42/0;
-
-        dbug.leave;
-      exception
-        when others
-        then
-          dbug.on_error;
-          raise;
-      end nested_proc;
-    begin
-      dbug.enter('PROC');
-      nested_proc;
-      dbug.leave;
-    end proc;
-  begin
-    dbug.enter('UT_RUN');
-    proc;
-    dbug.leave;
-  exception
-    when others
-    then
-      dbug.leave_on_error;
-      raise;
-  end ut_run;
 
   procedure ut_leave_on_error
   is

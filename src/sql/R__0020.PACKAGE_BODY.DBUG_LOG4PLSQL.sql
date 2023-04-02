@@ -434,6 +434,9 @@ $end
     end loop;
 
     commit;
+  exception
+    when std_object_mgr.e_unimplemented_feature
+    then commit;
   end ut_store_remove;
 
   procedure ut_dbug_log4plsql
