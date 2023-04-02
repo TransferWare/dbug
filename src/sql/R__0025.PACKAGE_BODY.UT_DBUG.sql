@@ -116,7 +116,7 @@ $if ut_dbug.c_testing $then
 
   procedure init
   ( p_dbug_method in dbug.method_t
-  , p_dbug_options in varchar2
+  , p_plsdbug_options in varchar2
   )
   is
   begin
@@ -124,7 +124,7 @@ $if ut_dbug.c_testing $then
       when 'PLSDBUG'
       then
         dbug.activate(p_dbug_method);
-        dbug_plsdbug.init(p_dbug_options);
+        dbug_plsdbug.init(p_plsdbug_options);
         
       when 'DBMS_OUTPUT'
       then
@@ -201,9 +201,11 @@ $if ut_dbug.c_testing $then
     ut.expect(l_idx_exp).to_equal(p_lines_exp.last + 1);
   end done;  
 
+  -- start of (help) test procedures from plsdbug
+  
   procedure ut_leave
   ( p_dbug_method in dbug.method_t
-  , p_dbug_options in varchar2
+  , p_plsdbug_options in varchar2
   )
   is
     l_lines_exp constant sys.odcivarchar2list :=
@@ -462,7 +464,7 @@ $if ut_dbug.c_testing $then
       then null;
     end;
 
-    init(p_dbug_method, p_dbug_options);
+    init(p_dbug_method, p_plsdbug_options);
 
     for i_testcase in reverse 1..9
     loop
@@ -506,7 +508,7 @@ $if ut_dbug.c_testing $then
   procedure ut_benchmark
   ( p_count in positiven
   , p_dbug_method in dbug.method_t
-  , p_dbug_options in varchar2
+  , p_plsdbug_options in varchar2
   )
   is
     l_lines_exp sys.odcivarchar2list := sys.odcivarchar2list();
@@ -520,7 +522,7 @@ $if ut_dbug.c_testing $then
       dbug.leave;
     end;
   begin
-    init(p_dbug_method, p_dbug_options);
+    init(p_dbug_method, p_plsdbug_options);
     l_lines_exp.extend(1);
     l_lines_exp(l_lines_exp.last) := '>main';
     dbug.enter('main');
@@ -538,6 +540,80 @@ $if ut_dbug.c_testing $then
     dbug.done;
     done(p_dbug_method, l_lines_exp, l_lines_act, l_numlines);
   end ut_benchmark;
+
+  procedure ut_factorial
+  ( p_dbug_method in dbug.method_t
+  , p_plsdbug_options in varchar2
+  )
+  is
+    l_lines_exp constant sys.odcivarchar2list :=
+      sys.odcivarchar2list
+      ( '>factorial'
+      , '|   input: p_value: 10'
+      , '|   >factorial'
+      , '|   |   input: p_value: 9'
+      , '|   |   >factorial'
+      , '|   |   |   input: p_value: 8'
+      , '|   |   |   >factorial'
+      , '|   |   |   |   input: p_value: 7'
+      , '|   |   |   |   >factorial'
+      , '|   |   |   |   |   input: p_value: 6'
+      , '|   |   |   |   |   >factorial'
+      , '|   |   |   |   |   |   input: p_value: 5'
+      , '|   |   |   |   |   |   >factorial'
+      , '|   |   |   |   |   |   |   input: p_value: 4'
+      , '|   |   |   |   |   |   |   >factorial'
+      , '|   |   |   |   |   |   |   |   input: p_value: 3'
+      , '|   |   |   |   |   |   |   |   >factorial'
+      , '|   |   |   |   |   |   |   |   |   input: p_value: 2'
+      , '|   |   |   |   |   |   |   |   |   >factorial'
+      , '|   |   |   |   |   |   |   |   |   |   input: p_value: 1'
+      , '|   |   |   |   |   |   |   |   |   |   output: return: 1'
+      , '|   |   |   |   |   |   |   |   |   <factorial'
+      , '|   |   |   |   |   |   |   |   |   output: return: 2'
+      , '|   |   |   |   |   |   |   |   <factorial'
+      , '|   |   |   |   |   |   |   |   output: return: 6'
+      , '|   |   |   |   |   |   |   <factorial'
+      , '|   |   |   |   |   |   |   output: return: 24'
+      , '|   |   |   |   |   |   <factorial'
+      , '|   |   |   |   |   |   output: return: 120'
+      , '|   |   |   |   |   <factorial'
+      , '|   |   |   |   |   output: return: 720'
+      , '|   |   |   |   <factorial'
+      , '|   |   |   |   output: return: 5040'
+      , '|   |   |   <factorial'
+      , '|   |   |   output: return: 40320'
+      , '|   |   <factorial'
+      , '|   |   output: return: 362880'
+      , '|   <factorial'
+      , '|   output: return: 3628800'
+      , '<factorial'
+      );
+    l_lines_act dbms_output.chararr;
+    l_numlines integer;
+      
+    function factorial (p_value in integer)
+    return  integer
+    is
+      l_value integer := p_value;
+    begin
+      dbug.enter('factorial');
+      dbug.print(dbug."input", 'p_value: %s', l_value);
+      if (l_value > 1) 
+      then
+        l_value := l_value * factorial(l_value-1);
+      end if;
+      dbug.print(dbug."output", 'return: %s', l_value);
+      dbug.leave;
+      return l_value;
+    end factorial;
+  begin
+    init(p_dbug_method, p_plsdbug_options);
+    ut.expect(factorial(10), 'factorial(10)').to_equal(3628800);
+    done(p_dbug_method, l_lines_exp, l_lines_act, l_numlines);
+  end ut_factorial; 
+
+  -- end of (help) test procedures from plsdbug
 
   procedure ut_run
   is
@@ -740,7 +816,7 @@ $else -- ut_dbug.c_testing $then
 
   procedure ut_leave
   ( p_dbug_method in dbug.method_t
-  , p_dbug_options in varchar2
+  , p_plsdbug_options in varchar2
   )
   is
   begin
@@ -772,6 +848,18 @@ $end -- ut_dbug.c_testing $then
   begin
     ut_benchmark(100, 'LOG4PLSQL');
   end ut_benchmark_log4plsql;
+
+  procedure ut_factorial_dbms_output
+  is
+  begin
+    ut_factorial('DBMS_OUTPUT');
+  end ut_factorial_dbms_output;
+
+  procedure ut_factorial_log4plsql
+  is
+  begin
+    ut_factorial('LOG4PLSQL');
+  end ut_factorial_log4plsql;
 
 END UT_DBUG;
 /

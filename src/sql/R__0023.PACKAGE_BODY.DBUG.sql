@@ -714,6 +714,9 @@ $end
          -- See =head2 Restarting a PL/SQL block with dbug.leave calls missing due to an exception
          if ( p_obj.call_tab(p_obj.call_tab.first).module_name = p_obj.call_tab(l_idx).module_name
               and
+              -- GJP 2023-04-02 Use depth to check that it is really restarting a PL/SQL block
+              p_obj.call_tab(p_obj.call_tab.first).depth = p_obj.call_tab(l_idx).depth
+              and
               -- use a trick with appending 'X' so circumvent checking ((x is null and y is null) or x = y)
               p_obj.call_tab(p_obj.call_tab.first).called_from || 'X' = p_obj.call_tab(l_idx).called_from || 'X'
             )
