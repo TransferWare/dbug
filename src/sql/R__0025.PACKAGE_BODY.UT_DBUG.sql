@@ -125,6 +125,9 @@ $if ut_dbug.c_testing $then
       then
         dbug.activate(p_dbug_method);
         dbug_plsdbug.init(p_plsdbug_options);
+
+        execute immediate 'truncate table tlog';
+        dbug.activate('LOG4PLSQL');
         
       when 'DBMS_OUTPUT'
       then

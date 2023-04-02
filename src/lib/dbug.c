@@ -774,6 +774,169 @@ is_break_point( const dbug_ctx_t dbug_ctx,
 }
 #endif
 
+typedef enum {
+  DBUG_FPRINTF_INIT,
+  DBUG_FPRINTF_DONE,
+  DBUG_FPRINTF_ENTER,
+  DBUG_FPRINTF_LEAVE,
+  DBUG_FPRINTF_PRINT
+} dbug_fprintf_t;
+
+static
+void
+_dbug_fprintf( const dbug_fprintf_t dbug_fprintf,
+               FILE *fptr, const dbug_ctx_t dbug_ctx,
+               const char *file,
+               const char *function,
+               const int line,
+               const char *break_point,
+               const char *format,
+               va_list args,
+               double time,
+               long stack_usage )
+{
+  switch (dbug_fprintf)
+    {
+    case DBUG_FPRINTF_INIT:
+      (void) fprintf( fptr, DBUG_INIT_FMT, 
+                      dbug_ctx->separator,
+                      dbug_ctx->uid,
+                      dbug_ctx->separator,
+                      dbug_ctx->tm.tm_year + 1900,
+                      dbug_ctx->tm.tm_mon + 1,
+                      dbug_ctx->tm.tm_mday,
+                      dbug_ctx->tm.tm_hour,
+                      dbug_ctx->tm.tm_min,
+                      dbug_ctx->tm.tm_sec,
+                      dbug_ctx->separator,
+                      dbug_ctx->seq,
+                      dbug_ctx->separator,
+                      dbug_ctx->separator,
+                      PACKAGE_VERSION,
+                      dbug_ctx->separator,
+                      dbug_ctx->name,
+                      dbug_ctx->separator,
+                      (void*)dbug_ctx,
+                      dbug_ctx->separator,
+#if HAVE_GETPID
+                      dbug_ctx->pid,
+#else
+                      0L,
+#endif
+                      dbug_ctx->separator,
+                      dbug_ctx->flags );
+      FFLUSH(fptr);
+      break;
+
+    case DBUG_FPRINTF_DONE:
+      (void) fprintf( fptr, DBUG_DONE_FMT, 
+                      dbug_ctx->separator,
+                      dbug_ctx->uid,
+                      dbug_ctx->separator,
+                      dbug_ctx->tm.tm_year + 1900,
+                      dbug_ctx->tm.tm_mon + 1,
+                      dbug_ctx->tm.tm_mday,
+                      dbug_ctx->tm.tm_hour,
+                      dbug_ctx->tm.tm_min,
+                      dbug_ctx->tm.tm_sec,
+                      dbug_ctx->separator,
+                      dbug_ctx->seq,
+                      dbug_ctx->separator,
+                      dbug_ctx->separator,
+                      (long)dbug_ctx->stack.maxcount,
+                      dbug_ctx->separator,
+                      stack_usage );
+      FFLUSH( fptr );
+      break;
+
+    case DBUG_FPRINTF_ENTER:
+      (void) fprintf( fptr, DBUG_ENTER_FMT, 
+                      dbug_ctx->separator,
+                      dbug_ctx->uid,
+                      dbug_ctx->separator,
+                      dbug_ctx->tm.tm_year + 1900,
+                      dbug_ctx->tm.tm_mon + 1,
+                      dbug_ctx->tm.tm_mday,
+                      dbug_ctx->tm.tm_hour,
+                      dbug_ctx->tm.tm_min,
+                      dbug_ctx->tm.tm_sec,
+                      dbug_ctx->separator,
+                      dbug_ctx->seq,
+                      dbug_ctx->separator,
+                      dbug_ctx->separator,
+                      file, 
+                      dbug_ctx->separator,
+                      function, 
+                      dbug_ctx->separator,
+                      (long)line, 
+                      dbug_ctx->separator,
+                      (long)dbug_ctx->stack.count,
+                      dbug_ctx->separator,
+                      NR_DIGITS_AFTER_RADIX,
+                      time );
+      FFLUSH( fptr );
+      break;
+
+    case DBUG_FPRINTF_LEAVE:
+      (void) fprintf( fptr, DBUG_LEAVE_FMT, 
+                      dbug_ctx->separator,
+                      dbug_ctx->uid,
+                      dbug_ctx->separator,
+                      dbug_ctx->tm.tm_year + 1900,
+                      dbug_ctx->tm.tm_mon + 1,
+                      dbug_ctx->tm.tm_mday,
+                      dbug_ctx->tm.tm_hour,
+                      dbug_ctx->tm.tm_min,
+                      dbug_ctx->tm.tm_sec,
+                      dbug_ctx->separator,
+                      dbug_ctx->seq,
+                      dbug_ctx->separator,
+                      dbug_ctx->separator,
+                      file, 
+                      dbug_ctx->separator,
+                      function, 
+                      dbug_ctx->separator,
+                      (long)line, 
+                      dbug_ctx->separator,
+                      (long)dbug_ctx->stack.count,
+                      dbug_ctx->separator,
+                      NR_DIGITS_AFTER_RADIX,
+                      time );
+      FFLUSH(fptr);
+      break;
+      
+    case DBUG_FPRINTF_PRINT:
+      (void) fprintf( fptr, DBUG_PRINT_FMT,
+                      dbug_ctx->separator,
+                      dbug_ctx->uid,
+                      dbug_ctx->separator,
+                      dbug_ctx->tm.tm_year + 1900,
+                      dbug_ctx->tm.tm_mon + 1,
+                      dbug_ctx->tm.tm_mday,
+                      dbug_ctx->tm.tm_hour,
+                      dbug_ctx->tm.tm_min,
+                      dbug_ctx->tm.tm_sec,
+                      dbug_ctx->separator,
+                      dbug_ctx->seq,
+                      dbug_ctx->separator,
+                      dbug_ctx->separator,
+                      file,
+                      dbug_ctx->separator,
+                      function,
+                      dbug_ctx->separator,
+                      (long)line,
+                      dbug_ctx->separator,
+                      (long)dbug_ctx->stack.count,
+                      dbug_ctx->separator,
+                      break_point,
+                      dbug_ctx->separator );
+      (void) vfprintf(fptr, format, args);
+      (void) fprintf(fptr, "\n");
+      FFLUSH(fptr);
+      break;
+    }
+}
+
 /*
  *  FUNCTION
  *
@@ -844,33 +1007,9 @@ _dbug_print_ctx( const dbug_ctx_t dbug_ctx, const int line, const char *break_po
           Gmtime( &dbug_ctx->tm );
           dbug_ctx->seq++;
           assert( dbug_ctx->file != NULL );
-          (void) fprintf( dbug_ctx->file->fptr, DBUG_PRINT_FMT,
-                          dbug_ctx->separator,
-                          dbug_ctx->uid,
-                          dbug_ctx->separator,
-                          dbug_ctx->tm.tm_year + 1900,
-                          dbug_ctx->tm.tm_mon + 1,
-                          dbug_ctx->tm.tm_mday,
-                          dbug_ctx->tm.tm_hour,
-                          dbug_ctx->tm.tm_min,
-                          dbug_ctx->tm.tm_sec,
-                          dbug_ctx->separator,
-                          dbug_ctx->seq,
-                          dbug_ctx->separator,
-                          dbug_ctx->separator,
-                          file,
-                          dbug_ctx->separator,
-                          function,
-                          dbug_ctx->separator,
-                          (long)line,
-                          dbug_ctx->separator,
-                          (long)dbug_ctx->stack.count,
-                          dbug_ctx->separator,
-                          break_point,
-                          dbug_ctx->separator );
-          (void) vfprintf(dbug_ctx->file->fptr, format, args);
-          (void) fprintf(dbug_ctx->file->fptr, "\n");
-          FFLUSH(dbug_ctx->file->fptr);
+          _dbug_fprintf(DBUG_FPRINTF_PRINT, dbug_ctx->file->fptr, dbug_ctx, file, function, line, break_point, format, args, 0, 0L);
+          if (dbug_ctx->file->fptr != stderr)
+            _dbug_fprintf(DBUG_FPRINTF_PRINT, stderr, dbug_ctx, file, function, line, break_point, format, args, 0, 0L);
           DBUGUNLOCKFILE( dbug_ctx->file );
           SLEEPMSEC(dbug_ctx->delay);
           break;
@@ -2634,6 +2773,7 @@ dbug_init_ctx( const char * options, const char *name, dbug_ctx_t* dbug_ctx )
   } step_no;
   /*@temp@*/ char *dbug_options = (char*)options;
   const char *procname = "dbug_init_ctx";
+  va_list dummy;
 
   _DBUG_ENTER( procname );
   _DBUG_PRINT( "input", 
@@ -2811,34 +2951,9 @@ dbug_init_ctx( const char * options, const char *name, dbug_ctx_t* dbug_ctx )
               Gmtime( &(*dbug_ctx)->tm );
               (*dbug_ctx)->seq++;
               assert( (*dbug_ctx)->file != NULL );
-              (void) fprintf( (*dbug_ctx)->file->fptr, DBUG_INIT_FMT, 
-                              (*dbug_ctx)->separator,
-                              (*dbug_ctx)->uid,
-                              (*dbug_ctx)->separator,
-                              (*dbug_ctx)->tm.tm_year + 1900,
-                              (*dbug_ctx)->tm.tm_mon + 1,
-                              (*dbug_ctx)->tm.tm_mday,
-                              (*dbug_ctx)->tm.tm_hour,
-                              (*dbug_ctx)->tm.tm_min,
-                              (*dbug_ctx)->tm.tm_sec,
-                              (*dbug_ctx)->separator,
-                              (*dbug_ctx)->seq,
-                              (*dbug_ctx)->separator,
-                              (*dbug_ctx)->separator,
-                              PACKAGE_VERSION,
-                              (*dbug_ctx)->separator,
-                              (*dbug_ctx)->name,
-                              (*dbug_ctx)->separator,
-                              (void*)(*dbug_ctx),
-                              (*dbug_ctx)->separator,
-#if HAVE_GETPID
-                              (*dbug_ctx)->pid,
-#else
-                              0L,
-#endif
-                              (*dbug_ctx)->separator,
-                              (*dbug_ctx)->flags );
-              FFLUSH((*dbug_ctx)->file->fptr);
+              _dbug_fprintf(DBUG_FPRINTF_INIT, (*dbug_ctx)->file->fptr, (*dbug_ctx), NULL, NULL, 0, NULL, NULL, dummy, 0, 0L);
+              if ((*dbug_ctx)->file->fptr != stderr)
+                _dbug_fprintf(DBUG_FPRINTF_INIT, stderr, (*dbug_ctx), NULL, NULL, 0, NULL, NULL, dummy, 0, 0L);
               DBUGUNLOCKFILE( (*dbug_ctx)->file );
             }
           break;
@@ -3117,6 +3232,7 @@ dbug_done_ctx( dbug_ctx_t* dbug_ctx )
 {
   dbug_errno_t status = 0;
   const char *procname = "dbug_done_ctx";
+  va_list dummy;
 
   _DBUG_ENTER( procname );
   _DBUG_PRINT( "input", ( "dbug_ctx: %s", PTR_STR(dbug_ctx) ) );
@@ -3147,24 +3263,9 @@ dbug_done_ctx( dbug_ctx_t* dbug_ctx )
           Gmtime( &(*dbug_ctx)->tm );
           (*dbug_ctx)->seq++;
           assert( (*dbug_ctx)->file != NULL );
-          (void) fprintf( (*dbug_ctx)->file->fptr, DBUG_DONE_FMT, 
-                          (*dbug_ctx)->separator,
-                          (*dbug_ctx)->uid,
-                          (*dbug_ctx)->separator,
-                          (*dbug_ctx)->tm.tm_year + 1900,
-                          (*dbug_ctx)->tm.tm_mon + 1,
-                          (*dbug_ctx)->tm.tm_mday,
-                          (*dbug_ctx)->tm.tm_hour,
-                          (*dbug_ctx)->tm.tm_min,
-                          (*dbug_ctx)->tm.tm_sec,
-                          (*dbug_ctx)->separator,
-                          (*dbug_ctx)->seq,
-                          (*dbug_ctx)->separator,
-                          (*dbug_ctx)->separator,
-                          (long)(*dbug_ctx)->stack.maxcount,
-                          (*dbug_ctx)->separator,
-                          stack_usage );
-          FFLUSH( (*dbug_ctx)->file->fptr );
+          _dbug_fprintf(DBUG_FPRINTF_DONE, (*dbug_ctx)->file->fptr, (*dbug_ctx), NULL, NULL, 0, NULL, NULL, dummy, 0, stack_usage);
+          if ((*dbug_ctx)->file->fptr != stderr)
+            _dbug_fprintf(DBUG_FPRINTF_DONE, stderr, (*dbug_ctx), NULL, NULL, 0, NULL, NULL, dummy, 0, stack_usage);
           DBUGUNLOCKFILE( (*dbug_ctx)->file );
         }
 
@@ -3299,6 +3400,7 @@ dbug_enter_ctx( const dbug_ctx_t dbug_ctx, const char *file, const char *functio
   BOOLEAN print = FALSE;
   double time = 0;
   const char *procname = "dbug_enter_ctx";
+  va_list dummy;
 
   _DBUG_ENTER( procname );
   _DBUG_PRINT( "input", 
@@ -3386,31 +3488,9 @@ dbug_enter_ctx( const dbug_ctx_t dbug_ctx, const char *file, const char *functio
               Gmtime( &dbug_ctx->tm );
               dbug_ctx->seq++;
               assert( dbug_ctx->file != NULL );
-              (void) fprintf( dbug_ctx->file->fptr, DBUG_ENTER_FMT, 
-                              dbug_ctx->separator,
-                              dbug_ctx->uid,
-                              dbug_ctx->separator,
-                              dbug_ctx->tm.tm_year + 1900,
-                              dbug_ctx->tm.tm_mon + 1,
-                              dbug_ctx->tm.tm_mday,
-                              dbug_ctx->tm.tm_hour,
-                              dbug_ctx->tm.tm_min,
-                              dbug_ctx->tm.tm_sec,
-                              dbug_ctx->separator,
-                              dbug_ctx->seq,
-                              dbug_ctx->separator,
-                              dbug_ctx->separator,
-                              call.file, 
-                              dbug_ctx->separator,
-                              call.function, 
-                              dbug_ctx->separator,
-                              (long)line, 
-                              dbug_ctx->separator,
-                              (long)dbug_ctx->stack.count,
-                              dbug_ctx->separator,
-                              NR_DIGITS_AFTER_RADIX,
-                              time );
-              FFLUSH( dbug_ctx->file->fptr );
+              _dbug_fprintf(DBUG_FPRINTF_ENTER, dbug_ctx->file->fptr, dbug_ctx, call.file, call.function, line, NULL, NULL, dummy, time, 0L);
+              if (dbug_ctx->file->fptr != stderr)
+                _dbug_fprintf(DBUG_FPRINTF_ENTER, stderr, dbug_ctx, call.file, call.function, line, NULL, NULL, dummy, time, 0L);
               DBUGUNLOCKFILE( dbug_ctx->file );
             }
           break;
@@ -3498,7 +3578,8 @@ dbug_leave_ctx( const dbug_ctx_t dbug_ctx, const int line, int *dbug_level )
   BOOLEAN print = FALSE;
   double time = 0;
   const char *procname = "dbug_leave_ctx";
-
+  va_list dummy;
+  
   _DBUG_ENTER( procname );
   _DBUG_PRINT( "input", 
                ( "dbug_ctx: %s; line: %d; dbug_level: %s", 
@@ -3560,31 +3641,9 @@ dbug_leave_ctx( const dbug_ctx_t dbug_ctx, const int line, int *dbug_level )
               Gmtime( &dbug_ctx->tm );
               dbug_ctx->seq++;
               assert( dbug_ctx->file != NULL );
-              (void) fprintf( dbug_ctx->file->fptr, DBUG_LEAVE_FMT, 
-                              dbug_ctx->separator,
-                              dbug_ctx->uid,
-                              dbug_ctx->separator,
-                              dbug_ctx->tm.tm_year + 1900,
-                              dbug_ctx->tm.tm_mon + 1,
-                              dbug_ctx->tm.tm_mday,
-                              dbug_ctx->tm.tm_hour,
-                              dbug_ctx->tm.tm_min,
-                              dbug_ctx->tm.tm_sec,
-                              dbug_ctx->separator,
-                              dbug_ctx->seq,
-                              dbug_ctx->separator,
-                              dbug_ctx->separator,
-                              call->file, 
-                              dbug_ctx->separator,
-                              call->function, 
-                              dbug_ctx->separator,
-                              (long)line, 
-                              dbug_ctx->separator,
-                              (long)dbug_ctx->stack.count,
-                              dbug_ctx->separator,
-                              NR_DIGITS_AFTER_RADIX,
-                              time );
-              FFLUSH(dbug_ctx->file->fptr);
+              _dbug_fprintf(DBUG_FPRINTF_LEAVE, dbug_ctx->file->fptr, dbug_ctx, call->file, call->function, line, NULL, NULL, dummy, time, 0L);
+              if (dbug_ctx->file->fptr != stderr)
+                _dbug_fprintf(DBUG_FPRINTF_LEAVE, stderr, dbug_ctx, call->file, call->function, line, NULL, NULL, dummy, time, 0L);
               DBUGUNLOCKFILE( dbug_ctx->file );
             }
           break;

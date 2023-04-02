@@ -379,7 +379,7 @@ $end
     -- When there is no mismatch this means the top entry from p_obj.call_tab will be removed.
 
 $if dbug.c_trace > 1 $then
-    trace('pop_call_stack(p_lwb => '||p_lwb||', p_leave_on_error => ' || dbug.cast_to_varchar2(p_leave_on_error) || ')');
+    trace('>pop_call_stack(p_lwb => '||p_lwb||', p_leave_on_error => ' || dbug.cast_to_varchar2(p_leave_on_error) || ')');
 $end
 
     if p_lwb = p_obj.call_tab.last
@@ -440,6 +440,10 @@ $end
     end loop;
 
     p_obj.dirty := 1;
+    
+$if dbug.c_trace > 1 $then
+    trace('<pop_call_stack');
+$end
   end pop_call_stack;
 
   procedure done
@@ -484,7 +488,7 @@ $end
     l_method method_t;
   begin
 $if dbug.c_trace > 1 $then
-    trace('>activate('''||p_method||''', '||cast_to_varchar2(p_status)||')');
+    trace('>activate('''||p_method||''', '||cast_to_varchar2(p_status)||') (1)');
 $end
 
     if upper(p_method) = 'TS_DBUG' -- backwards compability with TS_DBUG
@@ -510,7 +514,7 @@ $end
     p_obj.dirty := 1;
 
 $if dbug.c_trace > 1 $then
-    trace('<activate');
+    trace('<activate (1)');
 $end
   end activate;
 
@@ -662,10 +666,10 @@ $if dbug.c_trace > 0 or dbug.c_trace_enter > 0 or dbug.c_trace_leave > 0 $then
   is
     l_line_tab dbug.line_tab_t;
   begin
+    trace('>show_call_stack' || case when p_enter then ' after entering ' else ' before leaving ' end || case when p_obj.call_tab.last is not null then p_obj.call_tab(p_obj.call_tab.last).module_name end);
+    
     if p_obj is not null and p_obj.call_tab is not null and p_obj.call_tab.count > 0
     then
-      trace('>SHOW_CALL_STACK' || case when p_enter then ' after entering ' else ' before leaving ' end || p_obj.call_tab(p_obj.call_tab.last).module_name);
-
       for i_call_idx in p_obj.call_tab.first .. p_obj.call_tab.last
       loop
         trace('['||to_char(i_call_idx, 'fm00')||'] module name: '|| p_obj.call_tab(i_call_idx).module_name);
@@ -674,7 +678,7 @@ $if dbug.c_trace > 0 or dbug.c_trace_enter > 0 or dbug.c_trace_leave > 0 $then
       end loop;
     end if;
 
-      trace('<SHOW_CALL_STACK' || case when p_enter then ' after entering ' else ' before leaving ' end || p_obj.call_tab(p_obj.call_tab.last).module_name);
+    trace('<show_call_stack');
   end show_call_stack;
 
 $end
@@ -1259,7 +1263,7 @@ $end
     l_dynamic_depth constant pls_integer := utl_call_stack.dynamic_depth;
   begin
 $if dbug.c_trace > 1 $then
-    trace('>get_state');
+    trace('>get_state; dynamic depth: ' || l_dynamic_depth);
 $end
 
     -- Re-initialize if session has changed
@@ -1392,7 +1396,7 @@ $end
   is
   begin
 $if dbug.c_trace > 1 $then
-    trace('>activate');
+    trace('>activate(''' || p_method || ''', ' || cast_to_varchar2(p_status) || ') (2)');
 $end
 
     get_state;
@@ -1407,7 +1411,7 @@ $end
     set_state;
 
 $if dbug.c_trace > 1 $then
-    trace('<activate');
+    trace('<activate (2)');
 $end
 
 $if dbug.c_ignore_errors != 0 $then
@@ -1426,7 +1430,7 @@ $end
     l_result boolean;
   begin
 $if dbug.c_trace > 1 $then
-    trace('>active');
+    trace('>active(''' || p_method || ''')');
 $end
 
     get_state;
@@ -1460,7 +1464,7 @@ $end
   is
   begin
 $if dbug.c_trace > 1 $then
-    trace('>set_level');
+    trace('>set_level(' || p_level || ')');
 $end
 
     get_state;
@@ -1592,7 +1596,7 @@ $end
   is
   begin
 $if dbug.c_trace > 1 $then
-    trace('>enter (1)');
+    trace('>enter(''' || p_module || ''') (1)');
 $end
 
     get_state;
@@ -1625,7 +1629,7 @@ $end
   is
   begin
 $if dbug.c_trace > 1 $then
-    trace('>enter (2)');
+    trace('>enter(''' || p_module || ''') (2)');
 $end
 
     get_state;
@@ -1687,7 +1691,7 @@ $end
   is
   begin
 $if dbug.c_trace > 1 $then
-    trace('>leave (2)');
+    trace('>leave(''' || p_called_from || ''') (2)');
 $end
 
     get_state;
@@ -1751,7 +1755,7 @@ $end
   is
   begin
 $if dbug.c_trace > 1 $then
-    trace('>on_error (2)');
+    trace('>on_error(''' || p_function || ''', ''' || p_output || ''', ''' || p_sep || ''') (2)');
 $end
 
     get_state;
@@ -1789,7 +1793,7 @@ $end
   is
   begin
 $if dbug.c_trace > 1 $then
-    trace('>on_error (3)');
+    trace('>on_error(''' || p_function || ''') (3)');
 $end
     get_state;
     begin
@@ -1863,7 +1867,7 @@ $end
   ) is
   begin
 $if dbug.c_trace > 1 $then
-    trace('>print (1)');
+    trace('>print(''' || p_break_point || ''', ''' || p_str || ''') (1)');
 $end
 
     get_state;
@@ -1897,7 +1901,7 @@ $end
   is
   begin
 $if dbug.c_trace > 1 $then
-    trace('>print (2a)');
+    trace('>print(''' || p_break_point || ''', ''' || p_fmt || ''', ''' || p_arg1 || ''') (2a)');
 $end
 
     get_state;
@@ -1931,7 +1935,7 @@ $end
   is
   begin
 $if dbug.c_trace > 1 $then
-    trace('>print (2b)');
+    trace('>print(''' || p_break_point || ''', ''' || p_fmt || ''', ''' || to_char(p_arg1, 'YYYYMMDDHH24MISS') || ''') (2b)');
 $end
 
     get_state;
@@ -1965,7 +1969,7 @@ $end
   is
   begin
 $if dbug.c_trace > 1 $then
-    trace('>print (2c)');
+    trace('>print(''' || p_break_point || ''', ''' || p_fmt || ''', ''' || cast_to_varchar2(p_arg1) || ''') (2c)');
 $end
 
     get_state;
@@ -2000,7 +2004,7 @@ $end
   is
   begin
 $if dbug.c_trace > 1 $then
-    trace('>print (3)');
+    trace('>print(''' || p_break_point || ''', ''' || p_fmt || ''', ''' || p_arg1 || ''', ''' || p_arg2 || ''') (3)');
 $end
 
     get_state;
@@ -2036,7 +2040,7 @@ $end
   is
   begin
 $if dbug.c_trace > 1 $then
-    trace('>print (4)');
+    trace('>print(''' || p_break_point || ''', ''' || p_fmt || ''', ''' || p_arg1 || ''', ''' || p_arg2 || ''', ''' || p_arg3 || ''') (4)');
 $end
 
     get_state;
@@ -2073,7 +2077,7 @@ $end
   is
   begin
 $if dbug.c_trace > 1 $then
-    trace('>print (5)');
+    trace('>print(''' || p_break_point || ''', ''' || p_fmt || ''', ''' || p_arg1 || ''', ''' || p_arg2 || ''', ''' || p_arg3 || ''', ''' || p_arg4 || ''') (5)');
 $end
 
     get_state;
@@ -2111,7 +2115,7 @@ $end
   is
   begin
 $if dbug.c_trace > 1 $then
-    trace('>print (6)');
+    trace('>print(''' || p_break_point || ''', ''' || p_fmt || ''', ''' || p_arg1 || ''', ''' || p_arg2 || ''', ''' || p_arg3 || ''', ''' || p_arg4 || ''', ''' || p_arg5 || ''') (6)');
 $end
 
     get_state;
