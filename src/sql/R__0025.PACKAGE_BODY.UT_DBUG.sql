@@ -155,7 +155,7 @@ $if ut_dbug.c_testing $then
     case upper(p_dbug_method)
       when 'PLSDBUG'
       then
-        null;
+        return; -- for PLSDBUG we need to check the plsdbug executable output
         
       when 'DBMS_OUTPUT'
       then
@@ -183,9 +183,6 @@ $if ut_dbug.c_testing $then
         order by
                 id;
         p_numlines := p_lines_act.count;        
-
-      else
-        null;
     end case;
     
     ut.expect(p_numlines, '# lines').to_equal(p_lines_exp.count);
