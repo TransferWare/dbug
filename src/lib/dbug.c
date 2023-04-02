@@ -782,6 +782,13 @@ typedef enum {
   DBUG_FPRINTF_PRINT
 } dbug_fprintf_t;
 
+/* 1: print INIT, DONE, ENTER, LEAVE to stderr too
+   2: print PRINT to stderr too (may give a segmentation fault)
+*/
+#ifndef DBUG_FPRINTF_STDERR
+#define DBUG_FPRINTF_STDERR 1
+#endif
+
 static
 void
 _dbug_fprintf( const dbug_fprintf_t dbug_fprintf,
@@ -1008,8 +1015,10 @@ _dbug_print_ctx( const dbug_ctx_t dbug_ctx, const int line, const char *break_po
           dbug_ctx->seq++;
           assert( dbug_ctx->file != NULL );
           _dbug_fprintf(DBUG_FPRINTF_PRINT, dbug_ctx->file->fptr, dbug_ctx, file, function, line, break_point, format, args, 0, 0L);
+#if DBUG_FPRINTF_STDERR > 1
           if (dbug_ctx->file->fptr != stderr)
             _dbug_fprintf(DBUG_FPRINTF_PRINT, stderr, dbug_ctx, file, function, line, break_point, format, args, 0, 0L);
+#endif          
           DBUGUNLOCKFILE( dbug_ctx->file );
           SLEEPMSEC(dbug_ctx->delay);
           break;
@@ -2952,8 +2961,10 @@ dbug_init_ctx( const char * options, const char *name, dbug_ctx_t* dbug_ctx )
               (*dbug_ctx)->seq++;
               assert( (*dbug_ctx)->file != NULL );
               _dbug_fprintf(DBUG_FPRINTF_INIT, (*dbug_ctx)->file->fptr, (*dbug_ctx), NULL, NULL, 0, NULL, NULL, dummy, 0, 0L);
+#if DBUG_FPRINTF_STDERR > 0
               if ((*dbug_ctx)->file->fptr != stderr)
                 _dbug_fprintf(DBUG_FPRINTF_INIT, stderr, (*dbug_ctx), NULL, NULL, 0, NULL, NULL, dummy, 0, 0L);
+#endif              
               DBUGUNLOCKFILE( (*dbug_ctx)->file );
             }
           break;
@@ -3264,8 +3275,10 @@ dbug_done_ctx( dbug_ctx_t* dbug_ctx )
           (*dbug_ctx)->seq++;
           assert( (*dbug_ctx)->file != NULL );
           _dbug_fprintf(DBUG_FPRINTF_DONE, (*dbug_ctx)->file->fptr, (*dbug_ctx), NULL, NULL, 0, NULL, NULL, dummy, 0, stack_usage);
+#if DBUG_FPRINTF_STDERR > 0
           if ((*dbug_ctx)->file->fptr != stderr)
             _dbug_fprintf(DBUG_FPRINTF_DONE, stderr, (*dbug_ctx), NULL, NULL, 0, NULL, NULL, dummy, 0, stack_usage);
+#endif          
           DBUGUNLOCKFILE( (*dbug_ctx)->file );
         }
 
@@ -3489,8 +3502,10 @@ dbug_enter_ctx( const dbug_ctx_t dbug_ctx, const char *file, const char *functio
               dbug_ctx->seq++;
               assert( dbug_ctx->file != NULL );
               _dbug_fprintf(DBUG_FPRINTF_ENTER, dbug_ctx->file->fptr, dbug_ctx, call.file, call.function, line, NULL, NULL, dummy, time, 0L);
+#if DBUG_FPRINTF_STDERR > 0
               if (dbug_ctx->file->fptr != stderr)
                 _dbug_fprintf(DBUG_FPRINTF_ENTER, stderr, dbug_ctx, call.file, call.function, line, NULL, NULL, dummy, time, 0L);
+#endif              
               DBUGUNLOCKFILE( dbug_ctx->file );
             }
           break;
@@ -3642,8 +3657,10 @@ dbug_leave_ctx( const dbug_ctx_t dbug_ctx, const int line, int *dbug_level )
               dbug_ctx->seq++;
               assert( dbug_ctx->file != NULL );
               _dbug_fprintf(DBUG_FPRINTF_LEAVE, dbug_ctx->file->fptr, dbug_ctx, call->file, call->function, line, NULL, NULL, dummy, time, 0L);
+#if DBUG_FPRINTF_STDERR > 0
               if (dbug_ctx->file->fptr != stderr)
                 _dbug_fprintf(DBUG_FPRINTF_LEAVE, stderr, dbug_ctx, call->file, call->function, line, NULL, NULL, dummy, time, 0L);
+#endif              
               DBUGUNLOCKFILE( dbug_ctx->file );
             }
           break;
