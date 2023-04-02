@@ -121,9 +121,9 @@ begin
     then
       -- from local storage to external not allowed when there are local objects
       raise_application_error
-      ( -20000
+      ( c_change_group_local_storage
       , utl_lms.format_message
-        ( 'Can not change to group %s when there are local objects (first is %s)'
+        ( 'Can not change to non-empty group %s when there are local objects (first is %s)'
         , p_group_name
         , g_std_object_tab(g_std_object_tab.first).name()
         )
@@ -132,13 +132,17 @@ begin
     then
       -- from external storage to local not allowed when there are local objects
       raise_application_error
-      ( -20000
+      ( c_change_group_local_storage
       , utl_lms.format_message
-        ( 'Can not change from group %s when there are local objects (first is %s)'
+        ( 'Can not change from non-empty group %s when there are local objects (first is %s)'
         , g_group_name
         , g_std_object_tab(g_std_object_tab.first).name()
         )
       );
+    -- GJP 2023-04-02 Disable setting non-empty group temporarily
+    when p_group_name is not null
+    then
+      raise e_unimplemented_feature;      
     else
       null;
   end case;
@@ -394,23 +398,27 @@ end;
 procedure ut_set_group_name
 is
 begin
+  set_group_name(null);
+  ut.expect(g_group_name).to_be_null();
   set_group_name('TEST1');
+  -- GJP 2023-04-02 Can not set a non-empty group name
+  raise program_error;
   ut.expect(g_group_name).to_equal('TEST1');
   set_group_name('TEST2');
   ut.expect(g_group_name).to_equal('TEST2');
-  set_group_name(null);
-  ut.expect(g_group_name).to_be_null();
 end;
 
 procedure ut_get_group_name
 is
 begin
+  set_group_name(null);
+  ut.expect(get_group_name()).to_be_null();
   set_group_name('TEST1');
+  -- GJP 2023-04-02 Can not set a non-empty group name
+  raise program_error;
   ut.expect(get_group_name()).to_equal('TEST1');
   set_group_name('TEST2');
   ut.expect(get_group_name()).to_equal('TEST2');
-  set_group_name(null);
-  ut.expect(get_group_name()).to_be_null();
 end;
 
 procedure ut_store_remove
@@ -468,6 +476,11 @@ begin
   end loop;
 
   commit;
+exception
+  when e_unimplemented_feature
+  then
+    commit;
+    -- GJP 2023-04-02 Can not set a non-empty group name
 end;
 
 $else -- $if std_object_mgr.c_testing $then

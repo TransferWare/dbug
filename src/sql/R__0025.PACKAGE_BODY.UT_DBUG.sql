@@ -146,6 +146,7 @@ $if ut_dbug.c_testing $then
     for i_try in 1..2
     loop
       std_object_mgr.set_group_name(case i_try when 1 then 'TEST' else null end);
+
       l_dbug_obj := dbug_obj_t();
       l_dbug_obj.store();
       case i_try
@@ -171,7 +172,10 @@ $if ut_dbug.c_testing $then
       ut.expect(l_obj_act).to_equal(l_obj_exp);
     end loop;
     commit;
-  end;
+  exception
+    when std_object_mgr.e_unimplemented_feature
+    then commit;
+  end ut_dbug;
 
   procedure ut_run
   is
@@ -558,12 +562,15 @@ $if ut_dbug.c_testing $then
   begin
     execute immediate q'[ALTER SESSION SET NLS_LANGUAGE = 'AMERICAN']';
 
-    /*
-    -- Use a persistent group
-    std_object_mgr.delete_std_objects(null);
-    std_object_mgr.set_group_name('leave.sql');
-    std_object_mgr.delete_std_objects;
-    */
+    begin
+      -- Try to use a persistent group    
+      std_object_mgr.delete_std_objects(null);    
+      std_object_mgr.set_group_name('leave.sql');
+      std_object_mgr.delete_std_objects;
+    exception
+      when std_object_mgr.e_unimplemented_feature
+      then null;
+    end;
     
     case upper(p_dbug_method)
       when 'PLSDBUG'
@@ -646,9 +653,7 @@ $if ut_dbug.c_testing $then
         null;
     end case;
 
-    /*
     std_object_mgr.delete_std_objects;
-    */
   end ut_leave;
 
   procedure ut_leave_dbms_output
