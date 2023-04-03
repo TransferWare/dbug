@@ -164,6 +164,7 @@ $if ut_dbug.c_testing $then
     case upper(p_dbug_method)
       when 'PLSDBUG'
       then
+        dbug_plsdbug.done;
         return; -- for PLSDBUG we need to check the plsdbug executable output
         
       when 'DBMS_OUTPUT'
