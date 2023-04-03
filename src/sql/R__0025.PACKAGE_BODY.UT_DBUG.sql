@@ -161,10 +161,10 @@ $if ut_dbug.c_testing $then
     l_idx_act pls_integer;
     l_idx_exp pls_integer;
   begin
+    dbug.done;
     case upper(p_dbug_method)
       when 'PLSDBUG'
       then
-        dbug_plsdbug.done;
         return; -- for PLSDBUG we need to check the plsdbug executable output
         
       when 'DBMS_OUTPUT'
@@ -550,7 +550,6 @@ $if ut_dbug.c_testing $then
     l_lines_exp.extend(1);
     l_lines_exp(l_lines_exp.last) := '<main';
     dbug.leave;
-    dbug.done;
     done(p_dbug_method, l_lines_exp, l_tlog_id_max, l_lines_act, l_numlines);
   end ut_benchmark;
 
