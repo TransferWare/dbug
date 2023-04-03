@@ -117,6 +117,7 @@ $if ut_dbug.c_testing $then
   procedure init
   ( p_dbug_method in dbug.method_t
   , p_plsdbug_options in varchar2
+  , p_tlog_id_max out nocopy tlog.id%type
   )
   is
   begin
@@ -126,7 +127,7 @@ $if ut_dbug.c_testing $then
         dbug.activate(p_dbug_method);
         dbug_plsdbug.init(p_plsdbug_options);
 
-        execute immediate 'truncate table tlog';
+        -- execute immediate 'truncate table tlog';
         dbug.activate('LOG4PLSQL');
         
       when 'DBMS_OUTPUT'
@@ -137,7 +138,11 @@ $if ut_dbug.c_testing $then
 
       when 'LOG4PLSQL'
       then
-        execute immediate 'truncate table tlog';
+        -- execute immediate 'truncate table tlog';
+        select  nvl(max(id), 0)
+        into    p_tlog_id_max
+        from    tlog;
+        
         dbug.activate(p_dbug_method);
 
       else
@@ -148,6 +153,7 @@ $if ut_dbug.c_testing $then
   procedure done
   ( p_dbug_method in dbug.method_t
   , p_lines_exp in sys.odcivarchar2list
+  , p_tlog_id_max in tlog.id%type
   , p_lines_act in out nocopy dbms_output.chararr
   , p_numlines in out nocopy integer
   )
@@ -183,6 +189,7 @@ $if ut_dbug.c_testing $then
         bulk collect
         into    p_lines_act
         from    tlog
+        where   id > p_tlog_id_max
         order by
                 id;
         p_numlines := p_lines_act.count;        
@@ -453,6 +460,7 @@ $if ut_dbug.c_testing $then
       );
     l_lines_act dbms_output.chararr;
     l_numlines integer;
+    l_tlog_id_max tlog.id%type;
   begin
     begin
       -- Try to use a persistent group    
@@ -464,7 +472,7 @@ $if ut_dbug.c_testing $then
       then null;
     end;
 
-    init(p_dbug_method, p_plsdbug_options);
+    init(p_dbug_method, p_plsdbug_options, l_tlog_id_max);
 
     for i_testcase in reverse 1..9
     loop
@@ -505,7 +513,7 @@ $if ut_dbug.c_testing $then
     end loop;
     std_object_mgr.delete_std_objects;
 
-    done(p_dbug_method, l_lines_exp, l_lines_act, l_numlines);
+    done(p_dbug_method, l_lines_exp, l_tlog_id_max, l_lines_act, l_numlines);
   end ut_leave;
 
   procedure ut_benchmark
@@ -517,6 +525,7 @@ $if ut_dbug.c_testing $then
     l_lines_exp sys.odcivarchar2list := sys.odcivarchar2list();
     l_lines_act dbms_output.chararr;
     l_numlines integer;
+    l_tlog_id_max tlog.id%type;
       
     procedure doit
     is
@@ -525,7 +534,7 @@ $if ut_dbug.c_testing $then
       dbug.leave;
     end;
   begin
-    init(p_dbug_method, p_plsdbug_options);
+    init(p_dbug_method, p_plsdbug_options, l_tlog_id_max);
     l_lines_exp.extend(1);
     l_lines_exp(l_lines_exp.last) := '>main';
     dbug.enter('main');
@@ -541,7 +550,7 @@ $if ut_dbug.c_testing $then
     l_lines_exp(l_lines_exp.last) := '<main';
     dbug.leave;
     dbug.done;
-    done(p_dbug_method, l_lines_exp, l_lines_act, l_numlines);
+    done(p_dbug_method, l_lines_exp, l_tlog_id_max, l_lines_act, l_numlines);
   end ut_benchmark;
 
   procedure ut_factorial
@@ -594,6 +603,7 @@ $if ut_dbug.c_testing $then
       );
     l_lines_act dbms_output.chararr;
     l_numlines integer;
+    l_tlog_id_max tlog.id%type;
       
     function factorial (p_value in integer)
     return  integer
@@ -611,9 +621,9 @@ $if ut_dbug.c_testing $then
       return l_value;
     end factorial;
   begin
-    init(p_dbug_method, p_plsdbug_options);
+    init(p_dbug_method, p_plsdbug_options, l_tlog_id_max);
     ut.expect(factorial(10), 'factorial(10)').to_equal(3628800);
-    done(p_dbug_method, l_lines_exp, l_lines_act, l_numlines);
+    done(p_dbug_method, l_lines_exp, l_tlog_id_max, l_lines_act, l_numlines);
   end ut_factorial; 
 
   -- end of (help) test procedures from plsdbug
