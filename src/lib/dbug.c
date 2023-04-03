@@ -786,7 +786,7 @@ typedef enum {
    2: print PRINT to stderr too (may give a segmentation fault)
 */
 #ifndef DBUG_FPRINTF_STDERR
-#define DBUG_FPRINTF_STDERR 1
+#define DBUG_FPRINTF_STDERR 0
 #endif
 
 static
