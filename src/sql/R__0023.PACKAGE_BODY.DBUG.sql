@@ -330,9 +330,10 @@ $end
       return false;
   end handle_error;
 
-  procedure chk_called_from
+  procedure get_called_from
   ( p_called_from in module_name_t
   , p_depth in integer
+  , p_module_name out nocopy module_name_t
   )
   is
     l_dynamic_depth constant pls_integer := utl_call_stack.dynamic_depth;
@@ -354,6 +355,7 @@ $end
       then
         -- the called_from has been found
         l_found := i_idx;
+        p_module_name := utl_call_stack.concatenate_subprogram(utl_call_stack.subprogram(i_idx)) || '#' || utl_call_stack.unit_line(i_idx);
         exit search_loop;
       end if;
     end loop search_loop;
@@ -361,7 +363,7 @@ $end
     then
       raise_application_error(-20000, 'Could not find called from (' || p_called_from || ') with depth (' || p_depth || ') in the call stack.');
     end if;
-  end chk_called_from;
+  end get_called_from;
   
   procedure pop_call_stack
   ( p_obj in out nocopy dbug_obj_t
@@ -697,6 +699,7 @@ $end
     l_active_str method_t;
     l_cursor integer;
     l_dummy integer;
+    l_module module_name_t;
   begin
     if not check_break_point(p_obj, "trace")
     then
@@ -715,10 +718,10 @@ $if dbug.c_trace_enter > 0 $then
        trace('extended p_obj.call_tab with 1 to '||p_obj.call_tab.count||' elements');
 $end
 
-       chk_called_from(p_called_from, p_depth);
+       get_called_from(p_called_from, p_depth, l_module);
        p_obj.call_tab(l_idx).called_from := p_called_from;
        p_obj.call_tab(l_idx).depth := p_depth;
-       p_obj.call_tab(l_idx).module_name := nvl(p_module, p_obj.call_tab(l_idx).called_from);
+       p_obj.call_tab(l_idx).module_name := nvl(p_module, l_module);
        if l_idx != 1
        then
          -- Same stack?
