@@ -715,6 +715,7 @@ $if dbug.c_trace_enter > 0 $then
        trace('extended p_obj.call_tab with 1 to '||p_obj.call_tab.count||' elements');
 $end
 
+       chk_called_from(p_called_from, p_depth);
        p_obj.call_tab(l_idx).called_from := p_called_from;
        p_obj.call_tab(l_idx).depth := p_depth;
        p_obj.call_tab(l_idx).module_name := nvl(p_module, p_obj.call_tab(l_idx).called_from);
