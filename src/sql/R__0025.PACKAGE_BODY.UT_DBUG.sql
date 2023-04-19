@@ -796,6 +796,33 @@ $if ut_dbug.c_testing $then
 $else -- ut_dbug.c_testing $then
 
   -- some dummy stubs
+  -- start of help test procedures coming from plsdbug
+  procedure leave
+  ( p_testcase in positiven
+  )
+  is
+  begin
+    raise program_error;
+  end;
+
+  procedure ut_benchmark
+  ( p_count in positiven
+  , p_dbug_method in dbug.method_t
+  , p_plsdbug_options in varchar2 default null
+  )
+  is
+  begin
+    raise program_error;
+  end;
+
+  procedure ut_factorial
+  ( p_dbug_method in dbug.method_t
+  , p_plsdbug_options in varchar2 default null
+  )
+  is
+  begin
+    raise program_error;
+  end;
 
   procedure ut_setup
   is
