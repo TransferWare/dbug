@@ -135,29 +135,29 @@ DROP PACKAGE DBUG_PROFILER;
 call dbms_application_info.set_action('SQL statement 26');
 DROP PACKAGE DBUG_TRIGGER;
 
-/* SQL statement 27 (DROP;EPCAPP;TYPE_BODY;DBUG_OBJ_T;;;;;;;;2) */
+/* SQL statement 27 (DROP;EPCAPP;PACKAGE_SPEC;UT_DBUG;;;;;;;;2) */
 call dbms_application_info.set_action('SQL statement 27');
+DROP PACKAGE UT_DBUG;
+
+/* SQL statement 28 (DROP;EPCAPP;TYPE_BODY;DBUG_OBJ_T;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 28');
 DROP TYPE BODY DBUG_OBJ_T;
 
-/* SQL statement 28 (DROP;EPCAPP;PACKAGE_SPEC;DBUG;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 28');
+/* SQL statement 29 (DROP;EPCAPP;PACKAGE_SPEC;DBUG;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 29');
 DROP PACKAGE DBUG;
 
-/* SQL statement 29 (DROP;EPCAPP;TYPE_BODY;DBUG_LOG4PLSQL_OBJ_T;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 29');
+/* SQL statement 30 (DROP;EPCAPP;TYPE_BODY;DBUG_LOG4PLSQL_OBJ_T;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 30');
 DROP TYPE BODY DBUG_LOG4PLSQL_OBJ_T;
 
-/* SQL statement 30 (DROP;EPCAPP;TYPE_BODY;STD_OBJECT;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 30');
+/* SQL statement 31 (DROP;EPCAPP;TYPE_BODY;STD_OBJECT;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 31');
 DROP TYPE BODY STD_OBJECT;
 
-/* SQL statement 31 (DROP;EPCAPP;PACKAGE_SPEC;STD_OBJECT_MGR;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 31');
-DROP PACKAGE STD_OBJECT_MGR;
-
-/* SQL statement 32 (DROP;EPCAPP;PACKAGE_SPEC;UT_DBUG;;;;;;;;2) */
+/* SQL statement 32 (DROP;EPCAPP;PACKAGE_SPEC;STD_OBJECT_MGR;;;;;;;;2) */
 call dbms_application_info.set_action('SQL statement 32');
-DROP PACKAGE UT_DBUG;
+DROP PACKAGE STD_OBJECT_MGR;
 
 /* SQL statement 33 (DROP;EPCAPP;TABLE;STD_OBJECTS;;;;;;;;2) */
 call dbms_application_info.set_action('SQL statement 33');
