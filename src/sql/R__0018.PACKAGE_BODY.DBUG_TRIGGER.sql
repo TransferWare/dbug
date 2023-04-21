@@ -9,7 +9,6 @@ CREATE OR REPLACE PACKAGE BODY "DBUG_TRIGGER" IS
 
   /* scratch variable */
   g_text varchar2(32767);
-  g_called_from dbug.module_name_t := null;
   g_depth integer := null;
   g_break_point varchar2(4); /* key|data */
 
@@ -120,10 +119,9 @@ CREATE OR REPLACE PACKAGE BODY "DBUG_TRIGGER" IS
     );
 
     g_text := g_text || ' ROW TRIGGER ' || p_trigger_name || ' ON ' || p_table_name;
-    g_called_from := p_trigger_name;
     g_depth := utl_call_stack.dynamic_depth - 1; -- do not count DBUG_TRIGGER
     
-    dbug.enter( g_text, g_called_from, g_depth );
+    dbug.enter( p_module => g_text, p_depth => g_depth );
     dbug.print
     ( dbug."info"
     , 'user: %s; OS user: %s; sid: %s'
@@ -139,7 +137,7 @@ CREATE OR REPLACE PACKAGE BODY "DBUG_TRIGGER" IS
     g_inserting := null;
     g_updating := null;
     g_deleting := null;
-    dbug.leave( g_called_from, g_depth );
+    dbug.leave( p_depth => g_depth );
   end leave;
 
   procedure print(

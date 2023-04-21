@@ -86,14 +86,11 @@ return break_point_level_t;
 
 procedure enter
 ( p_module in module_name_t default null
-, p_called_from in module_name_t default utl_call_stack.subprogram(1)(1)
 , p_depth in integer default utl_call_stack.dynamic_depth
 );
 
--- See enter(p_module in module_name_t, p_called_from out module_name_t) above
 procedure leave
-( p_called_from in module_name_t default utl_call_stack.subprogram(1)(1)
-, p_depth in integer default utl_call_stack.dynamic_depth
+( p_depth in integer default utl_call_stack.dynamic_depth
 );
 
 procedure on_error;
@@ -111,8 +108,7 @@ procedure on_error
 );
 
 procedure leave_on_error
-( p_called_from in module_name_t default utl_call_stack.subprogram(1)(1)
-, p_depth in integer default utl_call_stack.dynamic_depth
+( p_depth in integer default utl_call_stack.dynamic_depth
 );
 
 function cast_to_varchar2

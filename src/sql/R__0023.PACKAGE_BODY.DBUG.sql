@@ -331,8 +331,8 @@ $end
   end handle_error;
 
   procedure get_called_from
-  ( p_called_from in module_name_t
-  , p_depth in integer
+  ( p_depth in integer
+  , p_called_from out nocopy module_name_t
   , p_module_name out nocopy module_name_t
   )
   is
@@ -349,19 +349,18 @@ $end
     <<search_loop>>
     for i_idx in 2 .. l_dynamic_depth -- since we are already in package DBUG, this call is utl_call_stack.subprogram(1)
     loop
-      if utl_call_stack.subprogram(i_idx)(1) = p_called_from -- (1) is unit name
-         and
-         ( l_dynamic_depth - i_idx + 1 ) = p_depth
+      if ( l_dynamic_depth - i_idx + 1 ) = p_depth
       then
         -- the called_from has been found
         l_found := i_idx;
+        p_called_from := utl_call_stack.subprogram(i_idx)(1); -- the unit name
         p_module_name := utl_call_stack.concatenate_subprogram(utl_call_stack.subprogram(i_idx)) || '#' || utl_call_stack.unit_line(i_idx);
         exit search_loop;
       end if;
     end loop search_loop;
     if l_found is null
     then
-      raise_application_error(-20000, 'Could not find called from (' || p_called_from || ') with depth (' || p_depth || ') in the call stack.');
+      raise_application_error(-20000, 'Could not find call stack with this depth (' || p_depth || ').');
     end if;
   end get_called_from;
   
@@ -691,7 +690,6 @@ $end
   procedure enter
   ( p_obj in out nocopy dbug_obj_t
   , p_module in module_name_t
-  , p_called_from in module_name_t
   , p_depth in integer
   )
   is
@@ -718,8 +716,7 @@ $if dbug.c_trace_enter > 0 $then
        trace('extended p_obj.call_tab with 1 to '||p_obj.call_tab.count||' elements');
 $end
 
-       get_called_from(p_called_from, p_depth, l_module);
-       p_obj.call_tab(l_idx).called_from := p_called_from;
+       get_called_from(p_depth, p_obj.call_tab(l_idx).called_from, l_module);
        p_obj.call_tab(l_idx).depth := p_depth;
        p_obj.call_tab(l_idx).module_name := nvl(p_module, l_module);
        if l_idx != 1
@@ -1073,7 +1070,6 @@ $end
 
   procedure leave
   ( p_obj in out nocopy dbug_obj_t
-  , p_called_from in varchar2
   , p_depth in pls_integer
   , p_leave_on_error in boolean
   )
@@ -1102,7 +1098,6 @@ $if dbug.c_trace_leave > 0 $then
 $end
     begin
 $if dbug.c_trace_leave > 0 $then
-      trace('p_called_from: "' || p_called_from || '"');
       trace('p_depth: ' || p_depth);
 $end
       -- adjust for mismatch in enter/leave pairs
@@ -1127,10 +1122,7 @@ $if dbug.c_trace_leave > 0 $then
           trace('p_obj.call_tab(l_idx).depth: ' || p_obj.call_tab(l_idx).depth);
 $end
 
---          if p_obj.call_tab(l_idx).depth = p_depth -- GJP 2023-02-11
-          if p_obj.call_tab(l_idx).called_from = p_called_from -- GJP 2023-04-18
-             and
-             p_obj.call_tab(l_idx).depth = p_depth
+          if p_obj.call_tab(l_idx).depth = p_depth -- GJP 2023-02-11
           then
             pop_call_stack(p_obj, l_idx, p_leave_on_error);
             exit find_same_depth_loop;
@@ -1238,13 +1230,12 @@ $end
 
   procedure leave_on_error
   ( p_obj in out nocopy dbug_obj_t
-  , p_called_from in module_name_t
   , p_depth in integer
   )
   is
   begin
     on_error(p_obj);
-    leave(p_obj => p_obj, p_called_from => p_called_from, p_depth => p_depth, p_leave_on_error => true);
+    leave(p_obj => p_obj, p_depth => p_depth, p_leave_on_error => true);
   end leave_on_error;
 
   procedure get_state
@@ -1581,18 +1572,17 @@ $end
 
   procedure enter
   ( p_module in module_name_t
-  , p_called_from in module_name_t
   , p_depth in integer
   )
   is
   begin
 $if dbug.c_trace > 1 $then
-    trace('>enter(''' || p_module || ''', ''' || p_called_from || ''', ''' || p_depth || ''')');
+    trace('>enter(''' || p_module || ''', ''' || p_depth || ''')');
 $end
 
     get_state;
     begin
-      enter(g_obj, p_module, p_called_from, p_depth);
+      enter(g_obj, p_module, p_depth);
     exception
       when others
       then
@@ -1614,18 +1604,17 @@ $end
   end enter;
 
   procedure leave
-  ( p_called_from in module_name_t
-  , p_depth in integer
+  ( p_depth in integer
   )
   is
   begin
 $if dbug.c_trace > 1 $then
-    trace('>leave(''' || p_called_from || ''', ''' || p_depth || ''')');
+    trace('>leave(''' || p_depth || ''')');
 $end
 
     get_state;
     begin
-      leave(p_obj => g_obj, p_called_from => p_called_from, p_depth => p_depth, p_leave_on_error => false);
+      leave(p_obj => g_obj, p_depth => p_depth, p_leave_on_error => false);
     exception
       when others
       then
@@ -1748,8 +1737,7 @@ $end
   end on_error;
 
   procedure leave_on_error
-  ( p_called_from in module_name_t
-  , p_depth in integer
+  ( p_depth in integer
   )
   is
   begin
@@ -1759,7 +1747,7 @@ $end
 
     get_state;
     begin
-      leave_on_error(g_obj, p_called_from, p_depth);
+      leave_on_error(g_obj, p_depth);
     exception
       when others
       then
