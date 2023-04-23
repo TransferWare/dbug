@@ -13,6 +13,10 @@ begin
     then
       self := dbug_obj_t
               ( 0
+              , null
+              , null
+              , null
+              , null
               , sys.odcivarchar2list()
               , sys.odcinumberlist()
               , 0
@@ -40,7 +44,8 @@ begin
                 )
               , 0
               );
-
+      self.set_session_attributes();
+      
       -- make it a singleton by storing it
       std_object_mgr.set_std_object(l_object_name, self);
   end;

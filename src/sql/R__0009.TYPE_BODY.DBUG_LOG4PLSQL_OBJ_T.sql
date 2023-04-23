@@ -24,6 +24,10 @@ begin
 
       self := dbug_log4plsql_obj_t
               ( 0 -- dirty
+              , null
+              , null
+              , null
+              , null
               , bool2int(l_log_ctx.isdefaultinit)
               , l_log_ctx.llevel
               , l_log_ctx.lsection
@@ -38,6 +42,7 @@ begin
               , l_log_ctx.init_llevel
               , l_log_ctx.dbms_output_wrap
               );
+      self.set_session_attributes();
 
       -- make it a singleton by storing it
       std_object_mgr.set_std_object(l_object_name, self);

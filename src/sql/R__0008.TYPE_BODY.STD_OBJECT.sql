@@ -1,6 +1,44 @@
 CREATE OR REPLACE TYPE BODY "STD_OBJECT" 
 is
 
+member procedure set_session_attributes
+( self in out nocopy std_object
+)
+is
+begin
+  self.db_session := dbms_session.unique_session_id;
+  self.db_username := 'ORCL-' || sys_context('USERENV', 'SESSION_USER');
+  self.app_session := case when sys_context('APEX$SESSION', 'APP_SESSION') is not null then sys_context('APEX$SESSION', 'APP_SESSION') end;
+  self.app_username := case
+                         when sys_context('APEX$SESSION', 'APP_USER') is not null
+                         then 'APEX-' || sys_context('APEX$SESSION', 'APP_USER')
+                         when sys_context('USERENV', 'CLIENT_IDENTIFIER') is not null
+                         then 'CLNT-' || regexp_substr(sys_context('USERENV', 'CLIENT_IDENTIFIER'), '^[^:]*')
+                       end;         
+end set_session_attributes;
+
+final member function get_session_attributes
+( self in std_object
+)
+return varchar2
+is
+begin
+  return self.db_session || '|' || self.db_username || '|' || self.app_session || '|' || self.app_username;
+end get_session_attributes;
+
+final member function belongs_to_same_session
+( p_std_object in std_object
+)
+return integer
+is
+begin
+  return case
+           when self.get_session_attributes() = p_std_object.get_session_attributes()
+           then 1
+           else 0
+         end;
+end belongs_to_same_session;
+
 final
 member procedure store(self in out nocopy std_object)
 is

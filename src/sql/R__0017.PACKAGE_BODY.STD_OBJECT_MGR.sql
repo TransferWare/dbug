@@ -21,12 +21,7 @@ is
   l_obj_type constant std_objects.obj_type%type := p_std_object.get_type();
   l_obj constant std_objects.obj%type := p_std_object.serialize();
 
-  l_user constant std_objects.created_by%type :=
-    case
-      when SYS_CONTEXT('APEX$SESSION', 'APP_USER') is not null
-      then 'APEX:' || SYS_CONTEXT('APEX$SESSION', 'APP_USER')
-      else 'ORACLE:' || SYS_CONTEXT('USERENV', 'SESSION_USER')
-    end;
+  l_user constant std_objects.created_by%type := nvl(p_std_object.app_username, p_std_object.db_username);
 begin
   -- persistent storage
   update  std_objects tab
@@ -60,7 +55,7 @@ $end
     , last_update_date
     , obj_type
     , obj
-    , app_session
+    , db_session
     )
     values
     ( g_group_name
@@ -71,11 +66,7 @@ $end
     , sysdate
     , l_obj_type
     , l_obj
-    , case
-        when SYS_CONTEXT('APEX$SESSION','APP_SESSION') is not null
-        then 'APEX:' || SYS_CONTEXT('APEX$SESSION','APP_SESSION')
-        else 'ORACLE:' || SYS_CONTEXT('USERENV','SESSIONID')
-      end
+    , p_std_object.db_session
     );
   end if;
 
