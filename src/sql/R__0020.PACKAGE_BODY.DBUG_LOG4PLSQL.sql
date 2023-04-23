@@ -326,7 +326,7 @@ $end
     -- with empty LSECTION
     l_obj_exp constant varchar2(32767) := '{"DIRTY":0,"ISDEFAULTINIT":1,"LLEVEL":70,"LSECTION":null,"LTEXT":null,"USE_LOG4J":0,"USE_OUT_TRANS":1,"USE_LOGTABLE":1,"USE_ALERT":0,"USE_TRACE":0,"USE_DBMS_OUTPUT":0,"INIT_LSECTION":null,"INIT_LLEVEL":70,"DBMS_OUTPUT_WRAP":100}';
 
-    l_json_exp constant json_object_t := json_object_t(l_obj_exp);
+    l_json_exp json_object_t := json_object_t(l_obj_exp);
 
     procedure get_object_names
     is
@@ -367,6 +367,17 @@ $end
     ut.expect(l_object_name_tab.count, 'count after store').to_equal(l_count + 1);
     l_json_act := json_object_t(l_obj_act);
     l_json_act.put_null('LSECTION');
+    
+    l_json_act.put_null('DB_SESSION');
+    l_json_act.put_null('DB_USERNAME');
+    l_json_act.put_null('APP_SESSION');
+    l_json_act.put_null('APP_USERNAME');
+    
+    l_json_exp.put_null('DB_SESSION');
+    l_json_exp.put_null('DB_USERNAME');
+    l_json_exp.put_null('APP_SESSION');
+    l_json_exp.put_null('APP_USERNAME');
+
     ut.expect(l_json_act, 'compare').to_equal(l_json_exp);
 
     -- after store
