@@ -79,7 +79,7 @@ $if std_object_mgr.c_debugging $then
     )
   );
 $end
-  std_object_mgr.del_std_object(name());
+  std_object_mgr.del_std_object(null, name());
 end remove;
 
 static

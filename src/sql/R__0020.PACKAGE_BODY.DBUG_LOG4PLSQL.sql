@@ -290,10 +290,6 @@ $if dbug_log4plsql.c_testing $then
   is
     pragma autonomous_transaction;
   begin
-    std_object_mgr.set_group_name(null);
-    std_object_mgr.delete_std_objects
-    ( p_group_name => 'TEST%' 
-    );
     -- ORA-20000: Can not change to group TEST when there are local objects (first is DBUG)
     std_object_mgr.delete_std_objects( p_group_name => null );
     commit;
@@ -306,7 +302,6 @@ $end
   is
     pragma autonomous_transaction;
   begin
-    std_object_mgr.set_group_name(null);
     std_object_mgr.delete_std_objects
     ( p_group_name => 'TEST%'
     );
@@ -336,7 +331,7 @@ $end
     procedure get_object_names
     is
     begin
-      std_object_mgr.get_object_names(l_object_name_tab);
+      std_object_mgr.get_object_names(null, l_object_name_tab);
 $if std_object_mgr.c_debugging $then
       if l_object_name_tab.count > 0
       then
@@ -348,95 +343,62 @@ $if std_object_mgr.c_debugging $then
 $end
     end get_object_names;
   begin
-    for i_try in 1..2
-    loop
-      std_object_mgr.set_group_name(case i_try when 1 then 'TEST' else null end);
-
-      -- before store
+    -- before store
 $if std_object_mgr.c_debugging $then
-      dbms_output.put_line('count before store ' || i_try);
+    dbms_output.put_line('count before store ' || i_try);
 $end
-      get_object_names;
-      l_count := l_object_name_tab.count;
+    get_object_names;
+    l_count := l_object_name_tab.count;
 
-      l_dbug_log4plsql_obj := new dbug_log4plsql_obj_t(); -- should store
+    l_dbug_log4plsql_obj := new dbug_log4plsql_obj_t(); -- should store
 
-      case i_try
-        when 1
-        then
-          select  t.obj
-          into    l_obj_act
-          from    std_objects t
-          where   group_name = 'TEST'
-          and     object_name = 'DBUG_LOG4PLSQL';
-
-        when 2
-        then
-          std_object_mgr.get_std_object
-          ( p_object_name => 'DBUG_LOG4PLSQL'
-          , p_std_object => l_std_object
-          );
-          select  l_std_object.serialize()
-          into    l_obj_act
-          from    dual;
-
-      end case;
+    std_object_mgr.get_std_object
+    ( p_object_name => 'DBUG_LOG4PLSQL'
+    , p_std_object => l_std_object
+    );
+    select  l_std_object.serialize()
+    into    l_obj_act
+    from    dual;
 
 $if std_object_mgr.c_debugging $then
-      dbms_output.put_line('count after store ' || i_try);
+    dbms_output.put_line('count after store');
 $end
-      get_object_names;
-      ut.expect(l_object_name_tab.count, 'count after store ' || i_try).to_equal(l_count + 1);
-      l_json_act := json_object_t(l_obj_act);
-      l_json_act.put_null('LSECTION');
-      ut.expect(l_json_act, 'compare ' || i_try).to_equal(l_json_exp);
+    get_object_names;
+    ut.expect(l_object_name_tab.count, 'count after store').to_equal(l_count + 1);
+    l_json_act := json_object_t(l_obj_act);
+    l_json_act.put_null('LSECTION');
+    ut.expect(l_json_act, 'compare').to_equal(l_json_exp);
 
-      -- after store
-      l_count := l_object_name_tab.count;
+    -- after store
+    l_count := l_object_name_tab.count;
 
-      l_dbug_log4plsql_obj.remove();
+    l_dbug_log4plsql_obj.remove();
 
 $if std_object_mgr.c_debugging $then
-      dbms_output.put_line('test removed');
+    dbms_output.put_line('test removed');
 $end
 
-      begin
-        case i_try
-          when 1
-          then
-            select  t.obj
-            into    l_obj_act
-            from    std_objects t
-            where   group_name = 'TEST'
-            and     object_name = 'DBUG_LOG4PLSQL';
+    begin
+      std_object_mgr.get_std_object
+      ( p_object_name => 'DBUG_LOG4PLSQL'
+      , p_std_object => l_std_object
+      );
 
-          when 2
-          then
-            std_object_mgr.get_std_object
-            ( p_object_name => 'DBUG_LOG4PLSQL'
-            , p_std_object => l_std_object
-            );
-
-        end case;
-        raise program_error;
-      exception
-        when others
-        then
-          ut.expect(sqlcode, 'remove ' || i_try).to_equal(100);
-      end;
+      raise program_error;
+    exception
+      when others
+      then
+        ut.expect(sqlcode, 'remove').to_equal(100);
+    end;
 
 $if std_object_mgr.c_debugging $then
-      dbms_output.put_line('count after remove ' || i_try);
+    dbms_output.put_line('count after remove');
 $end
-      get_object_names;
+    get_object_names;
 
-      ut.expect(l_object_name_tab.count, 'count after remove ' || i_try).to_equal(l_count - 1);
-    end loop;
+    ut.expect(l_object_name_tab.count, 'count after remove').to_equal(l_count - 1);
 
     commit;
-  exception
-    when std_object_mgr.e_unimplemented_feature
-    then commit;
   end ut_store_remove;
 
   procedure ut_dbug_log4plsql
@@ -485,8 +447,6 @@ $end
       );
     end;
   begin
-    std_object_mgr.set_group_name(null);
-
     select nvl(max(id), 0) into l_id from tlog;
 
     dbug.activate('LOG4PLSQL', true);

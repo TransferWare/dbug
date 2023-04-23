@@ -7,8 +7,6 @@ g_escape constant varchar2(1) := chr(92); -- escape character
 
 g_std_object_tab std_object_tabtype;
 
-g_group_name std_objects.group_name%type := null;
-
 -- PRIVATE
 
 procedure set_std_object_at
@@ -28,7 +26,7 @@ begin
   set     tab.obj = l_obj
   ,       tab.last_updated_by = l_user
   ,       tab.last_update_date = sysdate
-  where   tab.group_name = g_group_name
+  where   tab.group_name = p_std_object.get_session_attributes() -- g_group_name
   and     tab.object_name = p_object_name;
 
 $if std_object_mgr.c_debugging $then
@@ -58,7 +56,7 @@ $end
     , db_session
     )
     values
-    ( g_group_name
+    ( p_std_object.get_session_attributes() -- g_group_name
     , p_object_name
     , l_user
     , sysdate
@@ -102,51 +100,6 @@ $end
 end delete_std_objects_at;
 
 -- PUBLIC
-procedure set_group_name
-( p_group_name in std_objects.group_name%type
-)
-is
-begin
-  case
-    when g_group_name is null and p_group_name is not null and g_std_object_tab.count > 0
-    then
-      -- from local storage to external not allowed when there are local objects
-      raise_application_error
-      ( c_change_group_local_storage
-      , utl_lms.format_message
-        ( 'Can not change to non-empty group %s when there are local objects (first is %s)'
-        , p_group_name
-        , g_std_object_tab(g_std_object_tab.first).name()
-        )
-      );
-    when g_group_name is not null and p_group_name is null and g_std_object_tab.count > 0
-    then
-      -- from external storage to local not allowed when there are local objects
-      raise_application_error
-      ( c_change_group_local_storage
-      , utl_lms.format_message
-        ( 'Can not change from non-empty group %s when there are local objects (first is %s)'
-        , g_group_name
-        , g_std_object_tab(g_std_object_tab.first).name()
-        )
-      );
-    -- GJP 2023-04-02 Disable setting non-empty group temporarily
-    when p_group_name is not null
-    then
-      raise e_unimplemented_feature;      
-    else
-      null;
-  end case;
-  g_group_name := p_group_name;
-end set_group_name;
-
-function get_group_name
-return std_objects.group_name%type
-is
-begin
-  return g_group_name;
-end get_group_name;
-
 procedure get_std_object
 ( p_object_name in std_objects.object_name%type
 , p_std_object out nocopy std_object
@@ -155,19 +108,19 @@ is
   l_obj_type std_objects.obj_type%type;
   l_obj      std_objects.obj%type;
 begin
-  if g_group_name is not null
+  p_std_object := g_std_object_tab(p_object_name);
+  if p_std_object.belongs_to_this_session() = 0
   then
+    -- get from table (i.e. persistent storage)
     select  tab.obj_type
     ,       tab.obj
     into    l_obj_type
     ,       l_obj
     from    std_objects tab
-    where   tab.group_name = g_group_name
+    where   tab.group_name = p_std_object.get_session_attributes()
     and     tab.object_name = p_object_name;
 
     p_std_object := std_object.deserialize(l_obj_type, l_obj);
-  else
-    p_std_object := g_std_object_tab(p_object_name);
   end if;
 
   p_std_object.dirty := 0;
@@ -175,11 +128,10 @@ begin
 $if std_object_mgr.c_debugging $then
   dbms_output.put_line
   ( utl_lms.format_message
-    ( '[%s.%s] p_object_name: %s; g_group_name: %s; p_std_object.dirty: %s'
+    ( '[%s.%s] p_object_name: %s; p_std_object.dirty: %s'
     , $$PLSQL_UNIT
     , 'GET_STD_OBJECT'
     , p_object_name
-    , g_group_name
     , to_char(p_std_object.dirty)
     )
   );
@@ -235,11 +187,10 @@ begin
 $if std_object_mgr.c_debugging $then
   dbms_output.put_line
   ( utl_lms.format_message
-    ( '[%s.%s] p_object_name: %s; g_group_name: %s; l_store: %s'
+    ( '[%s.%s] p_object_name: %s; l_store: %s'
     , $$PLSQL_UNIT
     , 'SET_STD_OBJECT'
     , p_object_name
-    , g_group_name
     , case l_store when true then 'TRUE' when false then 'FALSE' else 'NULL' end
     )
   );
@@ -248,12 +199,6 @@ $end
   if not(l_store)
   then
     null;
-  elsif g_group_name is not null
-  then
-    set_std_object_at
-    ( p_object_name => p_object_name
-    , p_std_object => p_std_object
-    );
   else
     -- package state
     g_std_object_tab(p_object_name) := p_std_object;
@@ -261,40 +206,43 @@ $end
 end set_std_object;
 
 procedure del_std_object
-( p_object_name in std_objects.object_name%type
+( p_group_name in std_objects.group_name%type
+, p_object_name in std_objects.object_name%type
 )
 is
 begin
 $if std_object_mgr.c_debugging $then
   dbms_output.put_line
   ( utl_lms.format_message
-    ( '[%s.%s] p_object_name: %s'
+    ( '[%s.%s] p_group_name: %s; p_object_name: %s'
     , $$PLSQL_UNIT
     , 'DEL_STD_OBJECT'
+    , p_group_name
     , p_object_name
     )
   );
 $end
 
   delete_std_objects
-  ( p_group_name => replace(g_group_name, '_', g_escape || '_')
+  ( p_group_name => replace(p_group_name, '_', g_escape || '_')
   , p_object_name => replace(p_object_name, '_', g_escape || '_')
   );
 end del_std_object;
 
 procedure get_object_names
-( p_object_name_tab out nocopy sys.odcivarchar2list
+( p_group_name in std_objects.group_name%type
+, p_object_name_tab out nocopy sys.odcivarchar2list
 )
 is
   l_object_name std_objects.object_name%type;
 begin
-  if g_group_name is not null
+  if p_group_name is not null
   then
     select  tab.object_name
     bulk collect
     into    p_object_name_tab
     from    std_objects tab
-    where   tab.group_name = g_group_name;
+    where   tab.group_name = p_group_name;
   else
     p_object_name_tab := sys.odcivarchar2list();
     l_object_name := g_std_object_tab.first;
@@ -386,32 +334,6 @@ begin
   commit;
 end;
 
-procedure ut_set_group_name
-is
-begin
-  set_group_name(null);
-  ut.expect(g_group_name).to_be_null();
-  set_group_name('TEST1');
-  -- GJP 2023-04-02 Can not set a non-empty group name
-  raise program_error;
-  ut.expect(g_group_name).to_equal('TEST1');
-  set_group_name('TEST2');
-  ut.expect(g_group_name).to_equal('TEST2');
-end;
-
-procedure ut_get_group_name
-is
-begin
-  set_group_name(null);
-  ut.expect(get_group_name()).to_be_null();
-  set_group_name('TEST1');
-  -- GJP 2023-04-02 Can not set a non-empty group name
-  raise program_error;
-  ut.expect(get_group_name()).to_equal('TEST1');
-  set_group_name('TEST2');
-  ut.expect(get_group_name()).to_equal('TEST2');
-end;
-
 procedure ut_store_remove
 is
   pragma autonomous_transaction;
@@ -421,57 +343,40 @@ is
   l_dbug_obj_act dbug_obj_t;
   l_count pls_integer;
 begin
-  for i_try in 1..2
-  loop
-    set_group_name(case i_try when 1 then null else 'TEST' end);
+  ut.expect(g_std_object_tab.count, 'try 1').to_equal(0);
 
-    ut.expect(g_std_object_tab.count, 'try '||i_try).to_equal(0);
+  begin
+    get_std_object('DBUG', l_std_object);
+    raise program_error;
+  exception
+    when no_data_found
+    then
+      ut.expect(sqlcode, 'try 1').to_equal(sqlcode); -- no_data_found
+  end;
 
-    begin
-      get_std_object('DBUG', l_std_object);
-      raise program_error;
-    exception
-      when no_data_found
-      then
-        ut.expect(sqlcode, 'try '||i_try).to_equal(sqlcode); -- no_data_found
-    end;
+  l_dbug_obj_exp := dbug_obj_t();
+  ut.expect(l_dbug_obj_exp.dirty, 'try 1').to_equal(0);
 
-    l_dbug_obj_exp := dbug_obj_t();
-    ut.expect(l_dbug_obj_exp.dirty, 'try '||i_try).to_equal(0);
+  set_std_object('DBUG', l_dbug_obj_exp);
+  get_std_object('DBUG', l_dbug_obj_act);
 
-    set_std_object('DBUG', l_dbug_obj_exp);
-    get_std_object('DBUG', l_dbug_obj_act);
+  ut.expect(g_std_object_tab.count, 'try 1').to_equal(1);
 
-    ut.expect(g_std_object_tab.count, 'try '||i_try).to_equal(case when g_group_name is null then 1 else 0 end);
+  ut.expect(l_dbug_obj_act.dirty, 'try 1').to_equal(0);
 
-    select  count(*)
-    into    l_count
-    from    std_objects
-    where   group_name = g_group_name;
+  dbms_output.put_line('act: ' || l_dbug_obj_act.serialize());
+  dbms_output.put_line('exp: ' || l_dbug_obj_exp.serialize());
 
-    ut.expect(l_count, 'try '||i_try).to_equal(case when g_group_name is not null then 1 else 0 end);
+  ut.expect(json_object_t(l_dbug_obj_act.serialize()), 'try 1').to_equal(json_object_t(l_dbug_obj_exp.serialize()));
 
-    ut.expect(l_dbug_obj_act.dirty, 'try '||i_try).to_equal(0);
+  l_dbug_obj_act.dirty := 1;
+  l_dbug_obj_exp.dirty := 0;
 
-    dbms_output.put_line('act: ' || l_dbug_obj_act.serialize());
-    dbms_output.put_line('exp: ' || l_dbug_obj_exp.serialize());
+  ut.expect(l_dbug_obj_act = l_dbug_obj_exp, 'compare ignores dummy try 1').to_equal(true);
 
-    ut.expect(json_object_t(l_dbug_obj_act.serialize()), 'try '||i_try).to_equal(json_object_t(l_dbug_obj_exp.serialize()));
-
-    l_dbug_obj_act.dirty := 1;
-    l_dbug_obj_exp.dirty := 0;
-
-    ut.expect(l_dbug_obj_act = l_dbug_obj_exp, 'compare ignores dummy '||i_try).to_equal(true);
-
-    del_std_object('DBUG');
-  end loop;
+  del_std_object(null, 'DBUG');
 
   commit;
-exception
-  when e_unimplemented_feature
-  then
-    commit;
-    -- GJP 2023-04-02 Can not set a non-empty group name
 end;
 
 $else -- $if std_object_mgr.c_testing $then
@@ -483,18 +388,6 @@ begin
 end;
 
 procedure ut_teardown
-is
-begin
-  raise program_error;
-end;
-
-procedure ut_set_group_name
-is
-begin
-  raise program_error;
-end;
-
-procedure ut_get_group_name
 is
 begin
   raise program_error;
