@@ -709,6 +709,11 @@ $if ut_dbug.c_testing $then
     l_json_act.put_null('DB_USERNAME');
     l_json_act.put_null('APP_SESSION');
     l_json_act.put_null('APP_USERNAME');
+    
+    l_json_exp.put_null('DB_SESSION');
+    l_json_exp.put_null('DB_USERNAME');
+    l_json_exp.put_null('APP_SESSION');
+    l_json_exp.put_null('APP_USERNAME');
 
     ut.expect(l_json_act).to_equal(l_json_exp);
     commit;
