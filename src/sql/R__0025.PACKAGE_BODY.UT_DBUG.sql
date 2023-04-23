@@ -468,9 +468,6 @@ $if ut_dbug.c_testing $then
       std_object_mgr.delete_std_objects(null);    
       std_object_mgr.set_group_name('leave.sql');
       std_object_mgr.delete_std_objects;
-    exception
-      when std_object_mgr.e_unimplemented_feature
-      then null;
     end;
 
     init(p_dbug_method, p_plsdbug_options, l_tlog_id_max);
@@ -725,9 +722,6 @@ $if ut_dbug.c_testing $then
       ut.expect(l_obj_act).to_equal(l_obj_exp);
     end loop;
     commit;
-  exception
-    when std_object_mgr.e_unimplemented_feature
-    then commit;
   end ut_dbug;
 
   procedure ut_leave_on_error
