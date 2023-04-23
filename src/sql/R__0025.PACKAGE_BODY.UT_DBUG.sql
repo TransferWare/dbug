@@ -690,7 +690,9 @@ $if ut_dbug.c_testing $then
     l_std_object std_object;
     l_dbug_obj dbug_obj_t;
     l_obj_act varchar2(32767);
+    l_json_act json_object_t;
     l_obj_exp constant varchar2(32767) := '{"DIRTY":0,"INDENT_LEVEL":0,"DBUG_LEVEL":2,"BREAK_POINT_LEVEL_STR_TAB":["debug","error","fatal","info","input","output","trace","warning"],"BREAK_POINT_LEVEL_NUM_TAB":[2,5,6,3,2,2,2,4],"IGNORE_BUFFER_OVERFLOW":0}';
+    l_json_exp json_object_t := json_object_t.parse(l_obj_exp);
   begin
     l_dbug_obj := dbug_obj_t();
     l_dbug_obj.store();
@@ -702,7 +704,13 @@ $if ut_dbug.c_testing $then
     into    l_obj_act
     from    dual;
 
-    ut.expect(l_obj_act).to_equal(l_obj_exp);
+    l_json_act := json_object_t.parse(l_obj_act);
+    l_json_act.put_null('DB_SESSION');
+    l_json_act.put_null('DB_USERNAME');
+    l_json_act.put_null('APP_SESSION');
+    l_json_act.put_null('APP_USERNAME');
+
+    ut.expect(l_json_act).to_equal(l_json_exp);
     commit;
   end ut_dbug;
 
