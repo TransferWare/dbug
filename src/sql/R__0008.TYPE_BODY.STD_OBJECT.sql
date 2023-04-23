@@ -39,6 +39,15 @@ begin
          end;
 end belongs_to_same_session;
 
+final member function belongs_to_this_session
+return integer
+is
+  l_std_object std_object := treat(self as std_object);
+begin
+  l_std_object.set_session_attributes();
+  return self.belongs_to_same_session(l_std_object);
+end belongs_to_this_session;
+
 final
 member procedure store(self in out nocopy std_object)
 is
@@ -118,6 +127,10 @@ is
 begin
   -- every sub type must first start with (self as <super type>).serialize(p_json_object)
   p_json_object.put('DIRTY', dirty);
+  p_json_object.put('DB_SESSION', db_session);
+  p_json_object.put('DB_USERNAME', db_username);
+  p_json_object.put('APP_SESSION', app_session);
+  p_json_object.put('APP_USERNAME', app_username);
 end serialize;
 
 member function repr(self in std_object)
