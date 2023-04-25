@@ -463,11 +463,7 @@ $if ut_dbug.c_testing $then
     l_numlines integer;
     l_tlog_id_max tlog.id%type;
   begin
-    begin
-      -- Try to use a persistent group    
-      std_object_mgr.delete_std_objects(null);    
-      std_object_mgr.delete_std_objects;
-    end;
+    -- std_object_mgr.delete_std_objects;
 
     init(p_dbug_method, p_plsdbug_options, l_tlog_id_max);
 
@@ -508,7 +504,7 @@ $if ut_dbug.c_testing $then
           ut.expect(sqlcode, 'test case: ' || i_testcase).to_equal(0);
       end;
     end loop;
-    std_object_mgr.delete_std_objects;
+    -- std_object_mgr.delete_std_objects;
 
     done(p_dbug_method, l_lines_exp, l_tlog_id_max, l_lines_act, l_numlines);
   end ut_leave;
@@ -663,24 +659,14 @@ $if ut_dbug.c_testing $then
 
   procedure ut_setup
   is
-    pragma autonomous_transaction;
   begin
     execute immediate q'[ALTER SESSION SET NLS_LANGUAGE = 'AMERICAN']';
-
-    std_object_mgr.delete_std_objects
-    ( p_group_name => 'TEST%'
-    );
-    commit;
   end ut_setup;
 
   procedure ut_teardown
   is
-    pragma autonomous_transaction;
   begin
-    std_object_mgr.delete_std_objects
-    ( p_group_name => 'TEST%'
-    );
-    commit;
+    std_object_mgr.delete_std_objects;
   end ut_teardown;
 
   procedure ut_dbug
@@ -705,18 +691,8 @@ $if ut_dbug.c_testing $then
     from    dual;
 
     l_json_act := json_object_t.parse(l_obj_act);
-    l_json_act.put_null('DB_SESSION');
-    l_json_act.put_null('DB_USERNAME');
-    l_json_act.put_null('APP_SESSION');
-    l_json_act.put_null('APP_USERNAME');
-    
-    l_json_exp.put_null('DB_SESSION');
-    l_json_exp.put_null('DB_USERNAME');
-    l_json_exp.put_null('APP_SESSION');
-    l_json_exp.put_null('APP_USERNAME');
 
     ut.expect(l_json_act).to_equal(l_json_exp);
-    commit;
   end ut_dbug;
 
   procedure ut_leave_on_error

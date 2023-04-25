@@ -33,7 +33,6 @@ procedure ut_run;
 
 --%suitepath(DBUG)
 --%suite
---%rollback(manual)
 
 --%beforeeach
 procedure ut_setup;

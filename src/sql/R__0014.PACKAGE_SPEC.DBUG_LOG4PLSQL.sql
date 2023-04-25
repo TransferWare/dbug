@@ -53,7 +53,6 @@ CREATE OR REPLACE PACKAGE "DBUG_LOG4PLSQL" AUTHID DEFINER IS
 
   --%suitepath(DBUG)
   --%suite
-  --%rollback(manual)
 
   --%beforeeach
   procedure ut_setup;

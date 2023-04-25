@@ -288,11 +288,8 @@ $if dbug_log4plsql.c_testing $then
 
   procedure ut_setup
   is
-    pragma autonomous_transaction;
   begin
-    -- ORA-20000: Can not change to group TEST when there are local objects (first is DBUG)
-    std_object_mgr.delete_std_objects( p_group_name => null );
-    commit;
+    std_object_mgr.delete_std_objects;
 $if std_object_mgr.c_debugging $then
     dbms_output.put_line('ut_setup finished');
 $end
@@ -300,12 +297,8 @@ $end
 
   procedure ut_teardown
   is
-    pragma autonomous_transaction;
   begin
-    std_object_mgr.delete_std_objects
-    ( p_group_name => 'TEST%'
-    );
-    commit;
+    std_object_mgr.delete_std_objects;
 $if std_object_mgr.c_debugging $then
     dbms_output.put_line('ut_teardown finished');
 $end
@@ -313,8 +306,6 @@ $end
 
   procedure ut_store_remove
   is
-    pragma autonomous_transaction;
-
     l_std_object std_object;
     l_dbug_log4plsql_obj dbug_log4plsql_obj_t;
     l_object_name_tab sys.odcivarchar2list;
@@ -331,7 +322,7 @@ $end
     procedure get_object_names
     is
     begin
-      std_object_mgr.get_object_names(null, l_object_name_tab);
+      std_object_mgr.get_object_names(l_object_name_tab);
 $if std_object_mgr.c_debugging $then
       if l_object_name_tab.count > 0
       then
@@ -345,7 +336,7 @@ $end
   begin
     -- before store
 $if std_object_mgr.c_debugging $then
-    dbms_output.put_line('count before store ' || i_try);
+    dbms_output.put_line('count before store');
 $end
     get_object_names;
     l_count := l_object_name_tab.count;
@@ -368,16 +359,6 @@ $end
     l_json_act := json_object_t(l_obj_act);
     l_json_act.put_null('LSECTION');
     
-    l_json_act.put_null('DB_SESSION');
-    l_json_act.put_null('DB_USERNAME');
-    l_json_act.put_null('APP_SESSION');
-    l_json_act.put_null('APP_USERNAME');
-    
-    l_json_exp.put_null('DB_SESSION');
-    l_json_exp.put_null('DB_USERNAME');
-    l_json_exp.put_null('APP_SESSION');
-    l_json_exp.put_null('APP_USERNAME');
-
     ut.expect(l_json_act, 'compare').to_equal(l_json_exp);
 
     -- after store
@@ -408,14 +389,10 @@ $end
     get_object_names;
 
     ut.expect(l_object_name_tab.count, 'count after remove').to_equal(l_count - 1);
-
-    commit;
   end ut_store_remove;
 
   procedure ut_dbug_log4plsql
   is
-    pragma autonomous_transaction;
-
     l_id tlog.id%type;
     l_act sys_refcursor;
     l_exp sys_refcursor;
@@ -452,10 +429,7 @@ $end
       dbug.activate('LOG4PLSQL', false);
       dbug.done;
       -- clean local storage up
-      std_object_mgr.delete_std_objects
-      ( p_group_name => null
-      , p_object_name => '%'
-      );
+      std_object_mgr.delete_std_objects;
     end;
   begin
     select nvl(max(id), 0) into l_id from tlog;
@@ -483,14 +457,10 @@ $end
     ut.expect(l_act, 'tlog').to_equal(l_exp);
 
     cleanup;
-
-    commit;
   exception
     when others
     then
-      rollback;
       cleanup;
-      commit;
       raise;
   end ut_dbug_log4plsql;
 
