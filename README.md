@@ -95,6 +95,7 @@ Issue this to (re-)generate the documentation:
 
 ```
 $ make html
+$ npm run build:docs
 ```
 
 In the build directory you will find these files now:
@@ -104,6 +105,9 @@ In the build directory you will find these files now:
 - `util/dbug_trigger.html`, documentation about the utility to add debugging to triggers
 - `util/dbug_pls.html`, documentation about the utility to add debugging to PL/SQL
 - `util/dbug_trigger_show.html`, documentation about the utility to show the state of data using `DBUG` output of `DBUG_TRIGGER` enabled triggers.
+
+In the doc directory you will find:
+- [Package "STD_OBJECT_MGR"](doc/R__0007.PACKAGE_SPEC.STD_OBJECT_MGR.md)
 
 You can also have a look at [the DBUG GitHub Pages](https://TransferWare.github.io/dbug/).
 

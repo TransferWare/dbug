@@ -1,0 +1,10 @@
+{
+    "name": "DBUG - A debugging library",
+    "scripts": {
+        "build:docs": "npx ploc --in 'src/sql/*.PACKAGE_SPEC.*STD_OBJECT_MGR.sql' --out doc/{file}.md"
+    },
+    "dependencies": {
+        "chokidar-cli": "^3.0.0",
+        "ploc": "^0.6.3"
+    }
+}

@@ -86,20 +86,11 @@ return break_point_level_t;
 
 procedure enter
 ( p_module in module_name_t default null
+, p_depth in integer default utl_call_stack.dynamic_depth
 );
 
--- To be used when dbug.enter / dbug.leave pairs are not in the call / procedure.
--- For example: dbug_trigger.enter() and dbug_trigger.leave().
-procedure enter
-( p_module in module_name_t default null
-, p_called_from out nocopy module_name_t
-);
-
-procedure leave;
-
--- See enter(p_module in module_name_t, p_called_from out module_name_t) above
 procedure leave
-( p_called_from in module_name_t
+( p_depth in integer default utl_call_stack.dynamic_depth
 );
 
 procedure on_error;
@@ -116,7 +107,9 @@ procedure on_error
 , p_output in dbug.line_tab_t
 );
 
-procedure leave_on_error;
+procedure leave_on_error
+( p_depth in integer default utl_call_stack.dynamic_depth
+);
 
 function cast_to_varchar2
 ( p_value in boolean

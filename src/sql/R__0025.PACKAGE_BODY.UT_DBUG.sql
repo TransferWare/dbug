@@ -117,6 +117,7 @@ $if ut_dbug.c_testing $then
   procedure init
   ( p_dbug_method in dbug.method_t
   , p_plsdbug_options in varchar2
+  , p_tlog_id_max out nocopy tlog.id%type
   )
   is
   begin
@@ -125,6 +126,9 @@ $if ut_dbug.c_testing $then
       then
         dbug.activate(p_dbug_method);
         dbug_plsdbug.init(p_plsdbug_options);
+
+        -- execute immediate 'truncate table tlog';
+        dbug.activate('LOG4PLSQL');
         
       when 'DBMS_OUTPUT'
       then
@@ -134,7 +138,11 @@ $if ut_dbug.c_testing $then
 
       when 'LOG4PLSQL'
       then
-        execute immediate 'truncate table tlog';
+        -- execute immediate 'truncate table tlog';
+        select  nvl(max(id), 0)
+        into    p_tlog_id_max
+        from    tlog;
+        
         dbug.activate(p_dbug_method);
 
       else
@@ -145,6 +153,7 @@ $if ut_dbug.c_testing $then
   procedure done
   ( p_dbug_method in dbug.method_t
   , p_lines_exp in sys.odcivarchar2list
+  , p_tlog_id_max in tlog.id%type
   , p_lines_act in out nocopy dbms_output.chararr
   , p_numlines in out nocopy integer
   )
@@ -152,6 +161,7 @@ $if ut_dbug.c_testing $then
     l_idx_act pls_integer;
     l_idx_exp pls_integer;
   begin
+    dbug.done;
     case upper(p_dbug_method)
       when 'PLSDBUG'
       then
@@ -180,6 +190,7 @@ $if ut_dbug.c_testing $then
         bulk collect
         into    p_lines_act
         from    tlog
+        where   id > p_tlog_id_max
         order by
                 id;
         p_numlines := p_lines_act.count;        
@@ -238,33 +249,33 @@ $if ut_dbug.c_testing $then
       , '|   |   |   |   |   |   |   >f1'
       , '|   |   |   |   |   |   |   |   >f1'
       , '|   |   |   |   |   |   |   |   |   error: sqlerrm: ORA-06502: PL/SQL: numeric or value error'
-      , '|   |   |   |   |   |   |   |   |   error: dbms_utility.format_error_backtrace: ORA-06512: at "EPCAPP.UT_DBUG", line 36'
+      , '|   |   |   |   |   |   |   |   |   error: dbms_utility.format_error_backtrace: ORA-06512: at "' || $$PLSQL_UNIT_OWNER || '.UT_DBUG", line 36'
       , '|   |   |   |   |   |   |   |   <f1'
       , '|   |   |   |   |   |   |   |   error: sqlerrm: ORA-06502: PL/SQL: numeric or value error'
-      , '|   |   |   |   |   |   |   |   error: dbms_utility.format_error_backtrace (1): ORA-06512: at "EPCAPP.UT_DBUG", line 55'
-      , '|   |   |   |   |   |   |   |   error: dbms_utility.format_error_backtrace (2): ORA-06512: at "EPCAPP.UT_DBUG", line 36'
+      , '|   |   |   |   |   |   |   |   error: dbms_utility.format_error_backtrace (1): ORA-06512: at "' || $$PLSQL_UNIT_OWNER || '.UT_DBUG", line 55'
+      , '|   |   |   |   |   |   |   |   error: dbms_utility.format_error_backtrace (2): ORA-06512: at "' || $$PLSQL_UNIT_OWNER || '.UT_DBUG", line 36'
       , '|   |   |   |   |   |   |   <f1'
       , '|   |   |   |   |   |   |   error: sqlerrm: ORA-06502: PL/SQL: numeric or value error'
-      , '|   |   |   |   |   |   |   error: dbms_utility.format_error_backtrace (1): ORA-06512: at "EPCAPP.UT_DBUG", line 55'
-      , '|   |   |   |   |   |   |   error: dbms_utility.format_error_backtrace (2): ORA-06512: at "EPCAPP.UT_DBUG", line 36'
+      , '|   |   |   |   |   |   |   error: dbms_utility.format_error_backtrace (1): ORA-06512: at "' || $$PLSQL_UNIT_OWNER || '.UT_DBUG", line 55'
+      , '|   |   |   |   |   |   |   error: dbms_utility.format_error_backtrace (2): ORA-06512: at "' || $$PLSQL_UNIT_OWNER || '.UT_DBUG", line 36'
       , '|   |   |   |   |   |   <f1'
       , '|   |   |   |   |   |   error: sqlerrm: ORA-06502: PL/SQL: numeric or value error'
-      , '|   |   |   |   |   |   error: dbms_utility.format_error_backtrace (1): ORA-06512: at "EPCAPP.UT_DBUG", line 55'
-      , '|   |   |   |   |   |   error: dbms_utility.format_error_backtrace (2): ORA-06512: at "EPCAPP.UT_DBUG", line 36'
+      , '|   |   |   |   |   |   error: dbms_utility.format_error_backtrace (1): ORA-06512: at "' || $$PLSQL_UNIT_OWNER || '.UT_DBUG", line 55'
+      , '|   |   |   |   |   |   error: dbms_utility.format_error_backtrace (2): ORA-06512: at "' || $$PLSQL_UNIT_OWNER || '.UT_DBUG", line 36'
       , '|   |   |   |   |   <f1'
       , '|   |   |   |   |   error: sqlerrm: ORA-06502: PL/SQL: numeric or value error'
-      , '|   |   |   |   |   error: dbms_utility.format_error_backtrace (1): ORA-06512: at "EPCAPP.UT_DBUG", line 55'
-      , '|   |   |   |   |   error: dbms_utility.format_error_backtrace (2): ORA-06512: at "EPCAPP.UT_DBUG", line 36'
+      , '|   |   |   |   |   error: dbms_utility.format_error_backtrace (1): ORA-06512: at "' || $$PLSQL_UNIT_OWNER || '.UT_DBUG", line 55'
+      , '|   |   |   |   |   error: dbms_utility.format_error_backtrace (2): ORA-06512: at "' || $$PLSQL_UNIT_OWNER || '.UT_DBUG", line 36'
       , '|   |   |   |   <f1'
       , '|   |   |   |   error: sqlerrm: ORA-06502: PL/SQL: numeric or value error'
-      , '|   |   |   |   error: dbms_utility.format_error_backtrace (1): ORA-06512: at "EPCAPP.UT_DBUG", line 55'
-      , '|   |   |   |   error: dbms_utility.format_error_backtrace (2): ORA-06512: at "EPCAPP.UT_DBUG", line 36'
+      , '|   |   |   |   error: dbms_utility.format_error_backtrace (1): ORA-06512: at "' || $$PLSQL_UNIT_OWNER || '.UT_DBUG", line 55'
+      , '|   |   |   |   error: dbms_utility.format_error_backtrace (2): ORA-06512: at "' || $$PLSQL_UNIT_OWNER || '.UT_DBUG", line 36'
       , '|   |   |   <f1'
       , '|   |   |   error: sqlerrm: ORA-06502: PL/SQL: numeric or value error'
-      , '|   |   |   error: dbms_utility.format_error_backtrace (1): ORA-06512: at "EPCAPP.UT_DBUG", line 55'
-      , '|   |   |   error: dbms_utility.format_error_backtrace (2): ORA-06512: at "EPCAPP.UT_DBUG", line 36'
-      , '|   |   |   error: dbms_utility.format_error_backtrace (3): ORA-06512: at "EPCAPP.UT_DBUG", line 62'
-      , '|   |   |   error: dbms_utility.format_error_backtrace (4): ORA-06512: at "EPCAPP.UT_DBUG", line 70'
+      , '|   |   |   error: dbms_utility.format_error_backtrace (1): ORA-06512: at "' || $$PLSQL_UNIT_OWNER || '.UT_DBUG", line 55'
+      , '|   |   |   error: dbms_utility.format_error_backtrace (2): ORA-06512: at "' || $$PLSQL_UNIT_OWNER || '.UT_DBUG", line 36'
+      , '|   |   |   error: dbms_utility.format_error_backtrace (3): ORA-06512: at "' || $$PLSQL_UNIT_OWNER || '.UT_DBUG", line 62'
+      , '|   |   |   error: dbms_utility.format_error_backtrace (4): ORA-06512: at "' || $$PLSQL_UNIT_OWNER || '.UT_DBUG", line 70'
       , '|   |   <f2'
       , '|   <f3'
       , '<main'
@@ -298,33 +309,33 @@ $if ut_dbug.c_testing $then
       , '|   |   |   |   |   |   |   >f1'
       , '|   |   |   |   |   |   |   |   >f1'
       , '|   |   |   |   |   |   |   |   |   error: sqlerrm: ORA-06502: PL/SQL: numeric or value error'
-      , '|   |   |   |   |   |   |   |   |   error: dbms_utility.format_error_backtrace: ORA-06512: at "EPCAPP.UT_DBUG", line 36'
+      , '|   |   |   |   |   |   |   |   |   error: dbms_utility.format_error_backtrace: ORA-06512: at "' || $$PLSQL_UNIT_OWNER || '.UT_DBUG", line 36'
       , '|   |   |   |   |   |   |   |   <f1'
       , '|   |   |   |   |   |   |   |   error: sqlerrm: ORA-06502: PL/SQL: numeric or value error'
-      , '|   |   |   |   |   |   |   |   error: dbms_utility.format_error_backtrace (1): ORA-06512: at "EPCAPP.UT_DBUG", line 55'
-      , '|   |   |   |   |   |   |   |   error: dbms_utility.format_error_backtrace (2): ORA-06512: at "EPCAPP.UT_DBUG", line 36'
+      , '|   |   |   |   |   |   |   |   error: dbms_utility.format_error_backtrace (1): ORA-06512: at "' || $$PLSQL_UNIT_OWNER || '.UT_DBUG", line 55'
+      , '|   |   |   |   |   |   |   |   error: dbms_utility.format_error_backtrace (2): ORA-06512: at "' || $$PLSQL_UNIT_OWNER || '.UT_DBUG", line 36'
       , '|   |   |   |   |   |   |   <f1'
       , '|   |   |   |   |   |   |   error: sqlerrm: ORA-06502: PL/SQL: numeric or value error'
-      , '|   |   |   |   |   |   |   error: dbms_utility.format_error_backtrace (1): ORA-06512: at "EPCAPP.UT_DBUG", line 55'
-      , '|   |   |   |   |   |   |   error: dbms_utility.format_error_backtrace (2): ORA-06512: at "EPCAPP.UT_DBUG", line 36'
+      , '|   |   |   |   |   |   |   error: dbms_utility.format_error_backtrace (1): ORA-06512: at "' || $$PLSQL_UNIT_OWNER || '.UT_DBUG", line 55'
+      , '|   |   |   |   |   |   |   error: dbms_utility.format_error_backtrace (2): ORA-06512: at "' || $$PLSQL_UNIT_OWNER || '.UT_DBUG", line 36'
       , '|   |   |   |   |   |   <f1'
       , '|   |   |   |   |   |   error: sqlerrm: ORA-06502: PL/SQL: numeric or value error'
-      , '|   |   |   |   |   |   error: dbms_utility.format_error_backtrace (1): ORA-06512: at "EPCAPP.UT_DBUG", line 55'
-      , '|   |   |   |   |   |   error: dbms_utility.format_error_backtrace (2): ORA-06512: at "EPCAPP.UT_DBUG", line 36'
+      , '|   |   |   |   |   |   error: dbms_utility.format_error_backtrace (1): ORA-06512: at "' || $$PLSQL_UNIT_OWNER || '.UT_DBUG", line 55'
+      , '|   |   |   |   |   |   error: dbms_utility.format_error_backtrace (2): ORA-06512: at "' || $$PLSQL_UNIT_OWNER || '.UT_DBUG", line 36'
       , '|   |   |   |   |   <f1'
       , '|   |   |   |   |   error: sqlerrm: ORA-06502: PL/SQL: numeric or value error'
-      , '|   |   |   |   |   error: dbms_utility.format_error_backtrace (1): ORA-06512: at "EPCAPP.UT_DBUG", line 55'
-      , '|   |   |   |   |   error: dbms_utility.format_error_backtrace (2): ORA-06512: at "EPCAPP.UT_DBUG", line 36'
+      , '|   |   |   |   |   error: dbms_utility.format_error_backtrace (1): ORA-06512: at "' || $$PLSQL_UNIT_OWNER || '.UT_DBUG", line 55'
+      , '|   |   |   |   |   error: dbms_utility.format_error_backtrace (2): ORA-06512: at "' || $$PLSQL_UNIT_OWNER || '.UT_DBUG", line 36'
       , '|   |   |   |   <f1'
       , '|   |   |   |   error: sqlerrm: ORA-06502: PL/SQL: numeric or value error'
-      , '|   |   |   |   error: dbms_utility.format_error_backtrace (1): ORA-06512: at "EPCAPP.UT_DBUG", line 55'
-      , '|   |   |   |   error: dbms_utility.format_error_backtrace (2): ORA-06512: at "EPCAPP.UT_DBUG", line 36'
+      , '|   |   |   |   error: dbms_utility.format_error_backtrace (1): ORA-06512: at "' || $$PLSQL_UNIT_OWNER || '.UT_DBUG", line 55'
+      , '|   |   |   |   error: dbms_utility.format_error_backtrace (2): ORA-06512: at "' || $$PLSQL_UNIT_OWNER || '.UT_DBUG", line 36'
       , '|   |   |   <f1'
       , '|   |   |   error: sqlerrm: ORA-06502: PL/SQL: numeric or value error'
-      , '|   |   |   error: dbms_utility.format_error_backtrace (1): ORA-06512: at "EPCAPP.UT_DBUG", line 55'
-      , '|   |   |   error: dbms_utility.format_error_backtrace (2): ORA-06512: at "EPCAPP.UT_DBUG", line 36'
-      , '|   |   |   error: dbms_utility.format_error_backtrace (3): ORA-06512: at "EPCAPP.UT_DBUG", line 62'
-      , '|   |   |   error: dbms_utility.format_error_backtrace (4): ORA-06512: at "EPCAPP.UT_DBUG", line 70'
+      , '|   |   |   error: dbms_utility.format_error_backtrace (1): ORA-06512: at "' || $$PLSQL_UNIT_OWNER || '.UT_DBUG", line 55'
+      , '|   |   |   error: dbms_utility.format_error_backtrace (2): ORA-06512: at "' || $$PLSQL_UNIT_OWNER || '.UT_DBUG", line 36'
+      , '|   |   |   error: dbms_utility.format_error_backtrace (3): ORA-06512: at "' || $$PLSQL_UNIT_OWNER || '.UT_DBUG", line 62'
+      , '|   |   |   error: dbms_utility.format_error_backtrace (4): ORA-06512: at "' || $$PLSQL_UNIT_OWNER || '.UT_DBUG", line 70'
       , '|   |   <f2'
       , '|   <f3'
       , '<main'
@@ -358,10 +369,10 @@ $if ut_dbug.c_testing $then
       , '|   |   |   |   |   |   |   >f1'
       , '|   |   |   |   |   |   |   |   >f1'
       , '|   |   |   |   |   |   |   |   |   error: sqlerrm: ORA-06502: PL/SQL: numeric or value error'
-      , '|   |   |   |   |   |   |   |   |   error: dbms_utility.format_error_backtrace (1): ORA-06512: at "EPCAPP.UT_DBUG", line 55'
-      , '|   |   |   |   |   |   |   |   |   error: dbms_utility.format_error_backtrace (2): ORA-06512: at "EPCAPP.UT_DBUG", line 36'
-      , '|   |   |   |   |   |   |   |   |   error: dbms_utility.format_error_backtrace (3): ORA-06512: at "EPCAPP.UT_DBUG", line 62'
-      , '|   |   |   |   |   |   |   |   |   error: dbms_utility.format_error_backtrace (4): ORA-06512: at "EPCAPP.UT_DBUG", line 70'
+      , '|   |   |   |   |   |   |   |   |   error: dbms_utility.format_error_backtrace (1): ORA-06512: at "' || $$PLSQL_UNIT_OWNER || '.UT_DBUG", line 55'
+      , '|   |   |   |   |   |   |   |   |   error: dbms_utility.format_error_backtrace (2): ORA-06512: at "' || $$PLSQL_UNIT_OWNER || '.UT_DBUG", line 36'
+      , '|   |   |   |   |   |   |   |   |   error: dbms_utility.format_error_backtrace (3): ORA-06512: at "' || $$PLSQL_UNIT_OWNER || '.UT_DBUG", line 62'
+      , '|   |   |   |   |   |   |   |   |   error: dbms_utility.format_error_backtrace (4): ORA-06512: at "' || $$PLSQL_UNIT_OWNER || '.UT_DBUG", line 70'
       , '|   |   |   |   |   |   |   |   <f1'
       , '|   |   |   |   |   |   |   <f1'
       , '|   |   |   |   |   |   <f1'
@@ -371,12 +382,12 @@ $if ut_dbug.c_testing $then
       , '|   |   <f2'
       , '|   <f3'
       , '|   error: sqlerrm: ORA-06502: PL/SQL: numeric or value error'
-      , '|   error: dbms_utility.format_error_backtrace (1): ORA-06512: at "EPCAPP.UT_DBUG", line 88'
-      , '|   error: dbms_utility.format_error_backtrace (2): ORA-06512: at "EPCAPP.UT_DBUG", line 55'
-      , '|   error: dbms_utility.format_error_backtrace (3): ORA-06512: at "EPCAPP.UT_DBUG", line 36'
-      , '|   error: dbms_utility.format_error_backtrace (4): ORA-06512: at "EPCAPP.UT_DBUG", line 62'
-      , '|   error: dbms_utility.format_error_backtrace (5): ORA-06512: at "EPCAPP.UT_DBUG", line 70'
-      , '|   error: dbms_utility.format_error_backtrace (6): ORA-06512: at "EPCAPP.UT_DBUG", line 93'
+      , '|   error: dbms_utility.format_error_backtrace (1): ORA-06512: at "' || $$PLSQL_UNIT_OWNER || '.UT_DBUG", line 88'
+      , '|   error: dbms_utility.format_error_backtrace (2): ORA-06512: at "' || $$PLSQL_UNIT_OWNER || '.UT_DBUG", line 55'
+      , '|   error: dbms_utility.format_error_backtrace (3): ORA-06512: at "' || $$PLSQL_UNIT_OWNER || '.UT_DBUG", line 36'
+      , '|   error: dbms_utility.format_error_backtrace (4): ORA-06512: at "' || $$PLSQL_UNIT_OWNER || '.UT_DBUG", line 62'
+      , '|   error: dbms_utility.format_error_backtrace (5): ORA-06512: at "' || $$PLSQL_UNIT_OWNER || '.UT_DBUG", line 70'
+      , '|   error: dbms_utility.format_error_backtrace (6): ORA-06512: at "' || $$PLSQL_UNIT_OWNER || '.UT_DBUG", line 93'
       , '<main'
       , '>main'
       , '|   info: testcase: 3; log level: 2'
@@ -408,10 +419,10 @@ $if ut_dbug.c_testing $then
       , '|   |   |   |   |   |   |   >f1'
       , '|   |   |   |   |   |   |   |   >f1'
       , '|   |   |   |   |   |   |   |   |   error: sqlerrm: ORA-06502: PL/SQL: numeric or value error'
-      , '|   |   |   |   |   |   |   |   |   error: dbms_utility.format_error_backtrace (1): ORA-06512: at "EPCAPP.UT_DBUG", line 55'
-      , '|   |   |   |   |   |   |   |   |   error: dbms_utility.format_error_backtrace (2): ORA-06512: at "EPCAPP.UT_DBUG", line 36'
-      , '|   |   |   |   |   |   |   |   |   error: dbms_utility.format_error_backtrace (3): ORA-06512: at "EPCAPP.UT_DBUG", line 62'
-      , '|   |   |   |   |   |   |   |   |   error: dbms_utility.format_error_backtrace (4): ORA-06512: at "EPCAPP.UT_DBUG", line 70'
+      , '|   |   |   |   |   |   |   |   |   error: dbms_utility.format_error_backtrace (1): ORA-06512: at "' || $$PLSQL_UNIT_OWNER || '.UT_DBUG", line 55'
+      , '|   |   |   |   |   |   |   |   |   error: dbms_utility.format_error_backtrace (2): ORA-06512: at "' || $$PLSQL_UNIT_OWNER || '.UT_DBUG", line 36'
+      , '|   |   |   |   |   |   |   |   |   error: dbms_utility.format_error_backtrace (3): ORA-06512: at "' || $$PLSQL_UNIT_OWNER || '.UT_DBUG", line 62'
+      , '|   |   |   |   |   |   |   |   |   error: dbms_utility.format_error_backtrace (4): ORA-06512: at "' || $$PLSQL_UNIT_OWNER || '.UT_DBUG", line 70'
       , '|   |   |   |   |   |   |   |   <f1'
       , '|   |   |   |   |   |   |   <f1'
       , '|   |   |   |   |   |   <f1'
@@ -421,12 +432,12 @@ $if ut_dbug.c_testing $then
       , '|   |   <f2'
       , '|   <f3'
       , '|   error: sqlerrm: ORA-06502: PL/SQL: numeric or value error'
-      , '|   error: dbms_utility.format_error_backtrace (1): ORA-06512: at "EPCAPP.UT_DBUG", line 88'
-      , '|   error: dbms_utility.format_error_backtrace (2): ORA-06512: at "EPCAPP.UT_DBUG", line 55'
-      , '|   error: dbms_utility.format_error_backtrace (3): ORA-06512: at "EPCAPP.UT_DBUG", line 36'
-      , '|   error: dbms_utility.format_error_backtrace (4): ORA-06512: at "EPCAPP.UT_DBUG", line 62'
-      , '|   error: dbms_utility.format_error_backtrace (5): ORA-06512: at "EPCAPP.UT_DBUG", line 70'
-      , '|   error: dbms_utility.format_error_backtrace (6): ORA-06512: at "EPCAPP.UT_DBUG", line 93'
+      , '|   error: dbms_utility.format_error_backtrace (1): ORA-06512: at "' || $$PLSQL_UNIT_OWNER || '.UT_DBUG", line 88'
+      , '|   error: dbms_utility.format_error_backtrace (2): ORA-06512: at "' || $$PLSQL_UNIT_OWNER || '.UT_DBUG", line 55'
+      , '|   error: dbms_utility.format_error_backtrace (3): ORA-06512: at "' || $$PLSQL_UNIT_OWNER || '.UT_DBUG", line 36'
+      , '|   error: dbms_utility.format_error_backtrace (4): ORA-06512: at "' || $$PLSQL_UNIT_OWNER || '.UT_DBUG", line 62'
+      , '|   error: dbms_utility.format_error_backtrace (5): ORA-06512: at "' || $$PLSQL_UNIT_OWNER || '.UT_DBUG", line 70'
+      , '|   error: dbms_utility.format_error_backtrace (6): ORA-06512: at "' || $$PLSQL_UNIT_OWNER || '.UT_DBUG", line 93'
       , '<main'
       , '>main'
       , '|   info: testcase: 1; log level: 2'
@@ -450,18 +461,11 @@ $if ut_dbug.c_testing $then
       );
     l_lines_act dbms_output.chararr;
     l_numlines integer;
+    l_tlog_id_max tlog.id%type;
   begin
-    begin
-      -- Try to use a persistent group    
-      std_object_mgr.delete_std_objects(null);    
-      std_object_mgr.set_group_name('leave.sql');
-      std_object_mgr.delete_std_objects;
-    exception
-      when std_object_mgr.e_unimplemented_feature
-      then null;
-    end;
+    -- std_object_mgr.delete_std_objects;
 
-    init(p_dbug_method, p_plsdbug_options);
+    init(p_dbug_method, p_plsdbug_options, l_tlog_id_max);
 
     for i_testcase in reverse 1..9
     loop
@@ -500,9 +504,9 @@ $if ut_dbug.c_testing $then
           ut.expect(sqlcode, 'test case: ' || i_testcase).to_equal(0);
       end;
     end loop;
-    std_object_mgr.delete_std_objects;
+    -- std_object_mgr.delete_std_objects;
 
-    done(p_dbug_method, l_lines_exp, l_lines_act, l_numlines);
+    done(p_dbug_method, l_lines_exp, l_tlog_id_max, l_lines_act, l_numlines);
   end ut_leave;
 
   procedure ut_benchmark
@@ -514,6 +518,7 @@ $if ut_dbug.c_testing $then
     l_lines_exp sys.odcivarchar2list := sys.odcivarchar2list();
     l_lines_act dbms_output.chararr;
     l_numlines integer;
+    l_tlog_id_max tlog.id%type;
       
     procedure doit
     is
@@ -522,7 +527,7 @@ $if ut_dbug.c_testing $then
       dbug.leave;
     end;
   begin
-    init(p_dbug_method, p_plsdbug_options);
+    init(p_dbug_method, p_plsdbug_options, l_tlog_id_max);
     l_lines_exp.extend(1);
     l_lines_exp(l_lines_exp.last) := '>main';
     dbug.enter('main');
@@ -537,8 +542,7 @@ $if ut_dbug.c_testing $then
     l_lines_exp.extend(1);
     l_lines_exp(l_lines_exp.last) := '<main';
     dbug.leave;
-    dbug.done;
-    done(p_dbug_method, l_lines_exp, l_lines_act, l_numlines);
+    done(p_dbug_method, l_lines_exp, l_tlog_id_max, l_lines_act, l_numlines);
   end ut_benchmark;
 
   procedure ut_factorial
@@ -591,6 +595,7 @@ $if ut_dbug.c_testing $then
       );
     l_lines_act dbms_output.chararr;
     l_numlines integer;
+    l_tlog_id_max tlog.id%type;
       
     function factorial (p_value in integer)
     return  integer
@@ -608,9 +613,9 @@ $if ut_dbug.c_testing $then
       return l_value;
     end factorial;
   begin
-    init(p_dbug_method, p_plsdbug_options);
+    init(p_dbug_method, p_plsdbug_options, l_tlog_id_max);
     ut.expect(factorial(10), 'factorial(10)').to_equal(3628800);
-    done(p_dbug_method, l_lines_exp, l_lines_act, l_numlines);
+    done(p_dbug_method, l_lines_exp, l_tlog_id_max, l_lines_act, l_numlines);
   end ut_factorial; 
 
   -- end of (help) test procedures from plsdbug
@@ -654,24 +659,14 @@ $if ut_dbug.c_testing $then
 
   procedure ut_setup
   is
-    pragma autonomous_transaction;
   begin
     execute immediate q'[ALTER SESSION SET NLS_LANGUAGE = 'AMERICAN']';
-
-    std_object_mgr.delete_std_objects
-    ( p_group_name => 'TEST%'
-    );
-    commit;
   end ut_setup;
 
   procedure ut_teardown
   is
-    pragma autonomous_transaction;
   begin
-    std_object_mgr.delete_std_objects
-    ( p_group_name => 'TEST%'
-    );
-    commit;
+    std_object_mgr.delete_std_objects;
   end ut_teardown;
 
   procedure ut_dbug
@@ -681,40 +676,23 @@ $if ut_dbug.c_testing $then
     l_std_object std_object;
     l_dbug_obj dbug_obj_t;
     l_obj_act varchar2(32767);
+    l_json_act json_object_t;
     l_obj_exp constant varchar2(32767) := '{"DIRTY":0,"INDENT_LEVEL":0,"DBUG_LEVEL":2,"BREAK_POINT_LEVEL_STR_TAB":["debug","error","fatal","info","input","output","trace","warning"],"BREAK_POINT_LEVEL_NUM_TAB":[2,5,6,3,2,2,2,4],"IGNORE_BUFFER_OVERFLOW":0}';
+    l_json_exp json_object_t := json_object_t.parse(l_obj_exp);
   begin
-    for i_try in 1..2
-    loop
-      std_object_mgr.set_group_name(case i_try when 1 then 'TEST' else null end);
+    l_dbug_obj := dbug_obj_t();
+    l_dbug_obj.store();
+    std_object_mgr.get_std_object
+    ( p_object_name => 'DBUG'
+    , p_std_object => l_std_object
+    );
+    select  l_std_object.serialize()
+    into    l_obj_act
+    from    dual;
 
-      l_dbug_obj := dbug_obj_t();
-      l_dbug_obj.store();
-      case i_try
-        when 1
-        then
-          select  t.obj
-          into    l_obj_act
-          from    std_objects t
-          where   group_name = 'TEST'
-          and     object_name = 'DBUG';
+    l_json_act := json_object_t.parse(l_obj_act);
 
-        when 2
-        then
-          std_object_mgr.get_std_object
-          ( p_object_name => 'DBUG'
-          , p_std_object => l_std_object
-          );
-          select  l_std_object.serialize()
-          into    l_obj_act
-          from    dual;
-
-      end case;
-      ut.expect(l_obj_act).to_equal(l_obj_exp);
-    end loop;
-    commit;
-  exception
-    when std_object_mgr.e_unimplemented_feature
-    then commit;
+    ut.expect(l_json_act).to_equal(l_json_exp);
   end ut_dbug;
 
   procedure ut_leave_on_error
@@ -783,6 +761,33 @@ $if ut_dbug.c_testing $then
 $else -- ut_dbug.c_testing $then
 
   -- some dummy stubs
+  -- start of help test procedures coming from plsdbug
+  procedure leave
+  ( p_testcase in positiven
+  )
+  is
+  begin
+    raise program_error;
+  end;
+
+  procedure ut_benchmark
+  ( p_count in positiven
+  , p_dbug_method in dbug.method_t
+  , p_plsdbug_options in varchar2 default null
+  )
+  is
+  begin
+    raise program_error;
+  end;
+
+  procedure ut_factorial
+  ( p_dbug_method in dbug.method_t
+  , p_plsdbug_options in varchar2 default null
+  )
+  is
+  begin
+    raise program_error;
+  end;
 
   procedure ut_setup
   is

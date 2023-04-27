@@ -1,209 +1,68 @@
 CREATE OR REPLACE PACKAGE BODY "STD_OBJECT_MGR" IS
 
--- index by std_objects.object_name
-type std_object_tabtype is table of std_object index by std_objects.object_name%type;
+type std_object_tab_t is table of std_object index by object_name_t;
+subtype session_info_t is varchar2(4000 char);
+type session_std_object_tab_t is table of std_object_tab_t index by session_info_t;
 
 g_escape constant varchar2(1) := chr(92); -- escape character
 
-g_std_object_tab std_object_tabtype;
-
-g_group_name std_objects.group_name%type := null;
+g_std_object_tab session_std_object_tab_t;
 
 -- PRIVATE
 
-procedure set_std_object_at
-( p_object_name in std_objects.object_name%type
-, p_std_object in std_object
-)
+function current_session_info
+return session_info_t
 is
-  pragma autonomous_transaction;
-
-  l_obj_type constant std_objects.obj_type%type := p_std_object.get_type();
-  l_obj constant std_objects.obj%type := p_std_object.serialize();
-
-  l_user constant std_objects.created_by%type :=
+begin
+  return
+    sys_context('USERENV', 'SESSIONID') ||
+    '|' ||
+    sys_context('USERENV', 'SESSION_USER') ||
+    '|' ||
+    sys_context('APEX$SESSION', 'APP_SESSION') ||
+    '|' ||
     case
-      when SYS_CONTEXT('APEX$SESSION', 'APP_USER') is not null
-      then 'APEX:' || SYS_CONTEXT('APEX$SESSION', 'APP_USER')
-      else 'ORACLE:' || SYS_CONTEXT('USERENV', 'SESSION_USER')
-    end;
-begin
-  -- persistent storage
-  update  std_objects tab
-  set     tab.obj = l_obj
-  ,       tab.last_updated_by = l_user
-  ,       tab.last_update_date = sysdate
-  where   tab.group_name = g_group_name
-  and     tab.object_name = p_object_name;
-
-$if std_object_mgr.c_debugging $then
-  dbms_output.put_line
-  ( utl_lms.format_message
-    ( '[%s.%s] p_object_name: %s; sql%rowcount: %s'
-    , $$PLSQL_UNIT
-    , 'SET_STD_OBJECT_AT'
-    , p_object_name
-    , to_char(sql%rowcount)
-    )
-  );
-$end
-
-  if sql%rowcount = 0
-  then
-    insert
-    into    std_objects
-    ( group_name
-    , object_name
-    , created_by
-    , creation_date
-    , last_updated_by
-    , last_update_date
-    , obj_type
-    , obj
-    , app_session
-    )
-    values
-    ( g_group_name
-    , p_object_name
-    , l_user
-    , sysdate
-    , l_user
-    , sysdate
-    , l_obj_type
-    , l_obj
-    , case
-        when SYS_CONTEXT('APEX$SESSION','APP_SESSION') is not null
-        then 'APEX:' || SYS_CONTEXT('APEX$SESSION','APP_SESSION')
-        else 'ORACLE:' || SYS_CONTEXT('USERENV','SESSIONID')
-      end
-    );
-  end if;
-
-  commit;
-end set_std_object_at;
-
-procedure delete_std_objects_at
-( p_group_name in std_objects.group_name%type
-, p_object_name in std_objects.object_name%type
-)
-is
-  pragma autonomous_transaction;
-begin
-  delete
-  from    std_objects tab
-  where   tab.group_name like p_group_name escape g_escape
-  and     tab.object_name like p_object_name escape g_escape;
-
-$if std_object_mgr.c_debugging $then
-  dbms_output.put_line
-  ( utl_lms.format_message
-    ( '[%s.%s] p_group_name: %s; p_object_name: %s; sql%rowcount: %s'
-    , $$PLSQL_UNIT
-    , 'DELETE_STD_OBJECTS_AT'
-    , p_group_name
-    , p_object_name
-    , to_char(sql%rowcount)
-    )
-  );
-$end
-
-  commit;
-end delete_std_objects_at;
-
--- PUBLIC
-procedure set_group_name
-( p_group_name in std_objects.group_name%type
-)
-is
-begin
-  case
-    when g_group_name is null and p_group_name is not null and g_std_object_tab.count > 0
-    then
-      -- from local storage to external not allowed when there are local objects
-      raise_application_error
-      ( c_change_group_local_storage
-      , utl_lms.format_message
-        ( 'Can not change to non-empty group %s when there are local objects (first is %s)'
-        , p_group_name
-        , g_std_object_tab(g_std_object_tab.first).name()
-        )
-      );
-    when g_group_name is not null and p_group_name is null and g_std_object_tab.count > 0
-    then
-      -- from external storage to local not allowed when there are local objects
-      raise_application_error
-      ( c_change_group_local_storage
-      , utl_lms.format_message
-        ( 'Can not change from non-empty group %s when there are local objects (first is %s)'
-        , g_group_name
-        , g_std_object_tab(g_std_object_tab.first).name()
-        )
-      );
-    -- GJP 2023-04-02 Disable setting non-empty group temporarily
-    when p_group_name is not null
-    then
-      raise e_unimplemented_feature;      
-    else
-      null;
-  end case;
-  g_group_name := p_group_name;
-end set_group_name;
-
-function get_group_name
-return std_objects.group_name%type
-is
-begin
-  return g_group_name;
-end get_group_name;
+      when sys_context('APEX$SESSION', 'APP_USER') is not null
+      then 'APEX-' || sys_context('APEX$SESSION', 'APP_USER')
+      when sys_context('USERENV', 'CLIENT_IDENTIFIER') is not null
+      then 'CLNT-' || regexp_substr(sys_context('USERENV', 'CLIENT_IDENTIFIER'), '^[^:]*')
+    end;         
+end current_session_info;
 
 procedure get_std_object
-( p_object_name in std_objects.object_name%type
+( p_session_info in session_info_t
+, p_object_name in object_name_t
 , p_std_object out nocopy std_object
 )
 is
-  l_obj_type std_objects.obj_type%type;
-  l_obj      std_objects.obj%type;
 begin
-  if g_group_name is not null
-  then
-    select  tab.obj_type
-    ,       tab.obj
-    into    l_obj_type
-    ,       l_obj
-    from    std_objects tab
-    where   tab.group_name = g_group_name
-    and     tab.object_name = p_object_name;
-
-    p_std_object := std_object.deserialize(l_obj_type, l_obj);
-  else
-    p_std_object := g_std_object_tab(p_object_name);
-  end if;
-
+  -- this may raise NO_DATA_FOUND as it should
+  p_std_object := g_std_object_tab(p_session_info)(p_object_name);
   p_std_object.dirty := 0;
 
 $if std_object_mgr.c_debugging $then
   dbms_output.put_line
   ( utl_lms.format_message
-    ( '[%s.%s] p_object_name: %s; g_group_name: %s; p_std_object.dirty: %s'
+    ( '[%s.%s] p_session_info: %s; p_object_name: %s; p_std_object.dirty: %s'
     , $$PLSQL_UNIT
     , 'GET_STD_OBJECT'
+    , p_session_info
     , p_object_name
-    , g_group_name
     , to_char(p_std_object.dirty)
     )
   );
 $end
-end get_std_object;
+end get_std_object;  
 
 procedure set_std_object
-( p_object_name in std_objects.object_name%type
+( p_session_info in session_info_t
+, p_object_name in object_name_t
 , p_std_object in out nocopy std_object
 )
 is
   /* Store when:
   -- A) first when dirty equals 1
   -- B) then if the object is not stored yet
-  -- C) else when the object stored is not equal to the input object (ignoring the dirty attribute)
   */
   l_store boolean := case when p_std_object.dirty = 1 then true /* case A */ else null end;
   l_std_object std_object;
@@ -218,22 +77,14 @@ begin
 
   if l_store is null
   then
-    -- retrieve the last version stored and compare
+    -- retrieve the last version stored
     begin
       get_std_object
-      ( p_object_name => p_object_name
+      ( p_session_info => p_session_info
+      , p_object_name => p_object_name
       , p_std_object => l_std_object
       );
-      l_store :=
-        case
-          /* comparison ignores attribute dirty:
-             1) see order member function compare of type std_object.
-             2) see NOTE about dirty.
-          */
-          when p_std_object = l_std_object
-          then false
-          else true /* case C */
-        end;
+      l_store := false;
     exception
       when no_data_found
       then
@@ -244,94 +95,41 @@ begin
 $if std_object_mgr.c_debugging $then
   dbms_output.put_line
   ( utl_lms.format_message
-    ( '[%s.%s] p_object_name: %s; g_group_name: %s; l_store: %s'
+    ( '[%s.%s] p_session_info: %s; p_object_name: %s; l_store: %s'
     , $$PLSQL_UNIT
     , 'SET_STD_OBJECT'
+    , p_session_info
     , p_object_name
-    , g_group_name
     , case l_store when true then 'TRUE' when false then 'FALSE' else 'NULL' end
     )
   );
 $end
 
-  if not(l_store)
+  if l_store
   then
-    null;
-  elsif g_group_name is not null
-  then
-    set_std_object_at
-    ( p_object_name => p_object_name
-    , p_std_object => p_std_object
-    );
-  else
-    -- package state
-    g_std_object_tab(p_object_name) := p_std_object;
+    -- set package state
+    g_std_object_tab(p_session_info)(p_object_name) := p_std_object;
   end if;
 end set_std_object;
 
-procedure del_std_object
-( p_object_name in std_objects.object_name%type
-)
-is
-begin
-$if std_object_mgr.c_debugging $then
-  dbms_output.put_line
-  ( utl_lms.format_message
-    ( '[%s.%s] p_object_name: %s'
-    , $$PLSQL_UNIT
-    , 'DEL_STD_OBJECT'
-    , p_object_name
-    )
-  );
-$end
-
-  delete_std_objects
-  ( p_group_name => replace(g_group_name, '_', g_escape || '_')
-  , p_object_name => replace(p_object_name, '_', g_escape || '_')
-  );
-end del_std_object;
-
-procedure get_object_names
-( p_object_name_tab out nocopy sys.odcivarchar2list
-)
-is
-  l_object_name std_objects.object_name%type;
-begin
-  if g_group_name is not null
-  then
-    select  tab.object_name
-    bulk collect
-    into    p_object_name_tab
-    from    std_objects tab
-    where   tab.group_name = g_group_name;
-  else
-    p_object_name_tab := sys.odcivarchar2list();
-    l_object_name := g_std_object_tab.first;
-    while l_object_name is not null
-    loop
-      p_object_name_tab.extend(1);
-      p_object_name_tab(p_object_name_tab.last) := l_object_name;
-      l_object_name := g_std_object_tab.next(l_object_name);
-    end loop;
-  end if;
-end get_object_names;
-
 procedure delete_std_objects
-( p_group_name in std_objects.group_name%type default '%'
-, p_object_name in std_objects.object_name%type default '%'
+( p_session_info in session_info_t
+, p_object_name in object_name_t
 )
 is
-  l_object_name std_objects.object_name%type;
-  l_object_name_prev std_objects.object_name%type;
+  l_session_info constant session_info_t := current_session_info;
+  l_object_name object_name_t;
+  l_object_name_prev object_name_t;
 begin
 $if std_object_mgr.c_debugging $then
   dbms_output.put_line
   ( utl_lms.format_message
-    ( '[%s.%s] p_group_name: %s; p_object_name: %s'
+    ( '[%s.%s] p_session_info: %s; p_object_name: %s; objects exist: %s'
     , $$PLSQL_UNIT
     , 'DELETE_STD_OBJECTS'
-    , p_group_name
+    , p_session_info
     , p_object_name
+    , case g_std_object_tab.exists(p_session_info) when true then 'TRUE' when false then 'FALSE' else 'NULL' end
     )
   );
 $end
@@ -339,20 +137,25 @@ $end
   if p_object_name is null
   then
     raise value_error;
-  elsif p_group_name is not null
+  elsif g_std_object_tab.exists(p_session_info)
   then
-    delete_std_objects_at
-    ( p_group_name => p_group_name
-    , p_object_name => p_object_name
+    l_object_name := g_std_object_tab(p_session_info).first;
+$if std_object_mgr.c_debugging $then
+    dbms_output.put_line
+    ( utl_lms.format_message
+      ( '[%s.%s] first object name: %s'
+      , $$PLSQL_UNIT
+      , 'DELETE_STD_OBJECTS'
+      , l_object_name
+      )
     );
-  else
-    l_object_name := g_std_object_tab.first;
+$end
     while l_object_name is not null
     loop
       /* a delete now may influence the next operation,
          so first do next and then maybe delete (the previous) */
       l_object_name_prev := l_object_name;
-      l_object_name := g_std_object_tab.next(l_object_name);
+      l_object_name := g_std_object_tab(p_session_info).next(l_object_name);
 $if std_object_mgr.c_debugging $then
       dbms_output.put_line
       ( utl_lms.format_message
@@ -367,120 +170,138 @@ $if std_object_mgr.c_debugging $then
 $end
       if l_object_name_prev like p_object_name escape g_escape
       then
-        g_std_object_tab.delete(l_object_name_prev);
+        g_std_object_tab(p_session_info).delete(l_object_name_prev);
       end if;
     end loop;
+    if g_std_object_tab(p_session_info).count = 0
+    then
+      g_std_object_tab.delete(p_session_info);
+    end if;
   end if;
+end delete_std_objects;
+
+-- PUBLIC
+procedure get_std_object
+( p_object_name in object_name_t
+, p_std_object out nocopy std_object
+)
+is
+begin
+  get_std_object
+  ( p_session_info => current_session_info
+  , p_object_name => p_object_name
+  , p_std_object => p_std_object
+  );
+end get_std_object;
+
+procedure set_std_object
+( p_object_name in object_name_t
+, p_std_object in out nocopy std_object
+)
+is
+begin
+  set_std_object
+  ( p_session_info => current_session_info
+  , p_object_name => p_object_name
+  , p_std_object => p_std_object
+  );
+end set_std_object;
+
+procedure del_std_object
+( p_object_name in object_name_t
+)
+is
+begin
+  delete_std_objects
+  ( p_session_info => current_session_info
+  , p_object_name => replace(p_object_name, '_', g_escape || '_')
+  );
+end del_std_object;
+
+procedure get_object_names
+( p_object_name_tab out nocopy sys.odcivarchar2list
+)
+is
+  l_session_info constant session_info_t := current_session_info;
+  l_object_name object_name_t;
+begin
+  p_object_name_tab := sys.odcivarchar2list();
+  if g_std_object_tab.exists(l_session_info)
+  then
+    l_object_name := g_std_object_tab(l_session_info).first;
+    while l_object_name is not null
+    loop
+      p_object_name_tab.extend(1);
+      p_object_name_tab(p_object_name_tab.last) := l_object_name;
+      l_object_name := g_std_object_tab(l_session_info).next(l_object_name);
+    end loop;
+  end if;
+end get_object_names;
+
+procedure delete_std_objects
+( p_object_name in object_name_t
+)
+is
+begin
+  delete_std_objects
+  ( p_session_info => current_session_info
+  , p_object_name => p_object_name
+  );
 end delete_std_objects;
 
 $if std_object_mgr.c_testing $then
 
 procedure ut_setup
 is
-  pragma autonomous_transaction;
 begin
-  delete_std_objects
-  ( p_group_name => 'TEST%'
-  );
-  commit;
+  delete_std_objects;
 end;
 
 procedure ut_teardown
 is
-  pragma autonomous_transaction;
 begin
-  delete_std_objects
-  ( p_group_name => 'TEST%'
-  );
-  commit;
-end;
-
-procedure ut_set_group_name
-is
-begin
-  set_group_name(null);
-  ut.expect(g_group_name).to_be_null();
-  set_group_name('TEST1');
-  -- GJP 2023-04-02 Can not set a non-empty group name
-  raise program_error;
-  ut.expect(g_group_name).to_equal('TEST1');
-  set_group_name('TEST2');
-  ut.expect(g_group_name).to_equal('TEST2');
-end;
-
-procedure ut_get_group_name
-is
-begin
-  set_group_name(null);
-  ut.expect(get_group_name()).to_be_null();
-  set_group_name('TEST1');
-  -- GJP 2023-04-02 Can not set a non-empty group name
-  raise program_error;
-  ut.expect(get_group_name()).to_equal('TEST1');
-  set_group_name('TEST2');
-  ut.expect(get_group_name()).to_equal('TEST2');
+  delete_std_objects;
 end;
 
 procedure ut_store_remove
 is
-  pragma autonomous_transaction;
-
   l_std_object std_object;
   l_dbug_obj_exp dbug_obj_t;
   l_dbug_obj_act dbug_obj_t;
   l_count pls_integer;
 begin
-  for i_try in 1..2
-  loop
-    set_group_name(case i_try when 1 then null else 'TEST' end);
+  ut.expect(g_std_object_tab.count, 'no sessions/objects at the beginning').to_equal(0);
 
-    ut.expect(g_std_object_tab.count, 'try '||i_try).to_equal(0);
+  begin
+    get_std_object('DBUG', l_std_object);
+    raise program_error;
+  exception
+    when no_data_found
+    then
+      ut.expect(sqlcode, 'sqlcode after get').to_equal(sqlcode); -- no_data_found
+  end;
 
-    begin
-      get_std_object('DBUG', l_std_object);
-      raise program_error;
-    exception
-      when no_data_found
-      then
-        ut.expect(sqlcode, 'try '||i_try).to_equal(sqlcode); -- no_data_found
-    end;
+  l_dbug_obj_exp := dbug_obj_t();
+  ut.expect(l_dbug_obj_exp.dirty, 'dirty after first get').to_equal(0);
 
-    l_dbug_obj_exp := dbug_obj_t();
-    ut.expect(l_dbug_obj_exp.dirty, 'try '||i_try).to_equal(0);
+  set_std_object('DBUG', l_dbug_obj_exp);
+  get_std_object('DBUG', l_dbug_obj_act);
 
-    set_std_object('DBUG', l_dbug_obj_exp);
-    get_std_object('DBUG', l_dbug_obj_act);
+  ut.expect(g_std_object_tab(current_session_info).count, '# objects at the end').to_equal(1);
 
-    ut.expect(g_std_object_tab.count, 'try '||i_try).to_equal(case when g_group_name is null then 1 else 0 end);
+  ut.expect(l_dbug_obj_act.dirty, 'dirty after second get').to_equal(0);
 
-    select  count(*)
-    into    l_count
-    from    std_objects
-    where   group_name = g_group_name;
+  dbms_output.put_line('act: ' || l_dbug_obj_act.serialize());
+  dbms_output.put_line('exp: ' || l_dbug_obj_exp.serialize());
 
-    ut.expect(l_count, 'try '||i_try).to_equal(case when g_group_name is not null then 1 else 0 end);
+  ut.expect(json_object_t(l_dbug_obj_act.serialize()), 'json').to_equal(json_object_t(l_dbug_obj_exp.serialize()));
 
-    ut.expect(l_dbug_obj_act.dirty, 'try '||i_try).to_equal(0);
+  l_dbug_obj_act.dirty := 1;
+  l_dbug_obj_exp.dirty := 0;
 
-    dbms_output.put_line('act: ' || l_dbug_obj_act.serialize());
-    dbms_output.put_line('exp: ' || l_dbug_obj_exp.serialize());
+  ut.expect(l_dbug_obj_act = l_dbug_obj_exp, 'compare ignores dummy').to_equal(true);
 
-    ut.expect(json_object_t(l_dbug_obj_act.serialize()), 'try '||i_try).to_equal(json_object_t(l_dbug_obj_exp.serialize()));
-
-    l_dbug_obj_act.dirty := 1;
-    l_dbug_obj_exp.dirty := 0;
-
-    ut.expect(l_dbug_obj_act = l_dbug_obj_exp, 'compare ignores dummy '||i_try).to_equal(true);
-
-    del_std_object('DBUG');
-  end loop;
-
-  commit;
-exception
-  when e_unimplemented_feature
-  then
-    commit;
-    -- GJP 2023-04-02 Can not set a non-empty group name
+  del_std_object('DBUG');
 end;
 
 $else -- $if std_object_mgr.c_testing $then
@@ -492,18 +313,6 @@ begin
 end;
 
 procedure ut_teardown
-is
-begin
-  raise program_error;
-end;
-
-procedure ut_set_group_name
-is
-begin
-  raise program_error;
-end;
-
-procedure ut_get_group_name
 is
 begin
   raise program_error;

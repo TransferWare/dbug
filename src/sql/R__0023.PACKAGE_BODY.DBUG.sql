@@ -331,11 +331,13 @@ $end
   end handle_error;
 
   procedure get_called_from
-  ( p_called_from out nocopy module_name_t
-  , p_depth out nocopy integer
+  ( p_depth in integer
+  , p_called_from out nocopy module_name_t
+  , p_module_name out nocopy module_name_t
   )
   is
     l_dynamic_depth constant pls_integer := utl_call_stack.dynamic_depth;
+    l_found pls_integer := null;
   begin
     /*
      * In the case of a call stack in which A calls B, which calls C, which calls D, which calls E, which calls F, which calls E, this stack can be written as a line with the dynamic depths underneath:
@@ -344,22 +346,24 @@ $end
      * 7 6 5 4 3 2 1
      */
 
-    p_called_from := null;
-    p_depth := null;
-
     <<search_loop>>
     for i_idx in 2 .. l_dynamic_depth -- since we are already in package DBUG, this call is utl_call_stack.subprogram(1)
     loop
-      if utl_call_stack.subprogram(i_idx)(1) != $$PLSQL_UNIT -- (1) is unit name
+      if ( l_dynamic_depth - i_idx + 1 ) = p_depth
       then
-        -- the subprogram calling DBUG has been found
-        p_called_from := get_call(i_idx);
-        p_depth := l_dynamic_depth - i_idx + 1; -- using standard approach, i.e. we start at depth 1 and go up as long as we keep on calling subprograms
+        -- the called_from has been found
+        l_found := i_idx;
+        p_called_from := utl_call_stack.subprogram(i_idx)(1); -- the unit name
+        p_module_name := utl_call_stack.concatenate_subprogram(utl_call_stack.subprogram(i_idx)) || '#' || utl_call_stack.unit_line(i_idx);
         exit search_loop;
       end if;
     end loop search_loop;
+    if l_found is null
+    then
+      raise_application_error(-20000, 'Could not find call stack with this depth (' || p_depth || ').');
+    end if;
   end get_called_from;
-
+  
   procedure pop_call_stack
   ( p_obj in out nocopy dbug_obj_t
   , p_lwb in binary_integer
@@ -379,7 +383,7 @@ $end
     -- When there is no mismatch this means the top entry from p_obj.call_tab will be removed.
 
 $if dbug.c_trace > 1 $then
-    trace('pop_call_stack(p_lwb => '||p_lwb||', p_leave_on_error => ' || dbug.cast_to_varchar2(p_leave_on_error) || ')');
+    trace('>pop_call_stack(p_lwb => '||p_lwb||', p_leave_on_error => ' || dbug.cast_to_varchar2(p_leave_on_error) || ')');
 $end
 
     if p_lwb = p_obj.call_tab.last
@@ -440,6 +444,10 @@ $end
     end loop;
 
     p_obj.dirty := 1;
+    
+$if dbug.c_trace > 1 $then
+    trace('<pop_call_stack');
+$end
   end pop_call_stack;
 
   procedure done
@@ -484,7 +492,7 @@ $end
     l_method method_t;
   begin
 $if dbug.c_trace > 1 $then
-    trace('>activate('''||p_method||''', '||cast_to_varchar2(p_status)||')');
+    trace('>activate('''||p_method||''', '||cast_to_varchar2(p_status)||') (1)');
 $end
 
     if upper(p_method) = 'TS_DBUG' -- backwards compability with TS_DBUG
@@ -510,7 +518,7 @@ $end
     p_obj.dirty := 1;
 
 $if dbug.c_trace > 1 $then
-    trace('<activate');
+    trace('<activate (1)');
 $end
   end activate;
 
@@ -662,10 +670,10 @@ $if dbug.c_trace > 0 or dbug.c_trace_enter > 0 or dbug.c_trace_leave > 0 $then
   is
     l_line_tab dbug.line_tab_t;
   begin
+    trace('>show_call_stack' || case when p_enter then ' after entering ' else ' before leaving ' end || case when p_obj.call_tab.last is not null then p_obj.call_tab(p_obj.call_tab.last).module_name end);
+    
     if p_obj is not null and p_obj.call_tab is not null and p_obj.call_tab.count > 0
     then
-      trace('>SHOW_CALL_STACK' || case when p_enter then ' after entering ' else ' before leaving ' end || p_obj.call_tab(p_obj.call_tab.last).module_name);
-
       for i_call_idx in p_obj.call_tab.first .. p_obj.call_tab.last
       loop
         trace('['||to_char(i_call_idx, 'fm00')||'] module name: '|| p_obj.call_tab(i_call_idx).module_name);
@@ -674,7 +682,7 @@ $if dbug.c_trace > 0 or dbug.c_trace_enter > 0 or dbug.c_trace_leave > 0 $then
       end loop;
     end if;
 
-      trace('<SHOW_CALL_STACK' || case when p_enter then ' after entering ' else ' before leaving ' end || p_obj.call_tab(p_obj.call_tab.last).module_name);
+    trace('<show_call_stack');
   end show_call_stack;
 
 $end
@@ -682,12 +690,14 @@ $end
   procedure enter
   ( p_obj in out nocopy dbug_obj_t
   , p_module in module_name_t
+  , p_depth in integer
   )
   is
     l_idx pls_integer;
     l_active_str method_t;
     l_cursor integer;
     l_dummy integer;
+    l_module module_name_t;
   begin
     if not check_break_point(p_obj, "trace")
     then
@@ -706,8 +716,9 @@ $if dbug.c_trace_enter > 0 $then
        trace('extended p_obj.call_tab with 1 to '||p_obj.call_tab.count||' elements');
 $end
 
-       get_called_from(p_obj.call_tab(l_idx).called_from, p_obj.call_tab(l_idx).depth);
-       p_obj.call_tab(l_idx).module_name := nvl(p_module, p_obj.call_tab(l_idx).called_from);
+       get_called_from(p_depth, p_obj.call_tab(l_idx).called_from, l_module);
+       p_obj.call_tab(l_idx).depth := p_depth;
+       p_obj.call_tab(l_idx).module_name := nvl(p_module, l_module);
        if l_idx != 1
        then
          -- Same stack?
@@ -785,17 +796,6 @@ $end
 $if dbug.c_trace_enter > 0 $then
     show_call_stack(p_obj, true);
 $end
-  end enter;
-
-  procedure enter
-  ( p_obj in out nocopy dbug_obj_t
-  , p_module in module_name_t
-  , p_called_from out nocopy module_name_t
-  )
-  is
-  begin
-    enter(p_obj, p_module);
-    p_called_from := p_obj.call_tab(p_obj.call_tab.last).called_from;
   end enter;
 
   procedure print
@@ -1070,7 +1070,6 @@ $end
 
   procedure leave
   ( p_obj in out nocopy dbug_obj_t
-  , p_called_from in varchar2
   , p_depth in pls_integer
   , p_leave_on_error in boolean
   )
@@ -1091,7 +1090,6 @@ $end
     -- we must pop from the call stack (p_obj.call_tab) all entries through
     -- the one which has the same called from location as this call.
     -- When there is no mismatch this means the top entry from p_obj.call_tab will be removed.
-    -- See also get_called_from for an example.
 
     declare
       l_idx pls_integer := p_obj.call_tab.last;
@@ -1100,7 +1098,6 @@ $if dbug.c_trace_leave > 0 $then
 $end
     begin
 $if dbug.c_trace_leave > 0 $then
-      trace('p_called_from: "' || p_called_from || '"');
       trace('p_depth: ' || p_depth);
 $end
       -- adjust for mismatch in enter/leave pairs
@@ -1135,17 +1132,6 @@ $end
         end if;
       end loop find_same_depth_loop;
     end;
-  end leave;
-
-  procedure leave
-  ( p_obj in out nocopy dbug_obj_t
-  )
-  is
-    l_called_from module_name_t;
-    l_depth pls_integer;
-  begin
-    get_called_from(l_called_from, l_depth);
-    leave(p_obj => p_obj, p_called_from => l_called_from, p_depth => l_depth, p_leave_on_error => false);
   end leave;
 
   procedure on_error
@@ -1244,14 +1230,12 @@ $end
 
   procedure leave_on_error
   ( p_obj in out nocopy dbug_obj_t
+  , p_depth in integer
   )
   is
-    l_called_from module_name_t;
-    l_depth pls_integer;
   begin
     on_error(p_obj);
-    get_called_from(l_called_from, l_depth);
-    leave(p_obj => p_obj, p_called_from => l_called_from, p_depth => l_depth, p_leave_on_error => true);
+    leave(p_obj => p_obj, p_depth => p_depth, p_leave_on_error => true);
   end leave_on_error;
 
   procedure get_state
@@ -1259,7 +1243,7 @@ $end
     l_dynamic_depth constant pls_integer := utl_call_stack.dynamic_depth;
   begin
 $if dbug.c_trace > 1 $then
-    trace('>get_state');
+    trace('>get_state; dynamic depth: ' || l_dynamic_depth);
 $end
 
     -- Re-initialize if session has changed
@@ -1392,7 +1376,7 @@ $end
   is
   begin
 $if dbug.c_trace > 1 $then
-    trace('>activate');
+    trace('>activate(''' || p_method || ''', ' || cast_to_varchar2(p_status) || ') (2)');
 $end
 
     get_state;
@@ -1407,7 +1391,7 @@ $end
     set_state;
 
 $if dbug.c_trace > 1 $then
-    trace('<activate');
+    trace('<activate (2)');
 $end
 
 $if dbug.c_ignore_errors != 0 $then
@@ -1426,7 +1410,7 @@ $end
     l_result boolean;
   begin
 $if dbug.c_trace > 1 $then
-    trace('>active');
+    trace('>active(''' || p_method || ''')');
 $end
 
     get_state;
@@ -1460,7 +1444,7 @@ $end
   is
   begin
 $if dbug.c_trace > 1 $then
-    trace('>set_level');
+    trace('>set_level(' || p_level || ')');
 $end
 
     get_state;
@@ -1588,16 +1572,17 @@ $end
 
   procedure enter
   ( p_module in module_name_t
+  , p_depth in integer
   )
   is
   begin
 $if dbug.c_trace > 1 $then
-    trace('>enter (1)');
+    trace('>enter(''' || p_module || ''', ''' || p_depth || ''')');
 $end
 
     get_state;
     begin
-      enter(g_obj, p_module);
+      enter(g_obj, p_module, p_depth);
     exception
       when others
       then
@@ -1607,40 +1592,7 @@ $end
     set_state;
 
 $if dbug.c_trace > 1 $then
-    trace('<enter (1)');
-$end
-
-$if dbug.c_ignore_errors != 0 $then
-  exception
-    when others
-    then
-      null;
-$end
-  end enter;
-
-  procedure enter
-  ( p_module in module_name_t
-  , p_called_from out nocopy module_name_t
-  )
-  is
-  begin
-$if dbug.c_trace > 1 $then
-    trace('>enter (2)');
-$end
-
-    get_state;
-    begin
-      enter(g_obj, p_module, p_called_from);
-    exception
-      when others
-      then
-        set_state(p_print => false);
-        raise;
-    end;
-    set_state;
-
-$if dbug.c_trace > 1 $then
-    trace('<enter (2)');
+    trace('<enter');
 $end
 
 $if dbug.c_ignore_errors != 0 $then
@@ -1652,47 +1604,17 @@ $end
   end enter;
 
   procedure leave
-  is
-  begin
-$if dbug.c_trace > 1 $then
-    trace('>leave (1)');
-$end
-
-    get_state;
-    begin
-      leave(g_obj);
-    exception
-      when others
-      then
-        set_state(p_print => false);
-        raise;
-    end;
-    set_state;
-
-$if dbug.c_trace > 1 $then
-    trace('<leave (1)');
-$end
-
-$if dbug.c_ignore_errors != 0 $then
-  exception
-    when others
-    then
-      null;
-$end
-  end leave;
-
-  procedure leave
-  ( p_called_from in module_name_t
+  ( p_depth in integer
   )
   is
   begin
 $if dbug.c_trace > 1 $then
-    trace('>leave (2)');
+    trace('>leave(''' || p_depth || ''')');
 $end
 
     get_state;
     begin
-      leave(p_obj => g_obj, p_called_from => p_called_from, p_depth => null, p_leave_on_error => false);
+      leave(p_obj => g_obj, p_depth => p_depth, p_leave_on_error => false);
     exception
       when others
       then
@@ -1702,7 +1624,7 @@ $end
     set_state;
 
 $if dbug.c_trace > 1 $then
-    trace('<leave (2)');
+    trace('<leave');
 $end
 
 $if dbug.c_ignore_errors != 0 $then
@@ -1751,7 +1673,7 @@ $end
   is
   begin
 $if dbug.c_trace > 1 $then
-    trace('>on_error (2)');
+    trace('>on_error(''' || p_function || ''', ''' || p_output || ''', ''' || p_sep || ''') (2)');
 $end
 
     get_state;
@@ -1789,7 +1711,7 @@ $end
   is
   begin
 $if dbug.c_trace > 1 $then
-    trace('>on_error (3)');
+    trace('>on_error(''' || p_function || ''') (3)');
 $end
     get_state;
     begin
@@ -1815,6 +1737,8 @@ $end
   end on_error;
 
   procedure leave_on_error
+  ( p_depth in integer
+  )
   is
   begin
 $if dbug.c_trace > 1 $then
@@ -1823,7 +1747,7 @@ $end
 
     get_state;
     begin
-      leave_on_error(g_obj);
+      leave_on_error(g_obj, p_depth);
     exception
       when others
       then
@@ -1863,7 +1787,7 @@ $end
   ) is
   begin
 $if dbug.c_trace > 1 $then
-    trace('>print (1)');
+    trace('>print(''' || p_break_point || ''', ''' || p_str || ''') (1)');
 $end
 
     get_state;
@@ -1897,7 +1821,7 @@ $end
   is
   begin
 $if dbug.c_trace > 1 $then
-    trace('>print (2a)');
+    trace('>print(''' || p_break_point || ''', ''' || p_fmt || ''', ''' || p_arg1 || ''') (2a)');
 $end
 
     get_state;
@@ -1931,7 +1855,7 @@ $end
   is
   begin
 $if dbug.c_trace > 1 $then
-    trace('>print (2b)');
+    trace('>print(''' || p_break_point || ''', ''' || p_fmt || ''', ''' || to_char(p_arg1, 'YYYYMMDDHH24MISS') || ''') (2b)');
 $end
 
     get_state;
@@ -1965,7 +1889,7 @@ $end
   is
   begin
 $if dbug.c_trace > 1 $then
-    trace('>print (2c)');
+    trace('>print(''' || p_break_point || ''', ''' || p_fmt || ''', ''' || cast_to_varchar2(p_arg1) || ''') (2c)');
 $end
 
     get_state;
@@ -2000,7 +1924,7 @@ $end
   is
   begin
 $if dbug.c_trace > 1 $then
-    trace('>print (3)');
+    trace('>print(''' || p_break_point || ''', ''' || p_fmt || ''', ''' || p_arg1 || ''', ''' || p_arg2 || ''') (3)');
 $end
 
     get_state;
@@ -2036,7 +1960,7 @@ $end
   is
   begin
 $if dbug.c_trace > 1 $then
-    trace('>print (4)');
+    trace('>print(''' || p_break_point || ''', ''' || p_fmt || ''', ''' || p_arg1 || ''', ''' || p_arg2 || ''', ''' || p_arg3 || ''') (4)');
 $end
 
     get_state;
@@ -2073,7 +1997,7 @@ $end
   is
   begin
 $if dbug.c_trace > 1 $then
-    trace('>print (5)');
+    trace('>print(''' || p_break_point || ''', ''' || p_fmt || ''', ''' || p_arg1 || ''', ''' || p_arg2 || ''', ''' || p_arg3 || ''', ''' || p_arg4 || ''') (5)');
 $end
 
     get_state;
@@ -2111,7 +2035,7 @@ $end
   is
   begin
 $if dbug.c_trace > 1 $then
-    trace('>print (6)');
+    trace('>print(''' || p_break_point || ''', ''' || p_fmt || ''', ''' || p_arg1 || ''', ''' || p_arg2 || ''', ''' || p_arg3 || ''', ''' || p_arg4 || ''', ''' || p_arg5 || ''') (6)');
 $end
 
     get_state;

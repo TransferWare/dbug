@@ -288,15 +288,8 @@ $if dbug_log4plsql.c_testing $then
 
   procedure ut_setup
   is
-    pragma autonomous_transaction;
   begin
-    std_object_mgr.set_group_name(null);
-    std_object_mgr.delete_std_objects
-    ( p_group_name => 'TEST%' 
-    );
-    -- ORA-20000: Can not change to group TEST when there are local objects (first is DBUG)
-    std_object_mgr.delete_std_objects( p_group_name => null );
-    commit;
+    std_object_mgr.delete_std_objects;
 $if std_object_mgr.c_debugging $then
     dbms_output.put_line('ut_setup finished');
 $end
@@ -304,13 +297,8 @@ $end
 
   procedure ut_teardown
   is
-    pragma autonomous_transaction;
   begin
-    std_object_mgr.set_group_name(null);
-    std_object_mgr.delete_std_objects
-    ( p_group_name => 'TEST%'
-    );
-    commit;
+    std_object_mgr.delete_std_objects;
 $if std_object_mgr.c_debugging $then
     dbms_output.put_line('ut_teardown finished');
 $end
@@ -318,8 +306,6 @@ $end
 
   procedure ut_store_remove
   is
-    pragma autonomous_transaction;
-
     l_std_object std_object;
     l_dbug_log4plsql_obj dbug_log4plsql_obj_t;
     l_object_name_tab sys.odcivarchar2list;
@@ -331,7 +317,7 @@ $end
     -- with empty LSECTION
     l_obj_exp constant varchar2(32767) := '{"DIRTY":0,"ISDEFAULTINIT":1,"LLEVEL":70,"LSECTION":null,"LTEXT":null,"USE_LOG4J":0,"USE_OUT_TRANS":1,"USE_LOGTABLE":1,"USE_ALERT":0,"USE_TRACE":0,"USE_DBMS_OUTPUT":0,"INIT_LSECTION":null,"INIT_LLEVEL":70,"DBMS_OUTPUT_WRAP":100}';
 
-    l_json_exp constant json_object_t := json_object_t(l_obj_exp);
+    l_json_exp json_object_t := json_object_t(l_obj_exp);
 
     procedure get_object_names
     is
@@ -348,101 +334,65 @@ $if std_object_mgr.c_debugging $then
 $end
     end get_object_names;
   begin
-    for i_try in 1..2
-    loop
-      std_object_mgr.set_group_name(case i_try when 1 then 'TEST' else null end);
-
-      -- before store
+    -- before store
 $if std_object_mgr.c_debugging $then
-      dbms_output.put_line('count before store ' || i_try);
+    dbms_output.put_line('count before store');
 $end
-      get_object_names;
-      l_count := l_object_name_tab.count;
+    get_object_names;
+    l_count := l_object_name_tab.count;
 
-      l_dbug_log4plsql_obj := new dbug_log4plsql_obj_t(); -- should store
+    l_dbug_log4plsql_obj := new dbug_log4plsql_obj_t(); -- should store
 
-      case i_try
-        when 1
-        then
-          select  t.obj
-          into    l_obj_act
-          from    std_objects t
-          where   group_name = 'TEST'
-          and     object_name = 'DBUG_LOG4PLSQL';
-
-        when 2
-        then
-          std_object_mgr.get_std_object
-          ( p_object_name => 'DBUG_LOG4PLSQL'
-          , p_std_object => l_std_object
-          );
-          select  l_std_object.serialize()
-          into    l_obj_act
-          from    dual;
-
-      end case;
+    std_object_mgr.get_std_object
+    ( p_object_name => 'DBUG_LOG4PLSQL'
+    , p_std_object => l_std_object
+    );
+    select  l_std_object.serialize()
+    into    l_obj_act
+    from    dual;
 
 $if std_object_mgr.c_debugging $then
-      dbms_output.put_line('count after store ' || i_try);
+    dbms_output.put_line('count after store');
 $end
-      get_object_names;
-      ut.expect(l_object_name_tab.count, 'count after store ' || i_try).to_equal(l_count + 1);
-      l_json_act := json_object_t(l_obj_act);
-      l_json_act.put_null('LSECTION');
-      ut.expect(l_json_act, 'compare ' || i_try).to_equal(l_json_exp);
+    get_object_names;
+    ut.expect(l_object_name_tab.count, 'count after store').to_equal(l_count + 1);
+    l_json_act := json_object_t(l_obj_act);
+    l_json_act.put_null('LSECTION');
+    
+    ut.expect(l_json_act, 'compare').to_equal(l_json_exp);
 
-      -- after store
-      l_count := l_object_name_tab.count;
+    -- after store
+    l_count := l_object_name_tab.count;
 
-      l_dbug_log4plsql_obj.remove();
+    l_dbug_log4plsql_obj.remove();
 
 $if std_object_mgr.c_debugging $then
-      dbms_output.put_line('test removed');
+    dbms_output.put_line('test removed');
 $end
 
-      begin
-        case i_try
-          when 1
-          then
-            select  t.obj
-            into    l_obj_act
-            from    std_objects t
-            where   group_name = 'TEST'
-            and     object_name = 'DBUG_LOG4PLSQL';
+    begin
+      std_object_mgr.get_std_object
+      ( p_object_name => 'DBUG_LOG4PLSQL'
+      , p_std_object => l_std_object
+      );
 
-          when 2
-          then
-            std_object_mgr.get_std_object
-            ( p_object_name => 'DBUG_LOG4PLSQL'
-            , p_std_object => l_std_object
-            );
-
-        end case;
-        raise program_error;
-      exception
-        when others
-        then
-          ut.expect(sqlcode, 'remove ' || i_try).to_equal(100);
-      end;
+      raise program_error;
+    exception
+      when others
+      then
+        ut.expect(sqlcode, 'remove').to_equal(100);
+    end;
 
 $if std_object_mgr.c_debugging $then
-      dbms_output.put_line('count after remove ' || i_try);
+    dbms_output.put_line('count after remove');
 $end
-      get_object_names;
+    get_object_names;
 
-      ut.expect(l_object_name_tab.count, 'count after remove ' || i_try).to_equal(l_count - 1);
-    end loop;
-
-    commit;
-  exception
-    when std_object_mgr.e_unimplemented_feature
-    then commit;
+    ut.expect(l_object_name_tab.count, 'count after remove').to_equal(l_count - 1);
   end ut_store_remove;
 
   procedure ut_dbug_log4plsql
   is
-    pragma autonomous_transaction;
-
     l_id tlog.id%type;
     l_act sys_refcursor;
     l_exp sys_refcursor;
@@ -479,14 +429,9 @@ $end
       dbug.activate('LOG4PLSQL', false);
       dbug.done;
       -- clean local storage up
-      std_object_mgr.delete_std_objects
-      ( p_group_name => null
-      , p_object_name => '%'
-      );
+      std_object_mgr.delete_std_objects;
     end;
   begin
-    std_object_mgr.set_group_name(null);
-
     select nvl(max(id), 0) into l_id from tlog;
 
     dbug.activate('LOG4PLSQL', true);
@@ -512,14 +457,10 @@ $end
     ut.expect(l_act, 'tlog').to_equal(l_exp);
 
     cleanup;
-
-    commit;
   exception
     when others
     then
-      rollback;
       cleanup;
-      commit;
       raise;
   end ut_dbug_log4plsql;
 

@@ -4,7 +4,7 @@ is
 constructor function dbug_log4plsql_obj_t(self in out nocopy dbug_log4plsql_obj_t)
 return self as result
 is
-  l_object_name constant std_objects.object_name%type := 'DBUG_LOG4PLSQL';
+  l_object_name constant std_object_mgr.object_name_t := 'DBUG_LOG4PLSQL';
 
   l_log_ctx plogparam.log_ctx;
 

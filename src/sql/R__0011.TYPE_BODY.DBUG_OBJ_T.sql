@@ -4,7 +4,7 @@ is
 constructor function dbug_obj_t(self in out nocopy dbug_obj_t)
 return self as result
 is
-  l_object_name constant std_objects.object_name%type := 'DBUG';
+  l_object_name constant std_object_mgr.object_name_t := 'DBUG';
 begin
   begin
     std_object_mgr.get_std_object(l_object_name, self);
@@ -40,7 +40,7 @@ begin
                 )
               , 0
               );
-
+      
       -- make it a singleton by storing it
       std_object_mgr.set_std_object(l_object_name, self);
   end;

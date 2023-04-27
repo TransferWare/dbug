@@ -20,6 +20,8 @@ Please see the [DBUG issue queue](https://github.com/TransferWare/dbug/issues) f
 
 ## [Unreleased]
 
+## [7.0.0] -  2023-04-27
+
 ### Changed
 
 - [PL/SQL DBUG functionality must be moved from PLSDBUG to DBUG project.](https://github.com/TransferWare/dbug/issues/7)
