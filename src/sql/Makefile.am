@@ -21,13 +21,10 @@ pod_scripts      = dbug.pod dbug_trigger.pod
 html_files       = $(pod_scripts:.pod=.html)
 
 sql_scripts      = 0001.TYPE_SPEC.STD_OBJECT.sql \
-									 0002.TYPE_SPEC.DBUG_LOG4PLSQL_OBJ_T.sql \
+								   0002.TYPE_SPEC.DBUG_LOG4PLSQL_OBJ_T.sql \
 									 0003.TYPE_SPEC.DBUG_CALL_OBJ_T.sql \
 									 0004.TYPE_SPEC.DBUG_CALL_TAB_T.sql \
 									 0005.TYPE_SPEC.DBUG_OBJ_T.sql \
-									 0006.TABLE.STD_OBJECTS.sql \
-									 0024.INDEX.STD_OBJECTS.sql \
-									 0025.CONSTRAINT.STD_OBJECTS.sql \
 									 R__0007.PACKAGE_SPEC.STD_OBJECT_MGR.sql \
 									 R__0008.TYPE_BODY.STD_OBJECT.sql \
 									 R__0009.TYPE_BODY.DBUG_LOG4PLSQL_OBJ_T.sql \
@@ -45,8 +42,11 @@ sql_scripts      = 0001.TYPE_SPEC.STD_OBJECT.sql \
 									 R__0021.PACKAGE_BODY.DBUG_DBMS_OUTPUT.sql \
 									 R__0022.PACKAGE_BODY.DBUG_DBMS_APPLICATION_INFO.sql \
 									 R__0023.PACKAGE_BODY.DBUG.sql \
+									 R__0024.PACKAGE_SPEC.UT_DBUG.sql \
+									 R__0025.PACKAGE_BODY.UT_DBUG.sql \
 									 R__0026.OBJECT_GRANT.DBUG_TRIGGER.sql \
 									 R__0027.OBJECT_GRANT.DBUG.sql \
+									 R__0030.OBJECT_GRANT.DBUG_PROFILER.sql \
 									 V20221202174525.0001__TYPE_SPEC.STD_OBJECT.sql \
 									 V20221202174525.0002__TYPE_SPEC.DBUG_LOG4PLSQL_OBJ_T.sql \
 									 V20221202174525.0003__TYPE_SPEC.DBUG_CALL_OBJ_T.sql \
@@ -55,8 +55,10 @@ sql_scripts      = 0001.TYPE_SPEC.STD_OBJECT.sql \
 									 V20221202174525.0006__TABLE.STD_OBJECTS.sql \
 									 V20221202174525.0024__INDEX.STD_OBJECTS.sql \
 									 V20221202174525.0025__CONSTRAINT.STD_OBJECTS.sql \
-                   install.sql \
-                   uninstall.sql
+									 V20230425090300__drop_STD_OBJECTS.sql \
+									 beforeEachMigrate.sql \
+									 install.sql \
+									 uninstall.sql
 
 SUBDIRS          = .
 
