@@ -296,7 +296,7 @@ CREATE OR REPLACE PACKAGE BODY "DBUG_LOG4PLSQL" IS
       from    tlog t
       where   t.lsession = p_session
       and     substr(ltrim(ltext), 1, 1) in ('>', '<')
-      and     t.date < l_now -- history only
+      and     t.ldate < l_now -- history only
       order by
               t.id asc
     )
