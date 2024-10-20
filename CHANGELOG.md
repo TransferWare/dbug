@@ -20,6 +20,12 @@ Please see the [DBUG issue queue](https://github.com/TransferWare/dbug/issues) f
 
 ## [Unreleased]
 
+## [7.1.0] -  2024-10-20
+
+### Changed
+
+- [It must be possible to profile based on other logging modules than DBUG_PROFILER.](https://github.com/TransferWare/dbug/issues/10)
+
 ## [7.0.0] -  2023-04-27
 
 ### Changed
