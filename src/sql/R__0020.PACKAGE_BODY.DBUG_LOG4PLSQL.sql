@@ -288,6 +288,7 @@ CREATE OR REPLACE PACKAGE BODY "DBUG_LOG4PLSQL" IS
     p_session in tlog.lsession%type -- The session for which to feed profiling info.
   )
   is
+    l_now constant date := sysdate;
   begin
     for r in
     ( select  t.utc_timestamp
@@ -295,6 +296,7 @@ CREATE OR REPLACE PACKAGE BODY "DBUG_LOG4PLSQL" IS
       from    tlog t
       where   t.lsession = p_session
       and     substr(ltrim(ltext), 1, 1) in ('>', '<')
+      and     t.date < l_now -- history only
       order by
               t.id asc
     )
