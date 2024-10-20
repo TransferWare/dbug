@@ -73,7 +73,7 @@ procedure print(
 /** The print routine invoked by dbug.print. **/
 
 procedure feed_profiler(
-  p_session in tlog.lsession%type default 'ORCL-' || sys_context('USERENV', 'SESSIONID') -- The session for which to feed profiling info.
+  p_session in tlog.lsession%type default null -- The session for which to feed profiling info. Defaults to latest session.
 );
 
 /**
