@@ -32,6 +32,8 @@ procedure done;
 function show
 return t_profile_tab pipelined;
 
+procedure show;
+
 -- necessary functions for the dbug interface but they do nothing
 procedure print(
   p_break_point in varchar2,
@@ -80,10 +82,10 @@ $if oracle_tools.cfg_pkg.c_testing $then
 --%suitepath(DBUG)
 --%suite
 
---%beforeall
+--%beforeeach
 procedure ut_setup;
 
---%afterall
+--%aftereach
 procedure ut_teardown;
 
 --%test
