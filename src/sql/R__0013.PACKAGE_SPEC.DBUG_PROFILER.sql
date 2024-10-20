@@ -1,7 +1,5 @@
 CREATE OR REPLACE PACKAGE "DBUG_PROFILER" AUTHID DEFINER AS
 
-c_testing constant boolean := $if $$Testing $then true $else false $end;
-
 /**
 
 This package is **ONLY** invoked by the DBUG package when DBUG.ACTIVATE('PROFILER') is issued.
@@ -33,8 +31,8 @@ another routine P2 is invoked (also with DBUG.ENTER/DBUG.LEAVE at the begin and 
 
 There are two use cases:
 1. activate the profiler in a current session.
-2. feed the profiler with information from other sessions by issueing dbug_profiler.enter(<module>, <timestamp>)
-   and dbug_profiler.leave(<timestamp>) at the appropiate places.
+2. feed the profiler with information from other sessions by issuing dbug_profiler.enter(<module>, <timestamp>)
+   and dbug_profiler.leave(<timestamp>) at the appropriate places.
 
 In both cases you can use "select * from table(dbug_profiler.show)" to have the profiling details.
 
@@ -42,6 +40,8 @@ Issues:
 - https://github.com/TransferWare/dbug/issues/10 - It must be possible to profile based on other logging modules than DBUG_PROFILER.
 
 **/
+
+c_testing constant boolean := $if $$Testing $then true $else false $end;
 
 -- SYSTIMESTAMP
 subtype t_timestamp is timestamp(6); /** the type for UTC timestamps (having no problems with Winter and Summer time) **/
@@ -80,16 +80,16 @@ procedure leave
 
 procedure done;
 
-/** The done routine, i.e. profiling cache is cleared.  **/
+/** The done routine invoked by dbug.done: profiling cache is cleared.  **/
 
 function show
 return t_profiler_tab pipelined;
 
-/** Show the profing information as a pipelined function. Idempotent function. */
+/** Show the profiling information as a pipelined function. Idempotent function. */
 
 procedure show;
 
-/** Show the profing information via DBMS_OUTPUT. Idempotent procedure. */
+/** Show the profiling information via DBMS_OUTPUT. Idempotent procedure. */
 
 -- necessary functions for the dbug interface but they do nothing
 procedure print(
@@ -98,12 +98,16 @@ procedure print(
   p_arg1 in varchar2
 );
 
+/** The print routine invoked by dbug.print. **/
+
 procedure print(
   p_break_point in varchar2,
   p_fmt in varchar2,
   p_arg1 in varchar2,
   p_arg2 in varchar2
 );
+
+/** The print routine invoked by dbug.print. **/
 
 procedure print(
   p_break_point in varchar2,
@@ -112,6 +116,8 @@ procedure print(
   p_arg2 in varchar2,
   p_arg3 in varchar2
 );
+
+/** The print routine invoked by dbug.print. **/
 
 procedure print(
   p_break_point in varchar2,
@@ -122,6 +128,8 @@ procedure print(
   p_arg4 in varchar2
 );
 
+/** The print routine invoked by dbug.print. **/
+
 procedure print(
   p_break_point in varchar2,
   p_fmt in varchar2,
@@ -131,6 +139,8 @@ procedure print(
   p_arg4 in varchar2,
   p_arg5 in varchar2
 );
+
+/** The print routine invoked by dbug.print. **/
 
 -- test functions
 
