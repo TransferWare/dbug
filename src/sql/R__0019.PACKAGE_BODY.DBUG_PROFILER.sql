@@ -20,13 +20,9 @@ type t_module_name_stack is table of dbug.module_name_t index by pls_integer;
 g_count_tab t_count_tab;
 g_time_ms_tab t_time_ms_tab;
 g_module_name_stack t_module_name_stack;
-g_timestamp timestamp := null;
+g_timestamp t_timestamp := null;
 
 -- LOCAL ROUTINES
-procedure start_timer;
-
-function end_timer return t_time_ms;
-
 $if dbug_profiler.c_testing $then
 
 procedure sleep(p_seconds in number)
@@ -41,42 +37,73 @@ end;
 
 $end -- $if dbug_profiler.c_testing $then
 
--- GLOBAL ROUTINES
 procedure start_timer
+( p_timestamp in t_timestamp
+)
 is
 begin
+/*DBUG
+  dbms_output.put_line('>start_timer');
+  dbms_output.put_line('p_timestamp: ' || to_char(p_timestamp, 'yyyy-mm-dd hh24:mi:ss.ff'));
+/*DBUG*/  
   if g_timestamp is not null
   then
     raise program_error;
   end if;
-  g_timestamp := systimestamp;
+  g_timestamp := p_timestamp;
+/*DBUG
+  dbms_output.put_line('<start_timer');
+/*DBUG*/
 end start_timer;
 
-function end_timer return t_time_ms
+function end_timer
+( p_timestamp in t_timestamp
+)
+return t_time_ms
 is
-  l_timestamp constant timestamp := systimestamp;
-  l_diff_timestamp constant interval day to second := l_timestamp - g_timestamp;
+  l_diff_timestamp constant interval day to second := p_timestamp - g_timestamp;
+  l_time_ms constant t_time_ms :=
+    1000 * extract(day    from l_diff_timestamp) * 24 * 60 * 60 +
+    1000 * extract(hour   from l_diff_timestamp) * 60 * 60 +
+    1000 * extract(minute from l_diff_timestamp) * 60 +
+    round(1000 * extract(second from l_diff_timestamp));
 begin
+/*DBUG
+  dbms_output.put_line('>end_timer');
+  dbms_output.put_line('g_timestamp: ' || to_char(g_timestamp, 'yyyy-mm-dd hh24:mi:ss.ff'));
+  dbms_output.put_line('p_timestamp: ' || to_char(p_timestamp, 'yyyy-mm-dd hh24:mi:ss.ff'));
+  dbms_output.put_line('l_time_ms: ' || l_time_ms);
+  dbms_output.put_line('<end_timer');
+/*DBUG*/  
   g_timestamp := null;
-  return 1000 * extract(day    from l_diff_timestamp) * 24 * 60 * 60 +
-         1000 * extract(hour   from l_diff_timestamp) * 60 * 60 +
-         1000 * extract(minute from l_diff_timestamp) * 60 +
-         round(1000 * extract(second from l_diff_timestamp));
+  return l_time_ms;
 end end_timer;
 
+-- GLOBAL ROUTINES
 procedure enter(
   p_module in dbug.module_name_t
+, p_timestamp in t_timestamp
 )
 is
 begin
+/*DBUG
+  dbms_output.put_line('>enter');
+  dbms_output.put_line('p_module: ' || p_module);
+  dbms_output.put_line('p_timestamp: ' || to_char(p_timestamp, 'yyyy-mm-dd hh24:mi:ss.ff'));
+/*DBUG*/
+  
   -- stop timing for the previous module and add the elapsed time to it
   if g_module_name_stack.last is not null
   then
     begin
-      g_time_ms_tab(g_module_name_stack(g_module_name_stack.last)) := g_time_ms_tab(g_module_name_stack(g_module_name_stack.last)) + end_timer;
+      g_time_ms_tab(g_module_name_stack(g_module_name_stack.last)) := g_time_ms_tab(g_module_name_stack(g_module_name_stack.last)) + end_timer(p_timestamp);
     exception
       when no_data_found
-      then g_time_ms_tab(g_module_name_stack(g_module_name_stack.last)) := 0;
+      then
+/*DBUG
+        dbms_output.put_line('no_data_found');
+/*DBUG*/        
+        g_time_ms_tab(g_module_name_stack(g_module_name_stack.last)) := 0;
     end;
   end if;
 
@@ -91,18 +118,31 @@ begin
   end if;
 
   -- start the timer for this module
-  start_timer;
+  start_timer(p_timestamp);
+/*DBUG
+  dbms_output.put_line('<enter');
+/*DBUG*/  
 end enter;
 
 procedure leave
+( p_timestamp in t_timestamp
+)
 is
 begin
+/*DBUG
+  dbms_output.put_line('>leave');
+  dbms_output.put_line('p_timestamp: ' || to_char(p_timestamp, 'yyyy-mm-dd hh24:mi:ss.ff'));
+/*DBUG*/  
   -- stop the timer and add the elapsed time to the current module
   begin
-    g_time_ms_tab(g_module_name_stack(g_module_name_stack.last)) := g_time_ms_tab(g_module_name_stack(g_module_name_stack.last)) + end_timer;
+    g_time_ms_tab(g_module_name_stack(g_module_name_stack.last)) := g_time_ms_tab(g_module_name_stack(g_module_name_stack.last)) + end_timer(p_timestamp);
   exception
     when no_data_found
-    then g_time_ms_tab(g_module_name_stack(g_module_name_stack.last)) := 0;
+    then
+/*DBUG
+      dbms_output.put_line('no_data_found');
+/*DBUG*/      
+      g_time_ms_tab(g_module_name_stack(g_module_name_stack.last)) := 0;
   end;
   -- increase the count as well
   g_count_tab(g_module_name_stack(g_module_name_stack.last)) := g_count_tab(g_module_name_stack(g_module_name_stack.last)) + 1;
@@ -111,8 +151,11 @@ begin
   -- if there was a previous module start the timer again for that module
   if g_module_name_stack.last is not null
   then
-    start_timer;
+    start_timer(p_timestamp);
   end if;
+/*DBUG
+  dbms_output.put_line('<leave');
+/*DBUG*/  
 end leave;
 
 procedure done
@@ -125,21 +168,44 @@ begin
 end done;
 
 function show
-return t_profile_tab pipelined
+return t_profiler_tab pipelined
 is
-  l_profile_rec t_profile_rec;
+  l_profiler_rec t_profiler_rec;
 begin
-  l_profile_rec.module_name := g_time_ms_tab.first;
-  while l_profile_rec.module_name is not null
+  l_profiler_rec.module_name := g_time_ms_tab.first;
+  while l_profiler_rec.module_name is not null
   loop
-    l_profile_rec.nr_calls := g_count_tab(l_profile_rec.module_name);
-    l_profile_rec.elapsed_time := g_time_ms_tab(l_profile_rec.module_name) / 1000;
-    l_profile_rec.avg_time := case when l_profile_rec.nr_calls <> 0 then l_profile_rec.elapsed_time / l_profile_rec.nr_calls end;
-    pipe row (l_profile_rec);
-    l_profile_rec.module_name := g_time_ms_tab.next(l_profile_rec.module_name);
+    l_profiler_rec.nr_calls := g_count_tab(l_profiler_rec.module_name);
+    l_profiler_rec.elapsed_time := g_time_ms_tab(l_profiler_rec.module_name) / 1000;
+    l_profiler_rec.avg_time := case when l_profiler_rec.nr_calls <> 0 then l_profiler_rec.elapsed_time / l_profiler_rec.nr_calls end;
+    pipe row (l_profiler_rec);
+    l_profiler_rec.module_name := g_time_ms_tab.next(l_profiler_rec.module_name);
   end loop;
-  g_time_ms_tab.delete; -- cleanup timing
   return;
+end show;
+
+procedure show
+is
+  l_profiler_rec t_profiler_rec;
+begin
+  dbms_output.put_line('>show');
+  
+  l_profiler_rec.module_name := g_time_ms_tab.first;
+  while l_profiler_rec.module_name is not null
+  loop
+    l_profiler_rec.nr_calls := g_count_tab(l_profiler_rec.module_name);
+    l_profiler_rec.elapsed_time := g_time_ms_tab(l_profiler_rec.module_name) / 1000;
+    l_profiler_rec.avg_time := case when l_profiler_rec.nr_calls <> 0 then l_profiler_rec.elapsed_time / l_profiler_rec.nr_calls end;
+
+    dbms_output.put_line('=== ' || l_profiler_rec.module_name || ' ===');
+    dbms_output.put_line('nr_calls: ' || l_profiler_rec.nr_calls);
+    dbms_output.put_line('elapsed_time: ' || l_profiler_rec.elapsed_time);
+    dbms_output.put_line('avg_time: ' || l_profiler_rec.avg_time);
+
+    l_profiler_rec.module_name := g_time_ms_tab.next(l_profiler_rec.module_name);
+  end loop;
+
+  dbms_output.put_line('<show');
 end show;
 
 -- necessary functions for the dbug interface but they do nothing
@@ -203,30 +269,24 @@ begin
   null;
 end print;
 
+$if dbug_profiler.c_testing $then
+
 -- test procedures
 procedure ut_setup
 is
 begin
-$if dbug_profiler.c_testing $then
   null;
-$else
-  raise program_error;
-$end
 end ut_setup;
 
 procedure ut_teardown
 is
 begin
-$if dbug_profiler.c_testing $then
-  null;
-$else
-  raise program_error;
-$end
+  show;
+  done;
 end ut_teardown;
 
 procedure ut_test
 is
-$if dbug_profiler.c_testing $then
   procedure p1
   is
   begin
@@ -242,7 +302,11 @@ $if dbug_profiler.c_testing $then
     sleep(1);
     p1;
     sleep(2);
+    raise value_error;
     dbug.leave;
+  exception
+    when value_error
+    then dbug.leave_on_error; -- no reraise, just to show that this invokes dbug_profiler.leave too
   end p2;
 
   procedure p3
@@ -254,11 +318,7 @@ $if dbug_profiler.c_testing $then
     sleep(4);
     dbug.leave;
   end p3;
-  $end
 begin
-$if dbug_profiler.c_testing $then
-  ut_setup;
-
   dbug.activate('dbms_output');
   dbug.activate('profiler');
 
@@ -273,33 +333,33 @@ $if dbug_profiler.c_testing $then
     dbms_output.put_line('elapsed_time: ' || r.elapsed_time);
     dbms_output.put_line('avg_time: ' || r.avg_time);
 
-    if r.nr_calls = 2
-    then
-      null;
-    else
-      raise value_error;
-    end if;
-
-    if trunc(r.avg_time) = case r.module_name when 'p1' then 0 when 'p2' then 3 when 'p3' then 7 end
-    then
-      null;
-    else
-      raise value_error;
-    end if;
-
-    if trunc(r.elapsed_time, 3) = trunc(r.nr_calls * r.avg_time, 3)
-    then
-      null;
-    else
-      raise value_error;
-    end if;
+    ut.expect(r.nr_calls, r.module_name).to_equal(2);
+    ut.expect(trunc(r.avg_time), r.module_name).to_equal(case r.module_name when 'p1' then 0 when 'p2' then 3 when 'p3' then 7 end);
+    ut.expect(trunc(r.elapsed_time, 3), r.module_name).to_equal(trunc(r.nr_calls * r.avg_time, 3));
   end loop;
-
-  ut_teardown;
-$else
-  raise program_error;
-$end
 end ut_test;
+
+$else
+
+procedure ut_setup
+is
+begin
+  null;
+end;
+
+procedure ut_teardown
+is
+begin
+  null;
+end;
+
+procedure ut_test
+is
+begin
+  null;
+end;
+
+$end -- $if dbug_profiler.c_testing $then
 
 end dbug_profiler;
 /

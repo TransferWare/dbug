@@ -128,7 +128,7 @@ CREATE OR REPLACE PACKAGE BODY "DBUG_LOG4PLSQL" IS
     l_str varchar2(32767) := p_str;
     l_ctx plogparam.log_ctx;
   begin
-$if std_object_mgr.c_debugging $then
+  $if std_object_mgr.c_debugging $then
     dbms_output.put_line
     ( utl_lms.format_message
       ( '[%s.%s] p_str: %s'
@@ -137,7 +137,7 @@ $if std_object_mgr.c_debugging $then
       , p_str
       )
     );
-$end
+  $end
     get_log_ctx(l_ctx);
     l_prev_pos := 1;
     loop
@@ -170,7 +170,7 @@ $end
     p_arg1 in varchar2
   ) is
   begin
-$if std_object_mgr.c_debugging $then
+  $if std_object_mgr.c_debugging $then
     dbms_output.put_line
     ( utl_lms.format_message
       ( '[%s.%s] p_fmt: %s; p_arg1: %s'
@@ -180,7 +180,7 @@ $if std_object_mgr.c_debugging $then
       , p_arg1
       )
     );
-$end
+  $end
     print( dbug.format_print(p_break_point, p_fmt, 1, p_arg1) );
   end print;
 
@@ -191,7 +191,7 @@ $end
     p_arg2 in varchar2
   ) is
   begin
-$if std_object_mgr.c_debugging $then
+  $if std_object_mgr.c_debugging $then
     dbms_output.put_line
     ( utl_lms.format_message
       ( '[%s.%s] p_fmt: %s; p_arg1: %s; p_arg2: %s'
@@ -202,7 +202,7 @@ $if std_object_mgr.c_debugging $then
       , p_arg2
       )
     );
-$end
+  $end
     print( dbug.format_print(p_break_point, p_fmt, 2, p_arg1, p_arg2) );
   end print;
 
@@ -214,7 +214,7 @@ $end
     p_arg3 in varchar2
   ) is
   begin
-$if std_object_mgr.c_debugging $then
+  $if std_object_mgr.c_debugging $then
     dbms_output.put_line
     ( utl_lms.format_message
       ( '[%s.%s] p_fmt: %s; p_arg1: %s; p_arg2: %s; p_arg3: %s'
@@ -226,7 +226,7 @@ $if std_object_mgr.c_debugging $then
       , p_arg3
       )
     );
-$end
+  $end
     print( dbug.format_print(p_break_point, p_fmt, 3, p_arg1, p_arg2, p_arg3) );
   end print;
 
@@ -239,7 +239,7 @@ $end
     p_arg4 in varchar2
   ) is
   begin
-$if std_object_mgr.c_debugging $then
+  $if std_object_mgr.c_debugging $then
     dbms_output.put_line
     ( utl_lms.format_message
       ( '[%s.%s] p_fmt: %s; p_arg1: %s; p_arg2: %s; p_arg3: %s; p_arg4: %s'
@@ -252,7 +252,7 @@ $if std_object_mgr.c_debugging $then
       , p_arg4
       )
     );
-$end
+  $end
     print( dbug.format_print(p_break_point, p_fmt, 4, p_arg1, p_arg2, p_arg3, p_arg4) );
   end print;
 
@@ -266,7 +266,7 @@ $end
     p_arg5 in varchar2
   ) is
   begin
-$if std_object_mgr.c_debugging $then
+  $if std_object_mgr.c_debugging $then
     dbms_output.put_line
     ( utl_lms.format_message
       ( '[%s.%s] p_fmt: %s; p_arg1: %s; p_arg2: %s; p_arg3: %s; p_arg4: %s; p_arg5: %s'
@@ -280,28 +280,55 @@ $if std_object_mgr.c_debugging $then
       , p_arg5
       )
     );
-$end
+  $end
     print( dbug.format_print(p_break_point, p_fmt, 5, p_arg1, p_arg2, p_arg3, p_arg4, p_arg5) );
   end print;
 
-$if dbug_log4plsql.c_testing $then
+  procedure feed_profiler(
+    p_session in tlog.lsession%type -- The session for which to feed profiling info.
+  )
+  is
+    l_now constant date := sysdate;
+  begin
+    /* Use translate to transform "|   |   <" into "        <". Now it can be left trimmed. */
+    for r in
+    ( select  t.utc_timestamp
+      ,       ltrim(translate(t.ltext, '|', ' ')) as ltext
+      from    tlog t
+      where   t.lsession = p_session
+      and     substr(ltrim(translate(t.ltext, '|', ' ')), 1, 1) in ('>', '<')
+      and     t.ldate < l_now -- history only
+      order by
+              t.id asc
+    )
+    loop
+      case substr(r.ltext, 1, 1)
+        when '>'
+        then dbug_profiler.enter(substr(r.ltext, 2), r.utc_timestamp);
+        when '<'
+        then dbug_profiler.leave(r.utc_timestamp);
+      end case;    
+    end loop;
+  end feed_profiler;
+
+  $if dbug_log4plsql.c_testing $then
 
   procedure ut_setup
   is
   begin
     std_object_mgr.delete_std_objects;
-$if std_object_mgr.c_debugging $then
+  $if std_object_mgr.c_debugging $then
     dbms_output.put_line('ut_setup finished');
-$end
+  $end
   end;
 
   procedure ut_teardown
   is
   begin
     std_object_mgr.delete_std_objects;
-$if std_object_mgr.c_debugging $then
+  $if std_object_mgr.c_debugging $then
     dbms_output.put_line('ut_teardown finished');
-$end
+  $end
   end;
 
   procedure ut_store_remove
@@ -323,7 +350,7 @@ $end
     is
     begin
       std_object_mgr.get_object_names(l_object_name_tab);
-$if std_object_mgr.c_debugging $then
+  $if std_object_mgr.c_debugging $then
       if l_object_name_tab.count > 0
       then
         for i_idx in l_object_name_tab.first .. l_object_name_tab.last
@@ -331,13 +358,13 @@ $if std_object_mgr.c_debugging $then
           dbms_output.put_line('l_object_name_tab[' || i_idx || '] = ' || l_object_name_tab(i_idx));
         end loop;
       end if;
-$end
+  $end
     end get_object_names;
   begin
     -- before store
-$if std_object_mgr.c_debugging $then
+  $if std_object_mgr.c_debugging $then
     dbms_output.put_line('count before store');
-$end
+  $end
     get_object_names;
     l_count := l_object_name_tab.count;
 
@@ -351,9 +378,9 @@ $end
     into    l_obj_act
     from    dual;
 
-$if std_object_mgr.c_debugging $then
+  $if std_object_mgr.c_debugging $then
     dbms_output.put_line('count after store');
-$end
+  $end
     get_object_names;
     ut.expect(l_object_name_tab.count, 'count after store').to_equal(l_count + 1);
     l_json_act := json_object_t(l_obj_act);
@@ -366,9 +393,9 @@ $end
 
     l_dbug_log4plsql_obj.remove();
 
-$if std_object_mgr.c_debugging $then
+  $if std_object_mgr.c_debugging $then
     dbms_output.put_line('test removed');
-$end
+  $end
 
     begin
       std_object_mgr.get_std_object
@@ -383,9 +410,9 @@ $end
         ut.expect(sqlcode, 'remove').to_equal(100);
     end;
 
-$if std_object_mgr.c_debugging $then
+  $if std_object_mgr.c_debugging $then
     dbms_output.put_line('count after remove');
-$end
+  $end
     get_object_names;
 
     ut.expect(l_object_name_tab.count, 'count after remove').to_equal(l_count - 1);
@@ -447,9 +474,9 @@ $end
       select  4      , '|   |   >test' as ltext from dual union all
       select  5      , '|   |   |   info: p_try: 2 3 4 5 6' as ltext from dual union all
       select  6      , '|   |   |   error: sqlerrm: ORA-06501: PL/SQL: program error' as ltext from dual union all
-      select  7      , '|   |   |   error: dbms_utility.format_error_backtrace (1): ORA-06512: at "' || $$PLSQL_UNIT_OWNER || '.DBUG_LOG4PLSQL", line ' /*441*/ as ltext from dual union all
-      select  8      , '|   |   |   error: dbms_utility.format_error_backtrace (2): ORA-06512: at "' || $$PLSQL_UNIT_OWNER || '.DBUG_LOG4PLSQL", line ' /*443*/ as ltext from dual union all
-      select  9      , '|   |   |   error: dbms_utility.format_error_backtrace (3): ORA-06512: at "' || $$PLSQL_UNIT_OWNER || '.DBUG_LOG4PLSQL", line ' /*452*/ as ltext from dual union all
+      select  7      , '|   |   |   error: dbms_utility.format_error_backtrace (1): ORA-06512: at "' || $$PLSQL_UNIT_OWNER || '.DBUG_LOG4PLSQL",' /*441*/ as ltext from dual union all
+      select  8      , '|   |   |   error: dbms_utility.format_error_backtrace (2): ORA-06512: at "' || $$PLSQL_UNIT_OWNER || '.DBUG_LOG4PLSQL",' /*443*/ as ltext from dual union all
+      select  9      , '|   |   |   error: dbms_utility.format_error_backtrace (3): ORA-06512: at "' || $$PLSQL_UNIT_OWNER || '.DBUG_LOG4PLSQL",' /*452*/ as ltext from dual union all
       select 10      , '|   |   <test' as ltext from dual union all
       select 11      , '|   <test' as ltext from dual union all
       select 12      , '<main' as ltext from dual;
@@ -464,7 +491,7 @@ $end
       raise;
   end ut_dbug_log4plsql;
 
-$else -- dbug_log4plsql.c_testing $then
+  $else -- dbug_log4plsql.c_testing $then
 
   -- some dummy stubs
 
@@ -492,7 +519,7 @@ $else -- dbug_log4plsql.c_testing $then
     raise program_error;
   end ut_dbug_log4plsql;
 
-$end -- dbug_log4plsql.c_testing $then
+  $end -- dbug_log4plsql.c_testing $then
 
 end dbug_log4plsql;
 /

@@ -1,70 +1,102 @@
 CREATE OR REPLACE PACKAGE "DBUG_LOG4PLSQL" AUTHID DEFINER IS
 
-  c_testing constant boolean := $if $$Testing $then true $else false $end;
+/**
 
-  procedure done;
+This package is **ONLY** invoked by the DBUG package when DBUG.ACTIVATE('LOG4PLSQL') is issued.
 
-  procedure enter(
-    p_module in dbug.module_name_t
-  );
+It is meant to log to package PLOG that by default logs to table TLOG.
 
-  procedure leave;
+**/
 
-  procedure print(
-    p_break_point in varchar2,
-    p_fmt in varchar2,
-    p_arg1 in varchar2
-  );
+c_testing constant boolean := $if $$Testing $then true $else false $end;
 
-  procedure print(
-    p_break_point in varchar2,
-    p_fmt in varchar2,
-    p_arg1 in varchar2,
-    p_arg2 in varchar2
-  );
+procedure done;
 
-  procedure print(
-    p_break_point in varchar2,
-    p_fmt in varchar2,
-    p_arg1 in varchar2,
-    p_arg2 in varchar2,
-    p_arg3 in varchar2
-  );
+procedure enter(
+  p_module in dbug.module_name_t
+);
 
-  procedure print(
-    p_break_point in varchar2,
-    p_fmt in varchar2,
-    p_arg1 in varchar2,
-    p_arg2 in varchar2,
-    p_arg3 in varchar2,
-    p_arg4 in varchar2
-  );
+/** The enter routine invoked by dbug.enter. **/
 
-  procedure print(
-    p_break_point in varchar2,
-    p_fmt in varchar2,
-    p_arg1 in varchar2,
-    p_arg2 in varchar2,
-    p_arg3 in varchar2,
-    p_arg4 in varchar2,
-    p_arg5 in varchar2
-  );
+procedure leave;
 
+/** The leave routine invoked by dbug.leave. **/
 
-  --%suitepath(DBUG)
-  --%suite
+procedure print(
+  p_break_point in varchar2,
+  p_fmt in varchar2,
+  p_arg1 in varchar2
+);
 
-  --%beforeeach
-  procedure ut_setup;
+/** The print routine invoked by dbug.print. **/
 
-  --%aftereach
-  procedure ut_teardown;
+procedure print(
+  p_break_point in varchar2,
+  p_fmt in varchar2,
+  p_arg1 in varchar2,
+  p_arg2 in varchar2
+);
 
-  --%test
-  procedure ut_store_remove;
+/** The print routine invoked by dbug.print. **/
 
-  --%test
-  procedure ut_dbug_log4plsql;
+procedure print(
+  p_break_point in varchar2,
+  p_fmt in varchar2,
+  p_arg1 in varchar2,
+  p_arg2 in varchar2,
+  p_arg3 in varchar2
+);
+
+/** The print routine invoked by dbug.print. **/
+
+procedure print(
+  p_break_point in varchar2,
+  p_fmt in varchar2,
+  p_arg1 in varchar2,
+  p_arg2 in varchar2,
+  p_arg3 in varchar2,
+  p_arg4 in varchar2
+);
+
+/** The print routine invoked by dbug.print. **/
+
+procedure print(
+  p_break_point in varchar2,
+  p_fmt in varchar2,
+  p_arg1 in varchar2,
+  p_arg2 in varchar2,
+  p_arg3 in varchar2,
+  p_arg4 in varchar2,
+  p_arg5 in varchar2
+);
+
+/** The print routine invoked by dbug.print. **/
+
+procedure feed_profiler(
+  p_session in tlog.lsession%type default 'ORCL-' || sys_context('USERENV', 'SESSIONID') -- The session for which to feed profiling info.
+);
+
+/**
+
+Feed the DBUG_PROFILER package with profiling information so you can have profiling info not only from the current session.
+The table TLOG will be searched for but only for LDATE < SYSDATE (history).
+
+**/
+
+--%suitepath(DBUG)
+--%suite
+
+--%beforeeach
+procedure ut_setup;
+
+--%aftereach
+procedure ut_teardown;
+
+--%test
+procedure ut_store_remove;
+
+--%test
+procedure ut_dbug_log4plsql;
 
 end dbug_log4plsql;
 /
