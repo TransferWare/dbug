@@ -1,6 +1,7 @@
 CREATE OR REPLACE PACKAGE "DBUG_PROFILER" AUTHID DEFINER AS
 
-c_testing constant boolean := false;
+-- SYSTIMESTAMP
+subtype t_timestamp is timestamp(6);
 
 type t_profile_rec is record (
   /* see dbugrpt */
@@ -19,9 +20,12 @@ type t_profile_tab is table of t_profile_rec;
 
 procedure enter(
   p_module in dbug.module_name_t
+, p_timestamp in t_timestamp default sys_extract_utc(systimestamp) -- https://github.com/TransferWare/dbug/issues/10
 );
 
-procedure leave;
+procedure leave
+( p_timestamp in t_timestamp default sys_extract_utc(systimestamp) -- https://github.com/TransferWare/dbug/issues/10
+);
 
 procedure done;
 
@@ -69,9 +73,23 @@ procedure print(
   p_arg5 in varchar2
 );
 
+$if oracle_tools.cfg_pkg.c_testing $then
+
+-- test functions
+
+--%suitepath(DBUG)
+--%suite
+
+--%beforeall
 procedure ut_setup;
+
+--%afterall
 procedure ut_teardown;
+
+--%test
 procedure ut_test;
+
+$end -- $if oracle_tools.cfg_pkg.c_testing $then
 
 end dbug_profiler;
 /

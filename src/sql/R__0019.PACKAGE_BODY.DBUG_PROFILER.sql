@@ -20,14 +20,10 @@ type t_module_name_stack is table of dbug.module_name_t index by pls_integer;
 g_count_tab t_count_tab;
 g_time_ms_tab t_time_ms_tab;
 g_module_name_stack t_module_name_stack;
-g_timestamp timestamp := null;
+g_timestamp t_timestamp := null;
 
 -- LOCAL ROUTINES
-procedure start_timer;
-
-function end_timer return t_time_ms;
-
-$if dbug_profiler.c_testing $then
+$if oracle_tools.cfg_pkg.c_testing $then
 
 procedure sleep(p_seconds in number)
 is
@@ -39,22 +35,26 @@ $else
 $end
 end;
 
-$end -- $if dbug_profiler.c_testing $then
+$end -- $if oracle_tools.cfg_pkg.c_testing $then
 
--- GLOBAL ROUTINES
 procedure start_timer
+( p_timestamp in t_timestamp
+)
 is
 begin
   if g_timestamp is not null
   then
     raise program_error;
   end if;
-  g_timestamp := systimestamp;
+  g_timestamp := p_timestamp;
 end start_timer;
 
-function end_timer return t_time_ms
+function end_timer
+( p_timestamp in t_timestamp
+)
+return t_time_ms
 is
-  l_timestamp constant timestamp := systimestamp;
+  l_timestamp constant t_timestamp := p_timestamp;
   l_diff_timestamp constant interval day to second := l_timestamp - g_timestamp;
 begin
   g_timestamp := null;
@@ -64,8 +64,10 @@ begin
          round(1000 * extract(second from l_diff_timestamp));
 end end_timer;
 
+-- GLOBAL ROUTINES
 procedure enter(
   p_module in dbug.module_name_t
+, p_timestamp in t_timestamp
 )
 is
 begin
@@ -73,7 +75,7 @@ begin
   if g_module_name_stack.last is not null
   then
     begin
-      g_time_ms_tab(g_module_name_stack(g_module_name_stack.last)) := g_time_ms_tab(g_module_name_stack(g_module_name_stack.last)) + end_timer;
+      g_time_ms_tab(g_module_name_stack(g_module_name_stack.last)) := g_time_ms_tab(g_module_name_stack(g_module_name_stack.last)) + end_timer(p_timestamp);
     exception
       when no_data_found
       then g_time_ms_tab(g_module_name_stack(g_module_name_stack.last)) := 0;
@@ -91,15 +93,17 @@ begin
   end if;
 
   -- start the timer for this module
-  start_timer;
+  start_timer(p_timestamp);
 end enter;
 
 procedure leave
+( p_timestamp in t_timestamp
+)
 is
 begin
   -- stop the timer and add the elapsed time to the current module
   begin
-    g_time_ms_tab(g_module_name_stack(g_module_name_stack.last)) := g_time_ms_tab(g_module_name_stack(g_module_name_stack.last)) + end_timer;
+    g_time_ms_tab(g_module_name_stack(g_module_name_stack.last)) := g_time_ms_tab(g_module_name_stack(g_module_name_stack.last)) + end_timer(p_timestamp);
   exception
     when no_data_found
     then g_time_ms_tab(g_module_name_stack(g_module_name_stack.last)) := 0;
@@ -111,7 +115,7 @@ begin
   -- if there was a previous module start the timer again for that module
   if g_module_name_stack.last is not null
   then
-    start_timer;
+    start_timer(p_timestamp);
   end if;
 end leave;
 
@@ -203,30 +207,23 @@ begin
   null;
 end print;
 
+$if oracle_tools.cfg_pkg.c_testing $then
+
 -- test procedures
 procedure ut_setup
 is
 begin
-$if dbug_profiler.c_testing $then
   null;
-$else
-  raise program_error;
-$end
 end ut_setup;
 
 procedure ut_teardown
 is
 begin
-$if dbug_profiler.c_testing $then
   null;
-$else
-  raise program_error;
-$end
 end ut_teardown;
 
 procedure ut_test
 is
-$if dbug_profiler.c_testing $then
   procedure p1
   is
   begin
@@ -254,11 +251,7 @@ $if dbug_profiler.c_testing $then
     sleep(4);
     dbug.leave;
   end p3;
-  $end
 begin
-$if dbug_profiler.c_testing $then
-  ut_setup;
-
   dbug.activate('dbms_output');
   dbug.activate('profiler');
 
@@ -294,12 +287,9 @@ $if dbug_profiler.c_testing $then
       raise value_error;
     end if;
   end loop;
-
-  ut_teardown;
-$else
-  raise program_error;
-$end
 end ut_test;
+
+$end -- $if oracle_tools.cfg_pkg.c_testing $then
 
 end dbug_profiler;
 /
