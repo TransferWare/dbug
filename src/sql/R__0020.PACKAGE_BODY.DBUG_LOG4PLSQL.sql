@@ -289,13 +289,26 @@ CREATE OR REPLACE PACKAGE BODY "DBUG_LOG4PLSQL" IS
   )
   is
     l_now constant date := sysdate;
+    l_session tlog.lsession%type := p_session;
   begin
+    if l_session is null
+    then
+      select  t.lsession
+      into    l_session
+      from    ( select  t.lsession
+                from    tlog t
+                where   t.ldate < l_now -- history only
+                order by
+                        t.id desc
+              ) t
+      where   rownum = 1;        
+    end if;
     /* Use translate to transform "|   |   <" into "        <". Now it can be left trimmed. */
     for r in
     ( select  t.utc_timestamp
       ,       ltrim(translate(t.ltext, '|', ' ')) as ltext
       from    tlog t
-      where   t.lsession = p_session
+      where   t.lsession = l_session
       and     substr(ltrim(translate(t.ltext, '|', ' ')), 1, 1) in ('>', '<')
       and     t.ldate < l_now -- history only
       order by
