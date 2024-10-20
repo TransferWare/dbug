@@ -73,10 +73,15 @@ procedure print(
 /** The print routine invoked by dbug.print. **/
 
 procedure feed_profiler(
-  p_session in tlog.lsession%type -- The session for which to feed profiling info.
+  p_session in tlog.lsession%type default 'ORCL-' || sys_context('USERENV', 'SESSIONID') -- The session for which to feed profiling info.
 );
 
-/** Feed the DBUG_PROFILER package information so you can have profiling info from not only the current session. */
+/**
+
+Feed the DBUG_PROFILER package with profiling information so you can have profiling info not only from the current session.
+The table TLOG will be searched for but only for LDATE < SYSDATE (history).
+
+**/
 
 --%suitepath(DBUG)
 --%suite
