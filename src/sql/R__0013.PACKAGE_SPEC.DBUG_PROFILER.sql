@@ -1,9 +1,52 @@
 CREATE OR REPLACE PACKAGE "DBUG_PROFILER" AUTHID DEFINER AS
 
--- SYSTIMESTAMP
-subtype t_timestamp is timestamp(6);
+c_testing constant boolean := $if $$Testing $then true $else false $end;
 
-type t_profile_rec is record (
+/**
+
+This package is **ONLY** invoked by the DBUG package when DBUG.ACTIVATE('PROFILER') is issued.
+
+It is meant to add some rudimentary profiling to your application.
+
+The time elapsed is determined by starting (DBUG.ENTER that invokes DBUG_PROFILER.ENTER) and
+stopping (DBUG.LEAVE that invokes DBUG_PROFILER.LEAVE) a routine, like this procedure P1:
+
+```
+PROCEDURE P1
+IS
+BEGIN
+  DBUG.ENTER($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT_OWNER);
+  <do your stuff>
+  DBUG.LEAVE;
+EXCEPTION
+  WHEN OTHERS
+  THEN
+    DBUG.LEAVE_ON_ERROR;
+    RAISE;
+END P;
+```
+
+When a routine P1 is invoked (with DBUG.ENTER and DBUG.LEAVE at the begin and end of the routine) and
+another routine P2 is invoked (also with DBUG.ENTER/DBUG.LEAVE at the begin and end):
+- the time elapsed for P2 is not counted for P1 because the P1 timer stops when P2 is invoked (in DBUG_PROFILER.ENTER)
+- the P1 timer restarts when P2 stops (in DBUG_PROFILER.LEAVE)
+
+There are two use cases:
+1. activate the profiler in a current session.
+2. feed the profiler with information from other sessions by issueing dbug_profiler.enter(<module>, <timestamp>)
+   and dbug_profiler.leave(<timestamp>) at the appropiate places.
+
+In both cases you can use "select * from table(dbug_profiler.show)" to have the profiling details.
+
+Issues:
+- https://github.com/TransferWare/dbug/issues/10 - It must be possible to profile based on other logging modules than DBUG_PROFILER.
+
+**/
+
+-- SYSTIMESTAMP
+subtype t_timestamp is timestamp(6); /** the type for UTC timestamps (having no problems with Winter and Summer time) **/
+
+type t_profiler_rec is record (
   /* see dbugrpt */
   module_name dbug.module_name_t -- varchar2(4000)
 , nr_calls integer
@@ -16,23 +59,37 @@ type t_profile_rec is record (
 --, weight integer
 );
 
-type t_profile_tab is table of t_profile_rec;
+/** The profiler info. **/
+
+type t_profiler_tab is table of t_profiler_rec;
+
+/** The table of profiler info. */
 
 procedure enter(
-  p_module in dbug.module_name_t
-, p_timestamp in t_timestamp default sys_extract_utc(systimestamp) -- https://github.com/TransferWare/dbug/issues/10
+  p_module in dbug.module_name_t -- the module entered
+, p_timestamp in t_timestamp default sys_extract_utc(systimestamp) -- the timestamp (can be from other sources)
 );
+
+/** The enter routine invoked by dbug.enter. **/
 
 procedure leave
 ( p_timestamp in t_timestamp default sys_extract_utc(systimestamp) -- https://github.com/TransferWare/dbug/issues/10
 );
 
+/** The leave routine invoked by dbug.leave. **/
+
 procedure done;
 
+/** The done routine, i.e. profiling cache is cleared.  **/
+
 function show
-return t_profile_tab pipelined;
+return t_profiler_tab pipelined;
+
+/** Show the profing information as a pipelined function. Idempotent function. */
 
 procedure show;
+
+/** Show the profing information via DBMS_OUTPUT. Idempotent procedure. */
 
 -- necessary functions for the dbug interface but they do nothing
 procedure print(
@@ -75,8 +132,6 @@ procedure print(
   p_arg5 in varchar2
 );
 
-$if oracle_tools.cfg_pkg.c_testing $then
-
 -- test functions
 
 --%suitepath(DBUG)
@@ -90,8 +145,6 @@ procedure ut_teardown;
 
 --%test
 procedure ut_test;
-
-$end -- $if oracle_tools.cfg_pkg.c_testing $then
 
 end dbug_profiler;
 /
