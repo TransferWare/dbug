@@ -73,13 +73,15 @@ procedure print(
 /** The print routine invoked by dbug.print. **/
 
 procedure feed_profiler(
-  p_session in tlog.lsession%type default null -- The session for which to feed profiling info. Defaults to latest session.
+  p_session in tlog.lsession%type default oracle_tools.data_session_id -- The session for which to feed profiling info. Defaults to current session.
 );
 
 /**
 
 Feed the DBUG_PROFILER package with profiling information so you can have profiling info not only from the current session.
 The table TLOG will be searched for but only for LDATE < SYSDATE (history).
+
+When p_session is null, the last LSESSION in TLOG will be used with LDATE < SYSDATE.
 
 **/
 

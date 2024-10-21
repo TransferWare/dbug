@@ -20,9 +20,15 @@ Please see the [DBUG issue queue](https://github.com/TransferWare/dbug/issues) f
 
 ## [Unreleased]
 
-## [7.1.0] -  2024-10-20
+## [7.1.1] -  2024-10-21
 
 ### Changed
+
+- [The default session for DBUG_LOG4PLSQL.FEED_PROFILER must be the current session.](https://github.com/TransferWare/dbug/issues/12)
+
+## [7.1.0] -  2024-10-20
+
+### Added
 
 - [It must be possible to profile based on other logging modules than DBUG_PROFILER.](https://github.com/TransferWare/dbug/issues/10)
 
