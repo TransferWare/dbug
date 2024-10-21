@@ -179,8 +179,8 @@ begin
   while l_profiler_rec.module_name is not null
   loop
     l_profiler_rec.nr_calls := g_count_tab(l_profiler_rec.module_name);
-    l_profiler_rec.elapsed_time := g_time_ms_tab(l_profiler_rec.module_name) / 1000;
-    l_profiler_rec.avg_time := case when l_profiler_rec.nr_calls <> 0 then l_profiler_rec.elapsed_time / l_profiler_rec.nr_calls end;
+    l_profiler_rec.elapsed_time := round(g_time_ms_tab(l_profiler_rec.module_name) / 1000, 3);
+    l_profiler_rec.avg_time := case when l_profiler_rec.nr_calls <> 0 then round(l_profiler_rec.elapsed_time / l_profiler_rec.nr_calls, 3) end;
     pipe row (l_profiler_rec);
     l_profiler_rec.module_name := g_time_ms_tab.next(l_profiler_rec.module_name);
   end loop;
@@ -197,8 +197,8 @@ begin
   while l_profiler_rec.module_name is not null
   loop
     l_profiler_rec.nr_calls := g_count_tab(l_profiler_rec.module_name);
-    l_profiler_rec.elapsed_time := g_time_ms_tab(l_profiler_rec.module_name) / 1000;
-    l_profiler_rec.avg_time := case when l_profiler_rec.nr_calls <> 0 then l_profiler_rec.elapsed_time / l_profiler_rec.nr_calls end;
+    l_profiler_rec.elapsed_time := round(g_time_ms_tab(l_profiler_rec.module_name) / 1000, 3);
+    l_profiler_rec.avg_time := case when l_profiler_rec.nr_calls <> 0 then round(l_profiler_rec.elapsed_time / l_profiler_rec.nr_calls, 3) end;
 
     dbms_output.put_line('=== ' || l_profiler_rec.module_name || ' ===');
     dbms_output.put_line('nr_calls: ' || l_profiler_rec.nr_calls);
