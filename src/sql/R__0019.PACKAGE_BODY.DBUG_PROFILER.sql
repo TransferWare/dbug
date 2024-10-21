@@ -132,27 +132,30 @@ begin
 /*DBUG
   dbms_output.put_line('>leave');
   dbms_output.put_line('p_timestamp: ' || to_char(p_timestamp, 'yyyy-mm-dd hh24:mi:ss.ff'));
-/*DBUG*/  
-  -- stop the timer and add the elapsed time to the current module
-  begin
-    g_time_ms_tab(g_module_name_stack(g_module_name_stack.last)) := g_time_ms_tab(g_module_name_stack(g_module_name_stack.last)) + end_timer(p_timestamp);
-  exception
-    when no_data_found
-    then
-/*DBUG
-      dbms_output.put_line('no_data_found');
-/*DBUG*/      
-      g_time_ms_tab(g_module_name_stack(g_module_name_stack.last)) := 0;
-  end;
-  -- increase the count as well
-  g_count_tab(g_module_name_stack(g_module_name_stack.last)) := g_count_tab(g_module_name_stack(g_module_name_stack.last)) + 1;
-  -- delete the module from the stack
-  g_module_name_stack.delete(g_module_name_stack.last);
-  -- if there was a previous module start the timer again for that module
+/*DBUG*/
   if g_module_name_stack.last is not null
   then
-    start_timer(p_timestamp);
-  end if;
+    -- stop the timer and add the elapsed time to the current module
+    begin
+      g_time_ms_tab(g_module_name_stack(g_module_name_stack.last)) := g_time_ms_tab(g_module_name_stack(g_module_name_stack.last)) + end_timer(p_timestamp);
+    exception
+      when no_data_found
+      then
+/*DBUG
+        dbms_output.put_line('no_data_found');
+/*DBUG*/      
+        g_time_ms_tab(g_module_name_stack(g_module_name_stack.last)) := 0;
+    end;
+    -- increase the count as well
+    g_count_tab(g_module_name_stack(g_module_name_stack.last)) := g_count_tab(g_module_name_stack(g_module_name_stack.last)) + 1;
+    -- delete the module from the stack
+    g_module_name_stack.delete(g_module_name_stack.last);
+    -- if there was a previous module start the timer again for that module
+    if g_module_name_stack.last is not null
+    then
+      start_timer(p_timestamp);
+    end if;
+  end if;    
 /*DBUG
   dbms_output.put_line('<leave');
 /*DBUG*/  
