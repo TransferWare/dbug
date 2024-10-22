@@ -231,8 +231,8 @@ with src as (
   ,       t.module_name_part3
   ,       t.module_name_rest
   ,       sum(t.nr_calls) as nr_calls
-  ,       round(sum(t.elapsed_time), 3) as elapsed_time
-  ,       round(avg(t.elapsed_time), 3) as avg_time
+  ,       to_char(round(sum(t.elapsed_time), 3), '999990D000')  as elapsed_time
+  ,       to_char(round(avg(t.elapsed_time), 3), '999990D000') as avg_time
   ,       grouping_id(t.module_name_part1, t.module_name_part2, t.module_name_part3, t.module_name_rest) as grouping
   from    table(dbug_profiler.show) t
   group by
