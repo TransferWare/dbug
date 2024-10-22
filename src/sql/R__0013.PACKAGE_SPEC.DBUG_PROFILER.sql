@@ -49,6 +49,10 @@ subtype t_timestamp is timestamp(6); /** the type for UTC timestamps (having no 
 type t_profiler_rec is record (
   /* see dbugrpt */
   module_name dbug.module_name_t -- varchar2(4000)
+, module_name_part1 dbug.module_name_t -- varchar2(4000)
+, module_name_part2 dbug.module_name_t -- varchar2(4000)
+, module_name_part3 dbug.module_name_t -- varchar2(4000)
+, module_name_rest  dbug.module_name_t -- varchar2(4000)
 , nr_calls integer
 --  perc_calls number
 , elapsed_time number
@@ -86,6 +90,16 @@ function show
 return t_profiler_tab pipelined;
 
 /** Show the profiling information as a pipelined function. Idempotent function. */
+
+function show
+( p_module_name_part1 in varchar2
+, p_module_name_part2 in varchar2 default null
+, p_module_name_part3 in varchar2 default null
+)
+return varchar2
+sql_macro;
+
+/** Show the profiling information as a SQL macro. Idempotent function. */
 
 procedure show;
 

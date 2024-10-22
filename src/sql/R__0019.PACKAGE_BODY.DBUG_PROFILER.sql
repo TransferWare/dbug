@@ -174,10 +174,38 @@ function show
 return t_profiler_tab pipelined
 is
   l_profiler_rec t_profiler_rec;
+  l_line_tab dbug.line_tab_t;
 begin
   l_profiler_rec.module_name := g_time_ms_tab.first;
   while l_profiler_rec.module_name is not null
   loop
+    l_profiler_rec.module_name_part1 := null;
+    l_profiler_rec.module_name_part2 := null;
+    l_profiler_rec.module_name_part3 := null;
+    l_profiler_rec.module_name_rest  := null;
+    
+    dbug.split
+    ( p_buf => l_profiler_rec.module_name
+    , p_sep => '.'
+    , p_line_tab => l_line_tab
+    );
+    if l_line_tab.count > 0
+    then
+      for i_idx in l_line_tab.first .. l_line_tab.last
+      loop
+        case i_idx
+          when l_line_tab.first+0
+          then l_profiler_rec.module_name_part1 := l_line_tab(i_idx);
+          when l_line_tab.first+1
+          then l_profiler_rec.module_name_part2 := l_line_tab(i_idx);
+          when l_line_tab.first+2
+          then l_profiler_rec.module_name_part3 := l_line_tab(i_idx);
+          when l_line_tab.first+3
+          then l_profiler_rec.module_name_rest  := l_line_tab(i_idx);
+          else l_profiler_rec.module_name_rest  := l_profiler_rec.module_name_rest || '.' || l_line_tab(i_idx);
+        end case;
+      end loop;
+    end if;
     l_profiler_rec.nr_calls := g_count_tab(l_profiler_rec.module_name);
     l_profiler_rec.elapsed_time := round(g_time_ms_tab(l_profiler_rec.module_name) / 1000, 3);
     l_profiler_rec.avg_time := case when l_profiler_rec.nr_calls <> 0 then round(l_profiler_rec.elapsed_time / l_profiler_rec.nr_calls, 3) end;
@@ -185,6 +213,89 @@ begin
     l_profiler_rec.module_name := g_time_ms_tab.next(l_profiler_rec.module_name);
   end loop;
   return;
+end show;
+
+function show
+( p_module_name_part1 in varchar2
+, p_module_name_part2 in varchar2
+, p_module_name_part3 in varchar2
+)
+return varchar2
+sql_macro
+is
+begin
+  return q'[
+with src as (
+  select  t.module_name_part1
+  ,       t.module_name_part2
+  ,       t.module_name_part3
+  ,       t.module_name_rest
+  ,       sum(t.nr_calls) as nr_calls
+  ,       round(sum(t.elapsed_time), 3) as elapsed_time
+  ,       round(avg(t.elapsed_time), 3) as avg_time
+  ,       grouping_id(t.module_name_part1, t.module_name_part2, t.module_name_part3, t.module_name_rest) as grouping
+  from    table(dbug_profiler.show) t
+  group by
+          rollup
+          ( t.module_name_part1
+          , t.module_name_part2
+          , t.module_name_part3
+          , t.module_name_rest
+          )
+), totals_different as (
+  select  t.module_name_part1
+  ,       t.module_name_part2
+  ,       t.module_name_part3
+  ,       t.module_name_rest
+  ,       t.nr_calls
+  ,       t.elapsed_time
+  ,       t.avg_time 
+  from    src t
+  where   t.grouping > 0
+  minus
+  select  t.module_name_part1
+  ,       t.module_name_part2
+  ,       t.module_name_part3
+  ,       t.module_name_rest
+  ,       t.nr_calls
+  ,       t.elapsed_time
+  ,       t.avg_time 
+  from    src t
+  where   t.grouping = 0
+)
+select  t.module_name_part1
+,       t.module_name_part2
+,       t.module_name_part3
+,       t.module_name_rest
+,       '' as total
+,       t.nr_calls
+,       t.elapsed_time
+,       t.avg_time 
+from    src t
+where   grouping = 0
+and     ( show.p_module_name_part1 is null or t.module_name_part1 like show.p_module_name_part1 escape '\' )
+and     ( show.p_module_name_part2 is null or t.module_name_part2 like show.p_module_name_part2 escape '\' )
+and     ( show.p_module_name_part3 is null or t.module_name_part3 like show.p_module_name_part3 escape '\' )
+union
+select  t.module_name_part1
+,       t.module_name_part2
+,       t.module_name_part3
+,       t.module_name_rest
+,       '*** total ***' as total
+,       t.nr_calls
+,       t.elapsed_time
+,       t.avg_time
+from    totals_different t
+where   ( show.p_module_name_part1 is null or t.module_name_part1 is null or t.module_name_part1 like show.p_module_name_part1 escape '\' )
+and     ( show.p_module_name_part2 is null or t.module_name_part2 is null or t.module_name_part2 like show.p_module_name_part2 escape '\' )
+and     ( show.p_module_name_part3 is null or t.module_name_part3 is null or t.module_name_part3 like show.p_module_name_part3 escape '\' )
+order by
+        module_name_part1
+,       module_name_part2
+,       module_name_part3
+,       module_name_rest
+,       total nulls first
+  ]';
 end show;
 
 procedure show
