@@ -22,6 +22,12 @@ Please see the [DBUG issue queue](https://github.com/TransferWare/dbug/issues) f
 
 ## [7.1.1] -  2024-10-21
 
+### Added
+
+- [Show totals with the SQL DBUG profiler.](https://github.com/TransferWare/dbug/issues/14)
+
+## [7.1.1] -  2024-10-21
+
 ### Changed
 
 - [The default session for DBUG_LOG4PLSQL.FEED_PROFILER must be the current session.](https://github.com/TransferWare/dbug/issues/12)
