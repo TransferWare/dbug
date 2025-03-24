@@ -191,6 +191,9 @@ procedure set_ignore_buffer_overflow
 function get_ignore_buffer_overflow
 return boolean;
 
+function get_depth
+return integer;
+
 --  functions to be used by DBUG_<method> packages
 
 function format_enter
