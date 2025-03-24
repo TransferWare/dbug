@@ -20,6 +20,12 @@ Please see the [DBUG issue queue](https://github.com/TransferWare/dbug/issues) f
 
 ## [Unreleased]
 
+## [7.2.0] -  2025-03-24
+
+### Added
+
+- [The DBUG package must return the depth of its call stack.](https://github.com/TransferWare/dbug/issues/16)
+
 ## [7.1.1] -  2024-10-21
 
 ### Added
