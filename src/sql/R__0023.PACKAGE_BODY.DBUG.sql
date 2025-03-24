@@ -2147,6 +2147,18 @@ $if dbug.c_ignore_errors != 0 $then
 $end
   end get_ignore_buffer_overflow;
 
+  function get_depth
+  return integer
+  is
+    l_dbug_obj dbug_obj_t;
+  begin
+    l_dbug_obj := new dbug_obj_t();
+    return l_dbug_obj.call_tab.count;
+  exception
+    when others
+    then return 0;
+  end get_depth;
+
   function format_enter
   ( p_module in module_name_t
   )
