@@ -1,3 +1,7 @@
+-- Invoke beforeEachMigrate.sql just once otherwise:
+--
+-- ORA-20000: Recursive invocation of file - src/sql/beforeEachMigrate.sql
+--
 @@beforeEachMigrate.sql
 @@V20221202174525.0001__TYPE_SPEC.STD_OBJECT.sql
 @@V20221202174525.0002__TYPE_SPEC.DBUG_LOG4PLSQL_OBJ_T.sql
