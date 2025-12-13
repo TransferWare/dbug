@@ -20,50 +20,56 @@ Please see the [DBUG issue queue](https://github.com/TransferWare/dbug/issues) f
 
 ## [Unreleased]
 
-## [7.2.0] -  2025-03-24
+## [7.3.0] - 2025-12-13
+
+### Fixed
+
+- [Package DBUG must be able to work with LOG4PLSQL 4.0.2.](https://github.com/TransferWare/dbug/issues/18)
+
+## [7.2.0] - 2025-03-24
 
 ### Added
 
 - [The DBUG package must return the depth of its call stack.](https://github.com/TransferWare/dbug/issues/16)
 
-## [7.1.1] -  2024-10-21
+## [7.1.1] - 2024-10-21
 
 ### Added
 
 - [Show totals with the SQL DBUG profiler.](https://github.com/TransferWare/dbug/issues/14)
 
-## [7.1.1] -  2024-10-21
+## [7.1.1] - 2024-10-21
 
 ### Changed
 
 - [The default session for DBUG_LOG4PLSQL.FEED_PROFILER must be the current session.](https://github.com/TransferWare/dbug/issues/12)
 
-## [7.1.0] -  2024-10-20
+## [7.1.0] - 2024-10-20
 
 ### Added
 
 - [It must be possible to profile based on other logging modules than DBUG_PROFILER.](https://github.com/TransferWare/dbug/issues/10)
 
-## [7.0.0] -  2023-04-27
+## [7.0.0] - 2023-04-27
 
 ### Changed
 
 - [PL/SQL DBUG functionality must be moved from PLSDBUG to DBUG project.](https://github.com/TransferWare/dbug/issues/7)
 
-## [6.1.1] -  2022-11-25
+## [6.1.1] - 2022-11-25
 
 ### Fixed
 
 - [The number of digits after the radix for a timestamp is not correct.](https://github.com/TransferWare/dbug/issues/5)
 
-## [6.1.0] -  2022-11-24
+## [6.1.0] - 2022-11-24
 
 ### Fixed
 
 - [The Perl script dbugrpt does not run.](https://github.com/TransferWare/dbug/issues/3)
 - [The Unix clock function calculates the CPU time, not the wall clock time.](https://github.com/TransferWare/dbug/issues/4)
 
-## [6.0.0] -  2021-08-02
+## [6.0.0] - 2021-08-02
 
 A new version on GitHub.
 
@@ -93,14 +99,14 @@ A new version on GitHub.
 
 - Added rf2dbug utility for creating dbug log file from Robot Framework output.xml files.
 
-## [5.0.0] -  2018-08-19
+## [5.0.0] - 2018-08-19
 
 ### Changed
 
 - Solved issues with Perl dbug not well distributed
 - Solved compiler warnings
 
-## [4.8.0] -  2016-05-03
+## [4.8.0] - 2016-05-03
 
 ### Added
 
