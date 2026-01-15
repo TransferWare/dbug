@@ -20,6 +20,12 @@ Please see the [DBUG issue queue](https://github.com/TransferWare/dbug/issues) f
 
 ## [Unreleased]
 
+## [7.4.0] - 2026-01-15
+
+### Added
+
+- [Create channel for Logger.](https://github.com/TransferWare/dbug/issues/19)
+
 ## [7.3.0] - 2025-12-13
 
 ### Fixed
