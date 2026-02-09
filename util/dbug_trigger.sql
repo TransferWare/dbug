@@ -241,11 +241,11 @@ begin
           ||', ''' || r_trg.column_name || '''' 
           ||', '
           ||case when r_trg.data_type = 'TIMESTAMP(6)' then 'cast(' end
-          ||':old.' || r_trg.column_name 
+          ||':old."' || r_trg.column_name || '"'
           ||case when r_trg.data_type = 'TIMESTAMP(6)' then ' as date)' end
           ||', '
           ||case when r_trg.data_type = 'TIMESTAMP(6)' then 'cast(' end
-          ||':new.' || r_trg.column_name 
+          ||':new."' || r_trg.column_name || '"'
           ||case when r_trg.data_type = 'TIMESTAMP(6)' then ' as date)' end
           || ' );'
         );
