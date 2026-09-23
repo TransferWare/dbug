@@ -285,7 +285,7 @@ CREATE OR REPLACE PACKAGE BODY "DBUG_LOG4PLSQL" IS
   end print;
 
   procedure feed_profiler(
-    p_session in tlog.lsession%type -- The session for which to feed profiling info.
+    p_session in varchar2 -- The session for which to feed profiling info.
   )
   is
     l_now constant date := sysdate;
