@@ -14,14 +14,23 @@ CREATE OR REPLACE PACKAGE BODY "DBUG_LOGGER" IS
     loop
       begin
         case p_break_point
-          when dbug."debug" then logger.log( l_line_tab(l_line_no) );
-          when dbug."trace" then logger.log( l_line_tab(l_line_no) );
-          when dbug."input" then logger.log( l_line_tab(l_line_no) );
-          when dbug."output" then logger.log( l_line_tab(l_line_no) );
-          when dbug."info" then logger.log_info( l_line_tab(l_line_no) );
-          when dbug."warning" then logger.log_warn( l_line_tab(l_line_no) );
-          when dbug."error" then logger.log_error( l_line_tab(l_line_no) );
-          when dbug."fatal" then logger.log_permanent( l_line_tab(l_line_no) );
+          when dbug."debug"
+          then logger.log( l_line_tab(l_line_no) );
+          when dbug."trace"
+          then logger.log( l_line_tab(l_line_no) );
+          when dbug."input"
+          then logger.log( l_line_tab(l_line_no) );
+          when dbug."output"
+          then logger.log( l_line_tab(l_line_no) );
+          when dbug."info"
+          then logger.log_info( l_line_tab(l_line_no) );
+          when dbug."warning"
+          then logger.log_warn( l_line_tab(l_line_no) );
+          when dbug."error"
+          then logger.log_error( l_line_tab(l_line_no) );
+          when dbug."fatal"
+          then logger.log_permanent( l_line_tab(l_line_no) );
+          else logger.log( l_line_tab(l_line_no) );
         end case;
       end;
       l_line_no := l_line_tab.next(l_line_no);
