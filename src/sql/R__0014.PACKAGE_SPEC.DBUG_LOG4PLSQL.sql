@@ -73,7 +73,7 @@ procedure print(
 /** The print routine invoked by dbug.print. **/
 
 procedure feed_profiler(
-  p_session in tlog.lsession%type default oracle_tools.data_session_id -- The session for which to feed profiling info. Defaults to current session.
+  p_session in varchar2 default oracle_tools.data_session_id -- The session for which to feed profiling info. Defaults to current session.
 );
 
 /**
