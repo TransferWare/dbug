@@ -43,6 +43,27 @@ CREATE OR REPLACE PACKAGE "DBUG_TRIGGER" AUTHID DEFINER IS
   , p_new_value in date
   );
 
+  procedure print(
+    p_key in boolean
+  , p_column_name in varchar2
+  , p_old_value in timestamp
+  , p_new_value in timestamp
+  );
+
+  procedure print(
+    p_key in boolean
+  , p_column_name in varchar2
+  , p_old_value in timestamp with time zone
+  , p_new_value in timestamp with time zone
+  );
+
+  procedure print(
+    p_key in boolean
+  , p_column_name in varchar2
+  , p_old_value in timestamp with local time zone
+  , p_new_value in timestamp with local time zone
+  );
+
 end dbug_trigger;
 /
 

@@ -6,6 +6,7 @@ CREATE OR REPLACE PACKAGE BODY "DBUG_TRIGGER" IS
   g_updating boolean := null;
   g_deleting boolean := null;
   g_date_format_cst constant varchar2(16) := 'YYYYMMDDHH24MISS';
+  g_timestamp_format_cst constant varchar2(29) := 'YYYYMMDDHH24:MI:SSxFF TZH:TZM';
 
   /* scratch variable */
   g_text varchar2(32767);
@@ -200,6 +201,48 @@ CREATE OR REPLACE PACKAGE BODY "DBUG_TRIGGER" IS
          , p_column_name
          , to_char(p_old_value, g_date_format_cst)
          , to_char(p_new_value, g_date_format_cst) );
+  end print;
+
+  procedure print(
+    p_key in boolean
+  , p_column_name in varchar2
+  , p_old_value in timestamp
+  , p_new_value in timestamp
+  )
+  is
+  begin
+    print( p_key
+         , p_column_name
+         , to_char(p_old_value, g_timestamp_format_cst)
+         , to_char(p_new_value, g_timestamp_format_cst) );
+  end print;
+
+  procedure print(
+    p_key in boolean
+  , p_column_name in varchar2
+  , p_old_value in timestamp with time zone
+  , p_new_value in timestamp with time zone
+  )
+  is
+  begin
+    print( p_key
+         , p_column_name
+         , to_char(p_old_value, g_timestamp_format_cst)
+         , to_char(p_new_value, g_timestamp_format_cst) );
+  end print;
+
+  procedure print(
+    p_key in boolean
+  , p_column_name in varchar2
+  , p_old_value in timestamp with local time zone
+  , p_new_value in timestamp with local time zone
+  )
+  is
+  begin
+    print( p_key
+         , p_column_name
+         , to_char(p_old_value, g_timestamp_format_cst)
+         , to_char(p_new_value, g_timestamp_format_cst) );
   end print;
 
 end dbug_trigger;
