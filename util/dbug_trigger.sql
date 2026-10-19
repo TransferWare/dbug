@@ -156,7 +156,9 @@ begin
                                          'VARCHAR',
                                          'VARCHAR2',
                                          'DATE',
-                                         'TIMESTAMP(6)')
+                                         'TIMESTAMP(6)',
+                                         'TIMESTAMP(6) WITH LOCAL TIME ZONE',
+                                         'TIMESTAMP(6) WITH TIME ZONE')
               union
               select  tab.object_name table_name
               ,       null as trigger_name /* trigger_name only used for column_name 'begin' */
@@ -240,13 +242,9 @@ begin
           ||case when r_trg.key_position is null then 'false' else 'true' end
           ||', ''' || r_trg.column_name || '''' 
           ||', '
-          ||case when r_trg.data_type = 'TIMESTAMP(6)' then 'cast(' end
           ||':old."' || r_trg.column_name || '"'
-          ||case when r_trg.data_type = 'TIMESTAMP(6)' then ' as date)' end
           ||', '
-          ||case when r_trg.data_type = 'TIMESTAMP(6)' then 'cast(' end
           ||':new."' || r_trg.column_name || '"'
-          ||case when r_trg.data_type = 'TIMESTAMP(6)' then ' as date)' end
           || ' );'
         );
     end case;
