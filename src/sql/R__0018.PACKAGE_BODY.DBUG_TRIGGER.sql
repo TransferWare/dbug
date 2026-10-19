@@ -5,8 +5,8 @@ CREATE OR REPLACE PACKAGE BODY "DBUG_TRIGGER" IS
   g_inserting boolean := null;
   g_updating boolean := null;
   g_deleting boolean := null;
-  g_date_format_cst constant varchar2(16) := 'YYYYMMDDHH24MISS';
-  g_timestamp_format_cst constant varchar2(29) := 'YYYYMMDDHH24:MI:SSxFF TZH:TZM';
+  g_date_format_cst constant varchar2(21) := 'YYYY-MM-DD HH24:MI:SS';
+  g_timestamp_format_cst constant varchar2(32) := 'YYYY-MM-DD HH24:MI:SSxFF TZH:TZM';
 
   /* scratch variable */
   g_text varchar2(32767);
