@@ -234,8 +234,8 @@ CREATE OR REPLACE PACKAGE BODY "DBUG_TRIGGER" IS
   procedure print(
     p_key in boolean
   , p_column_name in varchar2
-  , p_old_value in timestamp with local time
-  , p_new_value in timestamp with local time
+  , p_old_value in timestamp with local time zone
+  , p_new_value in timestamp with local time zone
   )
   is
   begin
