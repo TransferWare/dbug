@@ -20,6 +20,12 @@ Please see the [DBUG issue queue](https://github.com/TransferWare/dbug/issues) f
 
 ## [Unreleased]
 
+## [7.5.0] - 2026-11-07
+
+### Added
+
+- [Add ability to save/restore DBUG methods.](https://github.com/TransferWare/dbug/issues/23)
+
 ## [7.4.0] - 2026-01-15
 
 ### Added

@@ -551,6 +551,38 @@ $end
       end;
   end active;
 
+  procedure save_dbug_method_active
+  ( p_method_active_tab out nocopy method_active_tab_t
+  )
+  is
+  begin
+    -- save DBUG methods
+    for r in
+    ( select  substr(object_name, 1 + length('DBUG_')) as channel_name
+      from    all_objects
+      where   owner = $$PLSQL_UNIT_OWNER
+      and     object_type = 'PACKAGE'
+      and     object_name like 'DBUG\_%' escape '\'
+    )
+    loop
+      p_method_active_tab(r.channel_name) := dbug.active(r.channel_name);
+    end loop;
+  end save_dbug_method_active;
+
+  procedure restore_dbug_method_active
+  ( p_method_active_tab in method_active_tab_t
+  )
+  is
+    l_method_name all_objects.object_name%type;
+  begin
+    l_method_name := p_method_active_tab.first;
+    while l_method_name is not null
+    loop
+      dbug.activate(l_method_name, p_method_active_tab(l_method_name));
+      l_method_name := p_method_active_tab.next(l_method_name);
+    end loop;
+  end restore_dbug_method_active;
+  
   procedure set_level
   ( p_obj in out nocopy dbug_obj_t
   , p_level in level_t
