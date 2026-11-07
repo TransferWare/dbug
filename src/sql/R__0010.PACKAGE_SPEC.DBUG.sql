@@ -70,6 +70,16 @@ function active
 )
 return boolean;
 
+type method_active_tab_t is table of boolean index by all_objects.object_name%type; -- since methods are a part of a package name
+
+procedure save_dbug_method_active
+( p_method_active_tab out nocopy method_active_tab_t
+);
+
+procedure restore_dbug_method_active
+( p_method_active_tab in method_active_tab_t
+);
+
 procedure set_level
 ( p_level in level_t
 );
