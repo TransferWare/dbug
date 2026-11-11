@@ -565,7 +565,12 @@ $end
       and     object_name like 'DBUG\_%' escape '\'
     )
     loop
-      p_method_active_tab(r.channel_name) := dbug.active(r.channel_name);
+      begin
+        p_method_active_tab(r.channel_name) := dbug.active(r.channel_name);
+      exception
+        when others
+        then null;
+      end;
     end loop;
   end save_dbug_method_active;
 
@@ -578,7 +583,12 @@ $end
     l_method_name := p_method_active_tab.first;
     while l_method_name is not null
     loop
-      dbug.activate(l_method_name, p_method_active_tab(l_method_name));
+      begin
+        dbug.activate(l_method_name, p_method_active_tab(l_method_name));
+      exception
+        when others
+        then null;
+      end;
       l_method_name := p_method_active_tab.next(l_method_name);
     end loop;
   end restore_dbug_method_active;
