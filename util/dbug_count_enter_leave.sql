@@ -10,6 +10,8 @@ PROMPT             1 - object name (defaults to wildcard %)
 PROMPT             &&1
 PROMPT             2 - object type (defaults to wildcard %)
 PROMPT             &&2
+PROMPT             3 - skip objects with an equal number of calls for dbug.enter/dbug.leave/dbug.leave_on_error (defaults to 1)
+PROMPT             &&3
 
 /*
 
@@ -56,7 +58,11 @@ Gert-Jan Paulissen
 
 set serveroutput on size unlimited format trunc
 
+set feedback off verify off
+
 declare
+  c_skip_equal_number_of_calls constant boolean := nvl(to_number('&3'), 1) != 0;
+
   r_prev user_source%rowtype;
 
   l_dbug_enter_calls naturaln := 0;
@@ -69,9 +75,19 @@ declare
     if r_prev.name is null then return; end if;
 
     dbms_output.put_line(utl_lms.format_message('=== object %s (%s) ===', r_prev.name, r_prev.type));
-    dbms_output.put_line('# dbug.enter          calls: ' || l_dbug_enter_calls);
-    dbms_output.put_line('# dbug.leave          calls: ' || l_dbug_leave_calls);
-    dbms_output.put_line('# dbug.leave_on_error calls: ' || l_dbug_leave_on_error_calls);
+    
+    if c_skip_equal_number_of_calls
+       and
+       l_dbug_enter_calls = l_dbug_leave_calls
+       and
+       l_dbug_leave_calls = l_dbug_leave_on_error_calls
+    then
+      null;
+    else
+      dbms_output.put_line('# dbug.enter          calls: ' || l_dbug_enter_calls);
+      dbms_output.put_line('# dbug.leave          calls: ' || l_dbug_leave_calls);
+      dbms_output.put_line('# dbug.leave_on_error calls: ' || l_dbug_leave_on_error_calls);
+    end if;  
 
     l_dbug_enter_calls := 0;
     l_dbug_leave_calls := 0;
